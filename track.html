@@ -7,8 +7,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;700;800&display=swap" rel="stylesheet">
 <style>
 :root{ --brown:#3e2420; --beige:#bc8f74; --cream:#fff8ef; --text:#1f2937; --muted:#6b7280; --radius:14px; --shadow:0 8px 28px rgba(0,0,0,.08); }
-*{box-sizing:border-box}
-body{margin:0;background:var(--cream);color:var(--text);font-family:"Tajawal",system-ui,Arial;line-height:1.75}
+*{box-sizing:border-box} body{margin:0;background:var(--cream);color:var(--text);font-family:"Tajawal",system-ui,Arial;line-height:1.75}
 .wrap{max-width:1100px;margin:24px auto;padding:0 16px}
 .topbar{display:flex;justify-content:space-between;align-items:center;padding:14px;background:#fff;border:1px solid #eadbcf;border-radius:var(--radius);box-shadow:var(--shadow)}
 .logo{width:36px;height:36px;border-radius:10px;background:linear-gradient(135deg,var(--brown),#2a1714);color:#fff;display:grid;place-items:center;font-weight:900}
@@ -18,17 +17,13 @@ h1{margin:0;font-size:18px;color:var(--brown)}
 input{padding:10px 12px;border:1px solid #eadbcf;border-radius:10px;background:#fff}
 button{border:1px solid #eadbcf;background:#fff;padding:10px 14px;border-radius:12px;cursor:pointer;font-weight:800}
 button.primary{background:var(--brown);border-color:var(--brown);color:#fff}
-.muted{color:var(--muted)}
+.small{font-size:13px}.muted{color:var(--muted)}
 .timeline{display:flex;gap:10px;overflow:auto;padding:8px 2px}
 .step{min-width:200px;background:#fff;border:1px solid #eadbcf;border-radius:12px;padding:10px}
-.step .t{font-weight:800}
-.step .m{font-size:12px;color:var(--muted)}
-.step.active{border-color:var(--beige);box-shadow:0 0 0 2px rgba(188,143,116,.12)}
-.step.done{opacity:.95}
+.step .t{font-weight:800}.step .m{font-size:12px;color:var(--muted)}
+.step.active{border-color:var(--beige);box-shadow:0 0 0 2px rgba(188,143,116,.12)} .step.done{opacity:.95}
 .strip{height:3px;background:repeating-linear-gradient(90deg,#e8d8cb 0 24px,#f7eee7 24px 48px);border-radius:999px;margin-bottom:8px}
-.grid{display:grid;gap:16px}
-@media(min-width:900px){ .grid-2{grid-template-columns:2fr 1fr} }
-.small{font-size:13px}
+.grid{display:grid;gap:16px} @media(min-width:900px){ .grid-2{grid-template-columns:2fr 1fr} }
 .pill{display:inline-flex;gap:8px;align-items:center;background:#fff6ef;border:1px solid #ffe3cc;color:#9a5c2b;padding:8px 10px;border-radius:10px;font-size:13px;margin-bottom:8px}
 </style>
 </head>
@@ -73,8 +68,8 @@ button.primary{background:var(--brown);border-color:var(--brown);color:#fff}
 </div>
 
 <script>
-// —— رابط الـ Function العامة — غيّره برابط مشروعك:
-const PUBLIC_FN = "https://<REGION>-<PROJECT_ID>.cloudfunctions.net/getPublicOrder";
+// ضع هنا رابط وظيفة getPublicOrder بعد النشر:
+const PUBLIC_FN = "https://us-central1-mzj-tracking.cloudfunctions.net/getPublicOrder";
 
 const STAGES = [
   {k:'ORDER_CREATED',      t:'1) تم إنشاء الطلب (رقم الطلب مهم)'},
@@ -88,12 +83,10 @@ const STAGES = [
   {k:'READY_OR_SHIPPING',  t:'9) جاهزية السيارة للاستلام أو طلب الشحن'},
   {k:'DELIVERED',          t:'10) إتمام عملية التسليم بنجاح'}
 ];
-
 function labelOf(k){ const f=STAGES.find(s=>s.k===k); return f?f.t:k; }
 
 function render(data){
-  const tl = document.getElementById('timeline');
-  tl.innerHTML = '';
+  const tl = document.getElementById('timeline'); tl.innerHTML = '';
   const idx = (data.statusIndex||1)-1;
   STAGES.forEach((s,i)=>{
     const div = document.createElement('div');
@@ -102,18 +95,17 @@ function render(data){
     tl.appendChild(div);
   });
   document.getElementById('currentPill').innerText = 'الحالة الحالية: ' + labelOf(data.status);
-  // توصية الإجراء التالي للعميل
   const nextMap = {
-    'ORDER_CREATED': 'سيتواصل معك فريقنا لإصدار أمر الدفع.',
-    'PAYMENT_ORDER': 'يرجى استكمال الدفع بالطريقة المناسبة.',
-    'CUSTOMER_SERVICE': 'سيتم إرسال البطاقة الجمركية لك.',
-    'FEES_PAYMENT': 'سداد الرسوم المطلوبة لاستكمال الإجراءات.',
-    'INSURANCE_LINK': 'جارٍ ربط التأمين على سيستم المملكة.',
-    'DOCS_CLEARANCE': 'يرجى استكمال أي مستندات/مبالغ متبقية.',
-    'CUSTOMS_TRANSFER': 'تجهيـر/تجيير البطاقة الجمركية.',
-    'PLATES_OR_OWNERSHIP': 'إصدار اللوحات أو نقل الملكية.',
-    'READY_OR_SHIPPING': 'سيارتك جاهزة للاستلام أو الشحن.',
-    'DELIVERED': 'مبروك! تم التسليم بنجاح 🎉'
+    'ORDER_CREATED':'سيتواصل معك فريقنا لإصدار أمر الدفع.',
+    'PAYMENT_ORDER':'يرجى استكمال الدفع بالطريقة المناسبة.',
+    'CUSTOMER_SERVICE':'سيتم إرسال البطاقة الجمركية لك.',
+    'FEES_PAYMENT':'سداد الرسوم المطلوبة لاستكمال الإجراءات.',
+    'INSURANCE_LINK':'جارٍ ربط التأمين على سيستم المملكة.',
+    'DOCS_CLEARANCE':'يرجى استكمال أي مستندات/مبالغ متبقية.',
+    'CUSTOMS_TRANSFER':'تجيير البطاقة الجمركية.',
+    'PLATES_OR_OWNERSHIP':'إصدار اللوحات أو نقل الملكية.',
+    'READY_OR_SHIPPING':'سيارتك جاهزة للاستلام أو الشحن.',
+    'DELIVERED':'مبروك! تم التسليم بنجاح 🎉'
   };
   document.getElementById('nextTitle').innerText = 'الخطوة التالية';
   document.getElementById('nextDesc').innerText = nextMap[data.status] || '—';
@@ -125,18 +117,15 @@ function render(data){
 document.getElementById('btnShow').addEventListener('click', async ()=>{
   const orderNumber = document.getElementById('orderInput').value.trim();
   const msg = document.getElementById('msg');
-  if(!orderNumber){ msg.innerText = 'أدخل رقم الطلب.'; return; }
-  msg.innerText = '...جاري جلب الحالة';
+  if(!orderNumber){ msg.innerText='أدخل رقم الطلب.'; return; }
+  msg.innerText='...جاري جلب الحالة';
   try{
-    const url = `${PUBLIC_FN}?orderNumber=${encodeURIComponent(orderNumber)}`;
-    const res = await fetch(url);
+    const res = await fetch(`${PUBLIC_FN}?orderNumber=${encodeURIComponent(orderNumber)}`);
     const data = await res.json();
-    if(!res.ok){ msg.innerText = data.error || 'تعذّر جلب الحالة'; return; }
+    if(!res.ok){ msg.innerText = data.error||'تعذّر جلب الحالة'; return; }
     msg.innerText = `تم العثور على الطلب: ${data.orderNumber}`;
     render(data);
-  }catch(e){
-    console.error(e); msg.innerText = 'خطأ غير متوقع.';
-  }
+  }catch(e){ console.error(e); msg.innerText='خطأ غير متوقع.'; }
 });
 </script>
 </body>
