@@ -10,8 +10,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
 <style>
 :root{ --brown:#3e2420; --beige:#bc8f74; --cream:#fff8ef; --text:#1f2937; --muted:#6b7280; --radius:14px; --shadow:0 8px 28px rgba(0,0,0,.08); }
-*{box-sizing:border-box}
-body{margin:0;background:var(--cream);color:var(--text);font-family:"Tajawal",system-ui,Arial;line-height:1.75}
+*{box-sizing:border-box} body{margin:0;background:var(--cream);color:var(--text);font-family:"Tajawal",system-ui,Arial;line-height:1.75}
 .wrap{max-width:1100px;margin:24px auto;padding:0 16px}
 .topbar{display:flex;justify-content:space-between;align-items:center;padding:14px;background:#fff;border:1px solid #eadbcf;border-radius:var(--radius);box-shadow:var(--shadow)}
 .logo{width:36px;height:36px;border-radius:10px;background:linear-gradient(135deg,var(--brown),#2a1714);color:#fff;display:grid;place-items:center;font-weight:900}
@@ -21,10 +20,8 @@ h1{margin:0;font-size:18px;color:var(--brown)}
 input,select,textarea{padding:10px 12px;border:1px solid #eadbcf;border-radius:10px;background:#fff}
 button{border:1px solid #eadbcf;background:#fff;padding:10px 14px;border-radius:12px;cursor:pointer;font-weight:800}
 button.primary{background:var(--brown);border-color:var(--brown);color:#fff}
-.muted{color:var(--muted)}
-.grid{display:grid;gap:16px}
-@media(min-width:900px){ .grid-2{grid-template-columns:1fr 1fr} }
-.small{font-size:13px}
+.small{font-size:13px}.muted{color:var(--muted)}
+.grid{display:grid;gap:16px} @media(min-width:900px){ .grid-2{grid-template-columns:1fr 1fr} }
 label{font-weight:800}
 </style>
 </head>
@@ -48,7 +45,7 @@ label{font-weight:800}
       <input id="password" type="password" placeholder="كلمة المرور" />
       <button class="primary" id="btnLogin">دخول</button>
     </div>
-    <div class="muted small">يجب أن يكون للمستخدم claim: role=sales أو admin</div>
+    <div class="muted small">لازم المستخدم يكون له claim: role=sales أو admin</div>
   </div>
 
   <!-- لوحة التحكم بعد الدخول -->
@@ -94,7 +91,7 @@ label{font-weight:800}
 
         <div class="row">
           <div style="flex:1">
-            <label>العميل</label>
+            <label>اسم العميل</label>
             <input id="custName" placeholder="الاسم"/>
           </div>
           <div style="flex:1">
@@ -102,7 +99,7 @@ label{font-weight:800}
             <input id="custPhone" placeholder="+9665..."/>
           </div>
           <div style="flex:1">
-            <label>البريد</label>
+            <label>البريد الإلكتروني</label>
             <input id="custEmail" placeholder="example@email.com"/>
           </div>
         </div>
@@ -129,9 +126,9 @@ label{font-weight:800}
       <div class="card">
         <div class="small muted" style="margin-bottom:8px">تلميحات سريعة</div>
         <ul class="small muted" style="margin-top:0">
-          <li>من (3) إلى (8) تُدار بواسطة فريق المبيعات.</li>
-          <li>العميل يرى الحالة من `track.html` فقط عبر Cloud Function.</li>
-          <li>لازم يكون للمستخدم claim دور صالح للكتابة.</li>
+          <li>المراحل من (3) إلى (8) مسؤولية فريق المبيعات.</li>
+          <li>العميل يشاهد الحالة من track.html عبر Cloud Function.</li>
+          <li>حدّث الملاحظات بما تم (إرسال البطاقة/سداد الرسوم...)</li>
         </ul>
       </div>
     </div>
@@ -139,20 +136,19 @@ label{font-weight:800}
 </div>
 
 <script>
-// ===== 1) Firebase Init (بدّل القيم) =====
+// ****** Firebase Config — من عندك ******
 const firebaseConfig = {
-  apiKey: "YOUR_KEY",
-  authDomain: "YOUR_PROJECT.firebaseapp.com",
-  projectId: "YOUR_PROJECT",
-  storageBucket: "YOUR_PROJECT.appspot.com",
-  messagingSenderId: "SENDER",
-  appId: "APP_ID"
+  apiKey: "AIzaSyCorGtT5_Z68jCtLODvqnv0Fb7QW5eR6MQ",
+  authDomain: "mzj-tracking.firebaseapp.com",
+  projectId: "mzj-tracking",
+  // storageBucket غير مطلوب هنا
+  messagingSenderId: "655452217491"
 };
 firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db = firebase.firestore();
 
-// ===== 2) مراحل التراكينج =====
+// مراحل التراكينج
 const STAGES = [
   {k:'ORDER_CREATED',      t:'1) تم إنشاء الطلب (رقم الطلب مهم)'},
   {k:'PAYMENT_ORDER',      t:'2) أمر الدفع (تحويل/شبكة/كاش)'},
@@ -166,39 +162,25 @@ const STAGES = [
   {k:'DELIVERED',          t:'10) إتمام عملية التسليم بنجاح'}
 ];
 const statusSel = document.getElementById('status');
-STAGES.forEach(s=>{
-  const o = document.createElement('option');
-  o.value = s.k; o.textContent = s.t; statusSel.appendChild(o);
-});
+STAGES.forEach(s=>{ const o=document.createElement('option'); o.value=s.k; o.textContent=s.t; statusSel.appendChild(o); });
 
-// ===== 3) عناصر =====
+// عناصر عامة
 const loginCard = document.getElementById('loginCard');
 const app = document.getElementById('app');
 const who = document.getElementById('who');
-
 document.getElementById('btnLogin').addEventListener('click', async ()=>{
-  const email = (document.getElementById('email') as HTMLInputElement).value.trim();
-  const password = (document.getElementById('password') as HTMLInputElement).value;
-  try{
-    await auth.signInWithEmailAndPassword(email, password);
-  }catch(e){ alert('فشل تسجيل الدخول'); console.error(e); }
+  const email = document.getElementById('email').value.trim();
+  const password = document.getElementById('password').value;
+  try{ await auth.signInWithEmailAndPassword(email, password); }
+  catch(e){ alert('فشل تسجيل الدخول'); console.error(e); }
 });
-
 document.getElementById('btnLogout').addEventListener('click', ()=>auth.signOut());
-
-auth.onAuthStateChanged(async (u)=>{
-  if(u){
-    who.textContent = `مسجّل: ${u.email||u.uid}`;
-    loginCard.style.display = 'none';
-    app.style.display = 'block';
-  }else{
-    who.textContent = '';
-    loginCard.style.display = 'block';
-    app.style.display = 'none';
-  }
+auth.onAuthStateChanged((u)=>{
+  if(u){ who.textContent = `مسجّل: ${u.email||u.uid}`; loginCard.style.display='none'; app.style.display='block'; }
+  else { who.textContent = ''; loginCard.style.display='block'; app.style.display='none'; }
 });
 
-// ===== 4) تحميل/إنشاء/حفظ =====
+// تحميل/إنشاء/حفظ
 const msg = document.getElementById('statusMsg');
 const f = {
   orderNumber: document.getElementById('orderNumber'),
@@ -211,21 +193,16 @@ const f = {
   veh: document.getElementById('veh'),
   notes: document.getElementById('notes'),
 };
-
 document.getElementById('btnLoad').addEventListener('click', async ()=>{
-  const num = (document.getElementById('orderSearch') as HTMLInputElement).value.trim();
+  const num = document.getElementById('orderSearch').value.trim();
   if(!num){ msg.textContent='أدخل رقم الطلب'; return; }
   try{
     const snap = await db.collection('orders').doc(num).get();
     if(!snap.exists){ msg.textContent='لم يتم العثور على الطلب'; return; }
-    const d = snap.data()!;
-    fillForm(d);
-    msg.textContent = 'تم التحميل';
+    fillForm(snap.data()); msg.textContent='تم التحميل';
   }catch(e){ console.error(e); msg.textContent='خطأ في التحميل'; }
 });
-
 document.getElementById('btnNew').addEventListener('click', ()=>{
-  // تهيئة نموذج فارغ
   fillForm({
     orderNumber: 'ORD-' + new Date().getFullYear() + '-' + Math.floor(Math.random()*1000).toString().padStart(3,'0'),
     status: 'ORDER_CREATED',
@@ -234,49 +211,40 @@ document.getElementById('btnNew').addEventListener('click', ()=>{
     notes: '',
     customer: {name:'', phone:'', email:''},
     vehicle: null,
-    meta: {updatedAt: Date.now(), updatedBy: (auth.currentUser?.email||auth.currentUser?.uid)}
+    meta: {updatedAt: Date.now()}
   });
   msg.textContent = 'جاري إنشاء طلب جديد — عدّل ثم احفظ';
 });
-
 document.getElementById('btnSave').addEventListener('click', async ()=>{
-  const orderNumber = (f.orderNumber as HTMLInputElement).value.trim();
+  const orderNumber = f.orderNumber.value.trim();
   if(!orderNumber){ msg.textContent='رقم الطلب مطلوب'; return; }
-  const status = (f.status as HTMLSelectElement).value;
+  const status = f.status.value;
   const statusIndex = STAGES.findIndex(s=>s.k===status)+1;
-  const doc:any = {
+  const doc = {
     orderNumber,
     status, statusIndex,
-    paymentMethod: (f.paymentMethod as HTMLSelectElement).value || null,
-    notes: (f.notes as HTMLTextAreaElement).value || '',
-    customer: {
-      name: (f.custName as HTMLInputElement).value || '',
-      phone: (f.custPhone as HTMLInputElement).value || '',
-      email: (f.custEmail as HTMLInputElement).value || ''
-    },
-    vehicle: (f.veh as HTMLInputElement).value ? { title: (f.veh as HTMLInputElement).value } : null,
-    meta: {
-      updatedAt: Date.now(),
-      updatedBy: auth.currentUser?.email || auth.currentUser?.uid
-    }
+    paymentMethod: f.paymentMethod.value || null,
+    notes: f.notes.value || '',
+    customer: { name: f.custName.value||'', phone: f.custPhone.value||'', email: f.custEmail.value||'' },
+    vehicle: f.veh.value ? { title: f.veh.value } : null,
+    meta: { updatedAt: Date.now(), updatedBy: auth.currentUser?.email || auth.currentUser?.uid }
   };
   try{
     await db.collection('orders').doc(orderNumber).set(doc, { merge:true });
-    (f.updatedAt as HTMLInputElement).value = new Date(doc.meta.updatedAt).toLocaleString('ar-SA');
+    f.updatedAt.value = new Date(doc.meta.updatedAt).toLocaleString('ar-SA');
     msg.textContent='تم الحفظ ✅';
   }catch(e){ console.error(e); msg.textContent='فشل الحفظ'; }
 });
-
-function fillForm(d:any){
-  (f.orderNumber as HTMLInputElement).value = d.orderNumber || '';
-  (f.status as HTMLSelectElement).value = d.status || 'ORDER_CREATED';
-  (f.paymentMethod as HTMLSelectElement).value = d.paymentMethod || '';
-  (f.updatedAt as HTMLInputElement).value = d.meta?.updatedAt ? new Date(d.meta.updatedAt).toLocaleString('ar-SA') : '';
-  (f.custName as HTMLInputElement).value = d.customer?.name || '';
-  (f.custPhone as HTMLInputElement).value = d.customer?.phone || '';
-  (f.custEmail as HTMLInputElement).value = d.customer?.email || '';
-  (f.veh as HTMLInputElement).value = d.vehicle?.title || '';
-  (f.notes as HTMLTextAreaElement).value = d.notes || '';
+function fillForm(d){
+  f.orderNumber.value = d.orderNumber||'';
+  f.status.value = d.status||'ORDER_CREATED';
+  f.paymentMethod.value = d.paymentMethod||'';
+  f.updatedAt.value = d.meta?.updatedAt ? new Date(d.meta.updatedAt).toLocaleString('ar-SA') : '';
+  f.custName.value = d.customer?.name||'';
+  f.custPhone.value = d.customer?.phone||'';
+  f.custEmail.value = d.customer?.email||'';
+  f.veh.value = d.vehicle?.title||'';
+  f.notes.value = d.notes||'';
 }
 </script>
 </body>
