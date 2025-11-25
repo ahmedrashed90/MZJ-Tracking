@@ -1,60 +1,120 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>MZJ — تتبّع طلبك</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>MZJ — تتبع الطلب</title>
   <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;700;800&display=swap" rel="stylesheet">
   <style>
-    :root{ --brown:#3e2420; --beige:#bc8f74; --cream:#fff8ef; --text:#1f2937; --muted:#6b7280; --radius:14px; --ok:#0e7a48 }
+    :root{
+      --brown:#3e2420;
+      --beige:#bc8f74;
+      --cream:#fff8ef;
+      --ok:#0e7a48;
+      --muted:#6b7280;
+    }
     *{box-sizing:border-box}
-    body{margin:0;background:var(--cream);color:var(--text);font-family:"Tajawal",system-ui,Arial}
-    .wrap{max-width:900px;margin:32px auto;padding:16px}
-    .head{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
-    .brand{color:var(--brown);font-weight:800}
-    .card{background:#fff;border-radius:var(--radius);box-shadow:0 8px 30px rgba(62,36,32,.08);padding:18px;margin-bottom:16px}
-    label{font-weight:800;color:var(--brown);display:block;margin-bottom:6px}
-    input{width:100%;padding:12px 14px;border:1px solid #e8e2dc;border-radius:12px;background:#fff}
-    button{border:0;border-radius:12px;padding:12px 16px;font-weight:800;cursor:pointer}
-    .btn{background:var(--brown);color:#fff}
-    .muted{color:var(--muted)}
-    .progress{height:10px;background:#f0e6de;border-radius:999px;overflow:hidden;margin:12px 0}
-    .bar{height:100%;background:var(--beige);width:0%}
-    .timeline{list-style:none;margin:0;padding:0}
-    .timeline li{display:flex;gap:12px;align-items:flex-start;padding:10px 0;border-bottom:1px dashed #efdfd4}
-    .dot{width:14px;height:14px;border-radius:50%;margin-top:4px}
+    body{
+      font-family:"Tajawal",system-ui;
+      background:var(--cream);
+      margin:0;
+      color:#1f2937;
+    }
+    .wrap{
+      max-width:800px;
+      margin:40px auto;
+      padding:16px;
+    }
+    .brand{
+      font-weight:800;
+      color:var(--brown);
+      margin-bottom:10px;
+    }
+    .card{
+      background:#fff;
+      border-radius:14px;
+      box-shadow:0 8px 30px rgba(62,36,32,.08);
+      padding:18px;
+      margin-bottom:20px;
+    }
+    label{font-weight:700;color:var(--brown);display:block;margin-bottom:6px}
+    input{
+      width:100%;
+      padding:12px 14px;
+      border-radius:12px;
+      border:1px solid #e5e7eb;
+      outline:none;
+    }
+    button{
+      background:var(--brown);
+      color:#fff;
+      border:0;
+      padding:12px 18px;
+      border-radius:12px;
+      font-weight:800;
+      cursor:pointer;
+      white-space:nowrap;
+    }
+    .row{
+      display:flex;
+      gap:8px;
+      align-items:center;
+    }
+    @media(max-width:640px){
+      .row{flex-direction:column;align-items:stretch}
+      button{width:100%}
+    }
+    #searchMsg{color:var(--muted);font-size:14px;margin-top:6px}
+    .timeline{list-style:none;padding:0;margin:0}
+    .timeline li{
+      display:flex;
+      gap:10px;
+      align-items:flex-start;
+      padding:8px 0;
+      border-bottom:1px dashed #eee;
+    }
+    .dot{
+      width:14px;
+      height:14px;
+      border-radius:50%;
+      margin-top:4px;
+    }
     .done{background:var(--ok)}
     .current{background:var(--beige)}
-    .next{background:#ddd}
-    .stage-title{font-weight:800;color:var(--brown)}
+    .next{background:#ccc}
+    .stage-title{font-weight:700;color:var(--brown)}
     .ts{font-size:13px;color:var(--muted)}
-    .statusline{display:flex;gap:8px;align-items:center}
-    .badge{display:inline-block;background:var(--beige);color:#fff;padding:4px 8px;border-radius:999px;font-size:12px}
+    .badge{
+      display:inline-block;
+      background:var(--beige);
+      color:#fff;
+      padding:4px 8px;
+      border-radius:999px;
+      font-size:12px;
+      margin-right:4px;
+    }
   </style>
 </head>
 <body>
   <div class="wrap">
-    <div class="head">
-      <div class="brand">MZJ — تتبّع الطلب</div>
-    </div>
+    <div class="brand">مع محمد بن ذعار العجمي للسيارات… أنت نجم الطريق ✨</div>
 
     <div class="card">
       <label>أدخل رقم الطلب</label>
-      <div style="display:flex;gap:8px">
-        <input id="orderIdInput" placeholder="مثال: MZJ-2025-0001" />
-        <button id="trackBtn" class="btn">تتبّع</button>
+      <div class="row">
+        <input id="orderIdInput" placeholder="مثال: MZJ-2025-0001">
+        <button id="trackBtn">تتبّع الطلب</button>
       </div>
-      <div id="searchMsg" class="muted" style="margin-top:6px"></div>
+      <p id="searchMsg"></p>
     </div>
 
     <div class="card" id="resultCard" style="display:none">
-      <div class="statusline">
-        <strong>حالة الطلب:</strong>
-        <span id="statusBadge" class="badge">—</span>
-      </div>
-      <div class="progress"><div id="bar" class="bar"></div></div>
+      <p>
+        <span class="badge">حالة الطلب</span>
+        <strong id="stageNow"></strong>
+      </p>
       <ul id="timeline" class="timeline"></ul>
-      <div id="updatedAt" class="muted" style="margin-top:8px"></div>
+      <p id="updatedAt" class="ts" style="margin-top:8px"></p>
     </div>
   </div>
 
@@ -62,39 +122,39 @@
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
     import { getFirestore, doc, getDoc, Timestamp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
 
-    // نفس المشروع (يمكنك عمل مشروع منفصل للقراءة فقط إن رغبت)
+    // نفس إعدادات مشروعك mzj-tracking
     const firebaseConfig = {
       apiKey: "AIzaSyCorGtT5_Z68jCtLODvqnv0Fb7QW5eR6MQ",
       authDomain: "mzj-tracking.firebaseapp.com",
       projectId: "mzj-tracking",
-      storageBucket: "mzj-tracking.firebasestorage.app",
+      storageBucket: "mzj-tracking.appspot.com",
       messagingSenderId: "655452217491",
-      appId: "1:655452217491:web:9348d172c47bdd411fad66"
+      appId: "1:655452217491:web:9348d172c47bdd411fad66",
+      measurementId: "G-QT7KTRWS4J"
     };
 
     const app = initializeApp(firebaseConfig);
-    const db = getFirestore(app);
+    const db  = getFirestore(app);
 
     const STAGES = [
       "1) إنشاء الطلب",
-      "2) أمر الدفع (تحويل/شبكة/كاش)",
-      "3) تواصل خدمة العملاء + إرسال البطاقة الجمركية",
+      "2) أمر الدفع",
+      "3) تواصل خدمة العملاء وإرسال البطاقة الجمركية",
       "4) سداد الرسوم",
-      "5) التأمين (ربط على سيستم المملكة)",
+      "5) التأمين (الربط على سيستم المملكة)",
       "6) استيفاء الأوراق والمبالغ",
       "7) تجيير البطاقة الجمركية",
       "8) إصدار اللوحات أو نقل الملكية",
-      "9) جاهزية السيارة للاستلام/طلب الشحن",
-      "10) إتمام التسليم بنجاح"
+      "9) جاهزية السيارة للاستلام أو الشحن",
+      "10) إتمام عملية التسليم"
     ];
 
-    const orderIdInput = document.getElementById("orderIdInput");
-    const trackBtn = document.getElementById("trackBtn");
-    const searchMsg = document.getElementById("searchMsg");
-    const resultCard = document.getElementById("resultCard");
-    const statusBadge = document.getElementById("statusBadge");
-    const bar = document.getElementById("bar");
-    const timeline = document.getElementById("timeline");
+    const input     = document.getElementById("orderIdInput");
+    const btn       = document.getElementById("trackBtn");
+    const msg       = document.getElementById("searchMsg");
+    const card      = document.getElementById("resultCard");
+    const stageNow  = document.getElementById("stageNow");
+    const timeline  = document.getElementById("timeline");
     const updatedAt = document.getElementById("updatedAt");
 
     function fmtTS(v){
@@ -103,59 +163,66 @@
       return new Date(d).toLocaleString();
     }
 
-    function render(orderData){
-      resultCard.style.display = "";
+    function render(data){
+      card.style.display = "";
       timeline.innerHTML = "";
-      const current = orderData.currentStage || 1;
 
-      // progress
-      const pct = Math.min(100, Math.round((current - 1) / (STAGES.length - 1) * 100));
-      bar.style.width = pct + "%";
-      statusBadge.textContent = `المرحلة ${current} من ${STAGES.length}`;
+      const current = data.currentStage || 1;
+      stageNow.textContent = `المرحلة ${current} من ${STAGES.length}`;
+      updatedAt.textContent = data.updatedAt ? ("آخر تحديث: " + fmtTS(data.updatedAt)) : "";
 
-      // timeline
       STAGES.forEach((label, idx) => {
         const key = "s" + (idx + 1);
         const done = (idx + 1) < current;
         const isCurrent = (idx + 1) === current;
-        const ts = orderData.stages?.[key] ? fmtTS(orderData.stages[key]) : null;
+        const ts = data.stages && data.stages[key] ? fmtTS(data.stages[key]) : null;
 
-        const li = document.createElement("li");
+        const li  = document.createElement("li");
         const dot = document.createElement("div");
         dot.className = "dot " + (done ? "done" : isCurrent ? "current" : "next");
-        const ct = document.createElement("div");
-        ct.innerHTML = `<div class="stage-title">${label}</div><div class="ts">${ts ? "مختومة: " + ts : (isCurrent ? "جارية الآن" : "قادمة")}</div>`;
+
+        const ct  = document.createElement("div");
+        ct.innerHTML = `
+          <div class="stage-title">${label}</div>
+          <div class="ts">${ts ? "مختومة: " + ts : (isCurrent ? "جارية الآن" : "قادمة")}</div>
+        `;
+
         li.appendChild(dot);
         li.appendChild(ct);
         timeline.appendChild(li);
       });
-
-      updatedAt.textContent = orderData.updatedAt ? ("آخر تحديث: " + fmtTS(orderData.updatedAt)) : "";
     }
 
-    async function fetchStatus() {
-      searchMsg.textContent = "";
-      const id = orderIdInput.value.trim();
-      if (!id) { searchMsg.textContent = "أدخل رقم الطلب."; return; }
-      const ref = doc(db, "orders", id, "public", "status");
-      const snap = await getDoc(ref);
-      if (!snap.exists()) {
-        resultCard.style.display = "none";
-        searchMsg.textContent = "لم يتم العثور على حالة لهذا الرقم. تأكد من صحة الرقم أو تواصل مع الدعم.";
+    async function fetchStatus(){
+      msg.textContent = "";
+      const id = input.value.trim();
+      if (!id){
+        msg.textContent = "من فضلك اكتب رقم الطلب.";
+        card.style.display = "none";
         return;
       }
+
+      const ref  = doc(db, "orders", id, "public", "status");
+      const snap = await getDoc(ref);
+
+      if (!snap.exists()){
+        card.style.display = "none";
+        msg.textContent = "لايوجد طلب بالرقم هذا. تأكد من الرقم أو تواصل مع خدمة العملاء.";
+        return;
+      }
+
       render(snap.data());
     }
 
-    trackBtn.onclick = fetchStatus;
+    btn.addEventListener("click", fetchStatus);
 
-    // دعم رابط مباشر مثل: /track.html?order=MZJ-2025-0001
+    // دعم رابط مباشر: track.html?order=MZJ-2025-0001
     const params = new URLSearchParams(location.search);
-    if (params.get("order")) {
-      orderIdInput.value = params.get("order");
+    const qOrder = params.get("order");
+    if (qOrder){
+      input.value = qOrder;
       fetchStatus();
     }
   </script>
 </body>
 </html>
-
