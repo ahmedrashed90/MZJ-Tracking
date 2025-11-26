@@ -12,6 +12,7 @@
       --cream:#fff8ef;
       --ok:#0e7a48;
       --muted:#6b7280;
+      --grey:#d1d5db;
     }
     *{box-sizing:border-box}
     body{
@@ -65,6 +66,37 @@
       button{width:100%}
     }
     #searchMsg{color:var(--muted);font-size:14px;margin-top:6px}
+
+    /* شريط التقدم */
+    .progress-wrap{
+      margin-bottom:16px;
+    }
+    .progress-label{
+      font-size:14px;
+      color:var(--muted);
+      margin-bottom:6px;
+    }
+    .progress-bar-bg{
+      width:100%;
+      height:10px;
+      border-radius:999px;
+      background:#f3f4f6;
+      overflow:hidden;
+      position:relative;
+    }
+    .progress-bar-fill{
+      height:100%;
+      width:0;
+      background:var(--ok);
+      border-radius:999px;
+      transition:width .25s ease-out;
+    }
+    .progress-percent{
+      font-size:13px;
+      color:var(--brown);
+      margin-top:4px;
+    }
+
     .timeline{list-style:none;padding:0;margin:0}
     .timeline li{
       display:flex;
@@ -74,16 +106,30 @@
       border-bottom:1px dashed #eee;
     }
     .dot{
-      width:14px;
-      height:14px;
+      width:18px;
+      height:18px;
       border-radius:50%;
       margin-top:4px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      font-size:11px;
+      color:#fff;
+      flex-shrink:0;
     }
-    .done{background:var(--ok)}
-    .current{background:var(--beige)}
-    .next{background:#ccc}
-    .stage-title{font-weight:700;color:var(--brown)}
-    .ts{font-size:13px;color:var(--muted)}
+    .dot.done{background:var(--ok);}
+    .dot.current{background:var(--beige);}
+    .dot.next{background:var(--grey);}
+
+    .stage-title{
+      font-weight:700;
+      color:var(--brown);
+      margin-bottom:2px;
+    }
+    .ts{
+      font-size:13px;
+      color:var(--muted);
+    }
     .badge{
       display:inline-block;
       background:var(--beige);
@@ -113,6 +159,18 @@
         <span class="badge">حالة الطلب</span>
         <strong id="stageNow"></strong>
       </p>
+
+      <!-- شريط التقدم -->
+      <div class="progress-wrap">
+        <div class="progress-label">تقدّم الطلب</div>
+        <div class="progress-bar-bg">
+          <div id="progressFill" class="progress-bar-fill"></div>
+        </div>
+        <div class="progress-percent">
+          مكتمل بنسبة <span id="progressPercent">0</span>%
+        </div>
+      </div>
+
       <ul id="timeline" class="timeline"></ul>
       <p id="updatedAt" class="ts" style="margin-top:8px"></p>
     </div>
@@ -122,7 +180,7 @@
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
     import { getFirestore, doc, getDoc, Timestamp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
 
-    // نفس إعدادات مشروعك mzj-tracking
+    // إعدادات مشروعك mzj-tracking
     const firebaseConfig = {
       apiKey: "AIzaSyCorGtT5_Z68jCtLODvqnv0Fb7QW5eR6MQ",
       authDomain: "mzj-tracking.firebaseapp.com",
@@ -136,12 +194,13 @@
     const app = initializeApp(firebaseConfig);
     const db  = getFirestore(app);
 
+    // تعديل نصوص المراحل حسب طلبك
     const STAGES = [
       "1) إنشاء الطلب",
       "2) أمر الدفع",
       "3) تواصل خدمة العملاء وإرسال البطاقة الجمركية",
-      "4) سداد الرسوم",
-      "5) التأمين (الربط على سيستم المملكة)",
+      "4) سداد رسوم التسجيل",
+      "5) التأمين (شرط الربط على السيستم)",
       "6) استيفاء الأوراق والمبالغ",
       "7) تجيير البطاقة الجمركية",
       "8) إصدار اللوحات أو نقل الملكية",
@@ -149,18 +208,20 @@
       "10) إتمام عملية التسليم"
     ];
 
-    const input     = document.getElementById("orderIdInput");
-    const btn       = document.getElementById("trackBtn");
-    const msg       = document.getElementById("searchMsg");
-    const card      = document.getElementById("resultCard");
-    const stageNow  = document.getElementById("stageNow");
-    const timeline  = document.getElementById("timeline");
-    const updatedAt = document.getElementById("updatedAt");
+    const input      = document.getElementById("orderIdInput");
+    const btn        = document.getElementById("trackBtn");
+    const msg        = document.getElementById("searchMsg");
+    const card       = document.getElementById("resultCard");
+    const stageNow   = document.getElementById("stageNow");
+    const timeline   = document.getElementById("timeline");
+    const updatedAt  = document.getElementById("updatedAt");
+    const progressFill    = document.getElementById("progressFill");
+    const progressPercent = document.getElementById("progressPercent");
 
     function fmtTS(v){
       if (!v) return null;
       const d = v instanceof Timestamp ? v.toDate() : (v.toDate ? v.toDate() : new Date(v));
-      return new Date(d).toLocaleString();
+      return new Date(d).toLocaleString("ar-SA");
     }
 
     function render(data){
@@ -168,23 +229,58 @@
       timeline.innerHTML = "";
 
       const current = data.currentStage || 1;
-      stageNow.textContent = `المرحلة ${current} من ${STAGES.length}`;
+      const total   = STAGES.length;
+      const safeCurrent = Math.min(Math.max(current,1), total);
+
+      // نص الحالة أعلى
+      stageNow.textContent = `المرحلة ${safeCurrent} من ${total}`;
+
+      // شريط التقدم
+      const percent = Math.round((safeCurrent / total) * 100);
+      progressFill.style.width = percent + "%";
+      progressPercent.textContent = percent;
+
       updatedAt.textContent = data.updatedAt ? ("آخر تحديث: " + fmtTS(data.updatedAt)) : "";
 
       STAGES.forEach((label, idx) => {
-        const key = "s" + (idx + 1);
-        const done = (idx + 1) < current;
-        const isCurrent = (idx + 1) === current;
+        const stageNumber = idx + 1;
+        const key = "s" + stageNumber;
         const ts = data.stages && data.stages[key] ? fmtTS(data.stages[key]) : null;
+
+        const done = stageNumber < safeCurrent;        // المراحل اللي فاتت
+        const isCurrent = stageNumber === safeCurrent; // المرحلة الحالية
+        const upcoming = stageNumber > safeCurrent;    // اللي جاية
 
         const li  = document.createElement("li");
         const dot = document.createElement("div");
-        dot.className = "dot " + (done ? "done" : isCurrent ? "current" : "next");
+        dot.classList.add("dot");
+
+        if (done){
+          dot.classList.add("done");
+          dot.textContent = "✔";
+        } else if (isCurrent){
+          dot.classList.add("current");
+          dot.textContent = "●";
+        } else {
+          dot.classList.add("next");
+          dot.textContent = "";
+        }
 
         const ct  = document.createElement("div");
+
+        let statusText = "";
+        if (ts){
+          // هنا غيرنا "مختومة" إلى "تم الانتهاء"
+          statusText = "تم الانتهاء: " + ts;
+        } else if (isCurrent){
+          statusText = "قيد التنفيذ الآن";
+        } else if (upcoming){
+          statusText = "لم تبدأ بعد";
+        }
+
         ct.innerHTML = `
           <div class="stage-title">${label}</div>
-          <div class="ts">${ts ? "مختومة: " + ts : (isCurrent ? "جارية الآن" : "قادمة")}</div>
+          <div class="ts">${statusText}</div>
         `;
 
         li.appendChild(dot);
@@ -207,7 +303,7 @@
 
       if (!snap.exists()){
         card.style.display = "none";
-        msg.textContent = "لايوجد طلب بالرقم هذا. تأكد من الرقم أو تواصل مع خدمة العملاء.";
+        msg.textContent = "لايوجد طلب بهذا الرقم. تأكد من الرقم أو تواصل مع خدمة العملاء.";
         return;
       }
 
@@ -215,6 +311,9 @@
     }
 
     btn.addEventListener("click", fetchStatus);
+    input.addEventListener("keydown", e => {
+      if (e.key === "Enter") fetchStatus();
+    });
 
     // دعم رابط مباشر: track.html?order=MZJ-2025-0001
     const params = new URLSearchParams(location.search);
