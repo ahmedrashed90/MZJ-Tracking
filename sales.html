@@ -17,6 +17,7 @@
     .col-6{grid-column:span 6}
     .col-4{grid-column:span 4}
     .col-3{grid-column:span 3}
+    .col-2{grid-column:span 2}
     .col-12{grid-column:span 12}
     label{font-weight:700;color:var(--brown);display:block;margin-bottom:6px}
     input,select,textarea{width:100%;padding:12px 14px;border:1px solid #e8e2dc;border-radius:12px;background:#fff}
@@ -34,7 +35,15 @@
     .ok{color:#0e7a48;font-weight:700}
     .err{color:#b00020;font-weight:700}
     .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-    @media (max-width:900px){ .row{grid-template-columns:1fr} .col-6,.col-4,.col-3,.col-12{grid-column:span 1} .grid-2{grid-template-columns:1fr} }
+    .pill{display:inline-block;padding:2px 8px;border-radius:999px;background:#f3f4ff;color:#1d4ed8;font-size:12px}
+    .pill-green{background:#ecfdf5;color:#047857}
+    .items-list{margin:0;padding-right:18px;font-size:14px}
+    .items-list li{margin-bottom:4px}
+    @media (max-width:900px){
+      .row{grid-template-columns:1fr}
+      .col-6,.col-4,.col-3,.col-2,.col-12{grid-column:span 1}
+      .grid-2{grid-template-columns:1fr}
+    }
   </style>
 </head>
 <body>
@@ -74,7 +83,7 @@
       <div class="row">
         <div class="col-3">
           <label>رقم الطلب (مهم جدًا)</label>
-          <input id="orderId" placeholder="مثال: MZJ-2025-0001" />
+          <input id="orderId" placeholder="مثال: 18790" />
         </div>
         <div class="col-3">
           <label>اسم العميل</label>
@@ -104,6 +113,57 @@
       </div>
     </div>
 
+    <!-- WooCommerce Order Details -->
+    <div class="card" id="wooDetailsCard" style="display:none">
+      <h3 class="title">تفاصيل الطلب من المتجر (WooCommerce)</h3>
+      <div class="row">
+        <div class="col-3">
+          <label>رقم الطلب في المتجر</label>
+          <input id="wooOrderNumber" readonly />
+        </div>
+        <div class="col-3">
+          <label>حالة الطلب في المتجر</label>
+          <input id="wooStatus" readonly />
+        </div>
+        <div class="col-3">
+          <label>إجمالي الطلب</label>
+          <input id="wooTotal" readonly />
+        </div>
+        <div class="col-3">
+          <label>طريقة الدفع (المتجر)</label>
+          <input id="wooPaymentTitle" readonly />
+        </div>
+
+        <div class="col-3">
+          <label>اسم العميل (الفاتورة)</label>
+          <input id="wooBillingName" readonly />
+        </div>
+        <div class="col-3">
+          <label>جوال العميل (الفاتورة)</label>
+          <input id="wooBillingPhone" readonly />
+        </div>
+        <div class="col-3">
+          <label>البريد الإلكتروني</label>
+          <input id="wooBillingEmail" readonly />
+        </div>
+        <div class="col-3">
+          <label>المدينة / الدولة</label>
+          <input id="wooBillingCityCountry" readonly />
+        </div>
+
+        <div class="col-12">
+          <label>عنوان الفاتورة</label>
+          <input id="wooBillingAddress" readonly />
+        </div>
+
+        <div class="col-12">
+          <label>المنتجات في الطلب</label>
+          <ul id="wooItemsList" class="items-list"></ul>
+        </div>
+      </div>
+      <div class="hint">هذه التفاصيل تُجلب مباشرةً من طلب WooCommerce عن طريق Webhook.</div>
+    </div>
+
     <!-- Stages -->
     <div class="card" id="stagesCard" style="display:none">
       <h3 class="title">مراحل التتبع</h3>
@@ -125,7 +185,6 @@
 
   <script type="module">
     // ===== Firebase CDN (v11) =====
-    // بدّل القيم أدناه بقيم مشروعك من Firebase Console
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
     import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-auth.js";
     import { getFirestore, doc, getDoc, setDoc, updateDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
@@ -169,6 +228,19 @@
     const saveStageBtn = document.getElementById("saveStageBtn");
     const stageMsg = document.getElementById("stageMsg");
 
+    // Woo details elements
+    const wooDetailsCard      = document.getElementById("wooDetailsCard");
+    const wooOrderNumberEl    = document.getElementById("wooOrderNumber");
+    const wooStatusEl         = document.getElementById("wooStatus");
+    const wooTotalEl          = document.getElementById("wooTotal");
+    const wooPaymentTitleEl   = document.getElementById("wooPaymentTitle");
+    const wooBillingNameEl    = document.getElementById("wooBillingName");
+    const wooBillingPhoneEl   = document.getElementById("wooBillingPhone");
+    const wooBillingEmailEl   = document.getElementById("wooBillingEmail");
+    const wooBillingCityCountryEl = document.getElementById("wooBillingCityCountry");
+    const wooBillingAddressEl = document.getElementById("wooBillingAddress");
+    const wooItemsListEl      = document.getElementById("wooItemsList");
+
     const STAGES = [
       "1) إنشاء الطلب",
       "2) أمر الدفع (تحويل/شبكة/كاش)",
@@ -189,13 +261,20 @@
 
       STAGES.forEach((label, idx) => {
         const key = "s" + (idx + 1);
-        const ts = data?.stages?.[key] ? new Date(data.stages[key].toDate ? data.stages[key].toDate() : data.stages[key]).toLocaleString() : null;
+        const ts = data?.stages?.[key]
+          ? new Date(
+              data.stages[key].toDate
+                ? data.stages[key].toDate()
+                : data.stages[key]
+            ).toLocaleString("ar-SA")
+          : null;
 
         const item = document.createElement("div");
         item.className = "stage";
         item.innerHTML = `
           <div>
-            <strong>${label}</strong><div class="muted">${ts ? "مختومة في: " + ts : "غير مختومة"}</div>
+            <strong>${label}</strong>
+            <div class="muted">${ts ? "مختومة في: " + ts : "غير مختومة"}</div>
           </div>
           <div>
             <button class="btn-outline" data-key="${key}">ختم الآن</button>
@@ -203,14 +282,62 @@
         `;
         stagesList.appendChild(item);
 
-        // current stage options
         const opt = document.createElement("option");
-        opt.value = (idx + 1);
+        opt.value = idx + 1;
         opt.textContent = label;
         currentStageSelect.appendChild(opt);
       });
 
       if (data?.currentStage) currentStageSelect.value = data.currentStage;
+    }
+
+    // تعبئة تفاصيل WooCommerce
+    function fillWooDetails(data) {
+      if (!data || !data.wooOrderNumber) {
+        wooDetailsCard.style.display = "none";
+        wooItemsListEl.innerHTML = "";
+        return;
+      }
+      wooDetailsCard.style.display = "";
+
+      wooOrderNumberEl.value  = data.wooOrderNumber || data.orderId || "";
+      wooStatusEl.value       = data.wooStatus || "";
+      wooTotalEl.value        = data.orderTotal
+        ? `${data.orderTotal} ${data.orderCurrency || ""}`
+        : "";
+      wooPaymentTitleEl.value = data.paymentMethodTitle || data.wooPaymentTitle || "";
+
+      const billingName = data.customerName || "";
+      const billingPhone = data.customerPhone || "";
+      const billingEmail = data.customerEmail || "";
+      const cityCountry = [
+        data.billingCity || "",
+        data.billingCountry || "",
+      ].filter(Boolean).join(" / ");
+      const address = [
+        data.billingAddress1 || "",
+        data.billingPostcode || "",
+      ]
+        .filter(Boolean)
+        .join(" - ");
+
+      wooBillingNameEl.value        = billingName;
+      wooBillingPhoneEl.value       = billingPhone;
+      wooBillingEmailEl.value       = billingEmail;
+      wooBillingCityCountryEl.value = cityCountry;
+      wooBillingAddressEl.value     = address;
+
+      const items = data.lineItems || (data.wooDetails && data.wooDetails.items) || [];
+      wooItemsListEl.innerHTML = "";
+      if (!items.length) {
+        wooItemsListEl.innerHTML = "<li class='muted'>لا توجد منتجات مسجلة في هذا الطلب.</li>";
+      } else {
+        items.forEach((it) => {
+          const li = document.createElement("li");
+          li.textContent = `${it.name || ""} — عدد: ${it.quantity || 1} — إجمالي: ${it.total || ""}`;
+          wooItemsListEl.appendChild(li);
+        });
+      }
     }
 
     // Auth state
@@ -225,6 +352,7 @@
         authCard.style.display = "";
         orderCard.style.display = "none";
         stagesCard.style.display = "none";
+        wooDetailsCard.style.display = "none";
         whoami.textContent = "";
         logoutBtn.style.display = "none";
       }
@@ -256,11 +384,15 @@
     async function loadOrder() {
       orderMsg.textContent = "";
       const id = orderId.value.trim();
-      if (!id) { orderMsg.innerHTML = `<span class="err">أدخل رقم الطلب.</span>`; return; }
+      if (!id) {
+        orderMsg.innerHTML = `<span class="err">أدخل رقم الطلب.</span>`;
+        return null;
+      }
       const ref = doc(db, "orders", id);
       const snap = await getDoc(ref);
       if (!snap.exists()) {
         buildStagesUI();
+        fillWooDetails(null);
         orderMsg.innerHTML = `<span class="err">الطلب غير موجود — يمكنك إنشاؤه.</span>`;
         return null;
       }
@@ -270,6 +402,7 @@
       paymentMethod.value = data.paymentMethod || "تحويل";
       notes.value = data.notes || "";
       buildStagesUI(data);
+      fillWooDetails(data);
       orderMsg.innerHTML = `<span class="ok">تم تحميل الطلب.</span>`;
       return data;
     }
@@ -293,16 +426,20 @@
         };
         await setDoc(doc(db, "orders", id), payload, { merge: true });
 
-        // sync public
-        await setDoc(doc(db, "orders", id, "public", "status"), {
-          orderId: id,
-          currentStage: 1,
-          stages: { s1: new Date() },
-          updatedAt: serverTimestamp()
-        }, { merge: true });
+        await setDoc(
+          doc(db, "orders", id, "public", "status"),
+          {
+            orderId: id,
+            currentStage: 1,
+            stages: { s1: new Date() },
+            updatedAt: serverTimestamp()
+          },
+          { merge: true }
+        );
 
         buildStagesUI(payload);
         currentStageSelect.value = 1;
+        fillWooDetails(null); // الطلب اليدوي مش جاي من Woo
         orderMsg.innerHTML = `<span class="ok">تم حفظ/إنشاء الطلب ومزامنته للعميل.</span>`;
       } catch (e) {
         orderMsg.innerHTML = `<span class="err">خطأ: ${e.message}</span>`;
@@ -314,17 +451,20 @@
       const btn = e.target.closest("button[data-key]");
       if (!btn) return;
       const id = orderId.value.trim();
-      if (!id) { stageMsg.innerHTML = `<span class="err">أدخل/حمّل رقم الطلب أولاً.</span>`; return; }
+      if (!id) {
+        stageMsg.innerHTML = `<span class="err">أدخل/حمّل رقم الطلب أولاً.</span>`;
+        return;
+      }
       const key = btn.getAttribute("data-key");
       try {
-        // update admin doc
         await updateDoc(doc(db, "orders", id), { [`stages.${key}`]: new Date() });
-
-        // update public doc
-        await updateDoc(doc(db, "orders", id, "public", "status"), { [`stages.${key}`]: new Date(), updatedAt: serverTimestamp() });
+        await updateDoc(doc(db, "orders", id, "public", "status"), {
+          [`stages.${key}`]: new Date(),
+          updatedAt: serverTimestamp()
+        });
 
         const data = await loadOrder();
-        buildStagesUI(data);
+        buildStagesUI(data || {});
         stageMsg.innerHTML = `<span class="ok">تم ختم ${key} بنجاح.</span>`;
       } catch (e2) {
         stageMsg.innerHTML = `<span class="err">خطأ: ${e2.message}</span>`;
@@ -335,18 +475,23 @@
     saveStageBtn.onclick = async () => {
       stageMsg.textContent = "";
       const id = orderId.value.trim();
-      if (!id) { stageMsg.innerHTML = `<span class="err">أدخل/حمّل رقم الطلب.</span>`; return; }
+      if (!id) {
+        stageMsg.innerHTML = `<span class="err">أدخل/حمّل رقم الطلب.</span>`;
+        return;
+      }
       const stNum = parseInt(currentStageSelect.value, 10);
-      if (!(stNum >= 1 && stNum <= 10)) { stageMsg.innerHTML = `<span class="err">قيمة مرحلة غير صحيحة.</span>`; return; }
+      if (!(stNum >= 1 && stNum <= 10)) {
+        stageMsg.innerHTML = `<span class="err">قيمة مرحلة غير صحيحة.</span>`;
+        return;
+      }
 
       try {
-        // admin
         await updateDoc(doc(db, "orders", id), { currentStage: stNum });
-        // public
-        await setDoc(doc(db, "orders", id, "public", "status"), {
-          currentStage: stNum,
-          updatedAt: serverTimestamp()
-        }, { merge: true });
+        await setDoc(
+          doc(db, "orders", id, "public", "status"),
+          { currentStage: stNum, updatedAt: serverTimestamp() },
+          { merge: true }
+        );
 
         stageMsg.innerHTML = `<span class="ok">تم تحديث المرحلة الحالية ومزامنتها.</span>`;
       } catch (e) {
@@ -354,10 +499,9 @@
       }
     };
 
-    // init empty UI
+    // init
     buildStagesUI();
+    fillWooDetails(null);
   </script>
 </body>
 </html>
-
-
