@@ -402,23 +402,23 @@
       try {
         const id = orderId.value.trim();
         if (!id) throw new Error("أدخل رقم الطلب");
-        const now = new Date();
         const payload = {
           orderId: id,
           customerName: customerName.value.trim(),
           customerPhone: customerPhone.value.trim(),
           paymentMethod: paymentMethod.value,
           notes: notes.value.trim(),
-          currentStage: 1,
-          stages: { } // أول مرة بدون ختم، تقدر تختم من الزرار
+          currentStage: 0,   // ولا مرحلة منتهية في البداية
+          stages: { }        // أول مرة بدون ختم، الختم من الزرار
         };
         await setDoc(doc(db, "orders", id), payload, { merge: true });
 
+        // doc الخاص بالعميل: المصدر اللي صفحة العميل بتقرأ منه
         await setDoc(
           doc(db, "orders", id, "public", "status"),
           {
             orderId: id,
-            currentStage: 0, // لسه ولا مرحلة منتهية
+            currentStage: 0,
             stages: {},
             updatedAt: serverTimestamp()
           },
@@ -434,9 +434,8 @@
     };
 
     // عند الضغط على "تم الانتهاء" لأي مرحلة:
-    // - نختم المرحلة (stages.sX = now)
-    // - currentStage = نفس رقم المرحلة (مافيش +1)
-    // - مزامنة document تبع العميل public/status بنفس الرقم
+    // - نختم المرحلة في doc الرئيسي
+    // - ونختم نفس المرحلة في doc تبع العميل public/status
     stagesList.addEventListener("click", async (e) => {
       const btn = e.target.closest("button[data-key]");
       if (!btn) return;
@@ -446,17 +445,19 @@
         return;
       }
 
-      const key = btn.getAttribute("data-key");
+      const key = btn.getAttribute("data-key");         // s1 / s2 / ...
       const stageNumber = parseInt(btn.getAttribute("data-stage"), 10) || 0;
 
       try {
         const now = new Date();
 
+        // تحديث doc الإدارة
         await updateDoc(doc(db, "orders", id), {
           [`stages.${key}`]: now,
           currentStage: stageNumber
         });
 
+        // تحديث doc العميل (المسار 2 اللي اخترته)
         await setDoc(
           doc(db, "orders", id, "public", "status"),
           {
