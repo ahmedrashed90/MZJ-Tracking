@@ -409,7 +409,7 @@
           paymentMethod: paymentMethod.value,
           notes: notes.value.trim(),
           currentStage: 0,   // ولا مرحلة منتهية في البداية
-          stages: { }        // أول مرة بدون ختم، الختم من الزرار
+          stages: { }        // الختم من زرار تم الانتهاء
         };
         await setDoc(doc(db, "orders", id), payload, { merge: true });
 
@@ -434,34 +434,42 @@
     };
 
     // عند الضغط على "تم الانتهاء" لأي مرحلة:
-    // - نختم المرحلة في doc الرئيسي
-    // - ونختم نفس المرحلة في doc تبع العميل public/status
+    // - نختم المرحلة في doc الإدارة
+    // - ونختم نفس المرحلة جوّه object stages في doc العميل public/status
     stagesList.addEventListener("click", async (e) => {
       const btn = e.target.closest("button[data-key]");
       if (!btn) return;
+
       const id = orderId.value.trim();
       if (!id) {
         stageMsg.innerHTML = `<span class="err">أدخل/حمّل رقم الطلب أولاً.</span>`;
         return;
       }
 
-      const key = btn.getAttribute("data-key");         // s1 / s2 / ...
+      const key = btn.getAttribute("data-key");              // s1 / s2 / ...
       const stageNumber = parseInt(btn.getAttribute("data-stage"), 10) || 0;
 
       try {
         const now = new Date();
 
-        // تحديث doc الإدارة
-        await updateDoc(doc(db, "orders", id), {
+        const adminRef  = doc(db, "orders", id);
+        const publicRef = doc(db, "orders", id, "public", "status");
+
+        // 1) تحديث doc الإدارة
+        await updateDoc(adminRef, {
           [`stages.${key}`]: now,
           currentStage: stageNumber
         });
 
-        // تحديث doc العميل (المسار 2 اللي اخترته)
+        // 2) نقرأ doc العميل، نحدّث object stages ثم نرجّعه
+        const publicSnap   = await getDoc(publicRef);
+        const existingData = publicSnap.exists() ? (publicSnap.data().stages || {}) : {};
+        existingData[key]  = now;
+
         await setDoc(
-          doc(db, "orders", id, "public", "status"),
+          publicRef,
           {
-            [`stages.${key}`]: now,
+            stages: existingData,
             currentStage: stageNumber,
             updatedAt: serverTimestamp()
           },
