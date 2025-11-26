@@ -229,37 +229,40 @@
       const stagesData = data.stages || {};
       const total      = STAGES.length;
 
-      // أعلى مرحلة منتهية (بناءً على وجود وقت في stages.sX)
-      let maxCompleted = 0;
+      // نحسب:
+      // 1) عدد المراحل المنتهية فعليًا (عليها Timestamp)
+      // 2) رقم آخر مرحلة منتهية (قد تكون 5 حتى لو 4 لسه)
+      let completedCount = 0;
+      let lastCompleted  = 0;
+
       for (let i = 1; i <= total; i++){
         const key = "s" + i;
-        if (stagesData[key]) maxCompleted = i;
+        if (stagesData[key]){
+          completedCount++;
+          lastCompleted = i;
+        }
       }
-
-      // لو مفيش ختم لكن في currentStage، نستخدمه كفاallback
-      const current = data.currentStage || 0;
-      if (maxCompleted === 0 && current > 0){
-        maxCompleted = current;
-      }
-
-      const safeCompleted = Math.min(Math.max(maxCompleted,0), total);
 
       // نص الحالة أعلى
-      if (safeCompleted === 0){
+      if (completedCount === 0){
         stageNow.textContent = "الطلب مسجَّل ولم تبدأ مراحله بعد.";
-      } else if (safeCompleted === total){
+      } else if (completedCount === total){
         stageNow.textContent = `اكتملت جميع المراحل (${total}/${total})`;
       } else {
-        stageNow.textContent = `تم الانتهاء من المرحلة ${safeCompleted} من ${total}`;
+        // مثال: "تم الانتهاء من 3 مراحل من 10 (آخر مرحلة منتهية: 5)"
+        stageNow.textContent =
+          `تم الانتهاء من ${completedCount} مرحلة من ${total}` +
+          (lastCompleted ? ` (آخر مرحلة منتهية: ${lastCompleted})` : "");
       }
 
-      // شريط التقدم
-      const percent = total === 0 ? 0 : Math.round((safeCompleted / total) * 100);
+      // شريط التقدم بناءً على عدد المراحل المنتهية فعليًا
+      const percent = total === 0 ? 0 : Math.round((completedCount / total) * 100);
       progressFill.style.width = percent + "%";
       progressPercent.textContent = percent;
 
       updatedAt.textContent = data.updatedAt ? ("آخر تحديث: " + fmtTS(data.updatedAt)) : "";
 
+      // كل مرحلة تتحدد لوحدها (فيه ختم؟ يبقى ✅، مفيش؟ يبقى لسه)
       STAGES.forEach((label, idx) => {
         const stageNumber = idx + 1;
         const key = "s" + stageNumber;
@@ -269,7 +272,7 @@
         const dot = document.createElement("div");
         dot.classList.add("dot");
 
-        if (stageNumber <= safeCompleted){
+        if (ts){
           dot.classList.add("done");
           dot.textContent = "✔";
         } else {
@@ -278,13 +281,7 @@
         }
 
         const ct  = document.createElement("div");
-        let statusText;
-
-        if (stageNumber <= safeCompleted){
-          statusText = ts ? (`تم الانتهاء: ${ts}`) : "تم الانتهاء";
-        } else {
-          statusText = "لم تبدأ بعد";
-        }
+        const statusText = ts ? (`تم الانتهاء: ${ts}`) : "لم تبدأ بعد";
 
         ct.innerHTML = `
           <div class="stage-title">${label}</div>
