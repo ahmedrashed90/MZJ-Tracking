@@ -37,7 +37,6 @@
     .err{color:#b00020;font-weight:700}
     .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
     .pill{display:inline-block;padding:2px 8px;border-radius:999px;background:#f3f4ff;color:#1d4ed8;font-size:12px}
-    .pill-green{background:#ecfdf5;color:#047857}
     .items-list{margin:0;padding-right:18px;font-size:14px}
     .items-list li{margin-bottom:4px}
     @media (max-width:900px){
@@ -410,8 +409,8 @@
           customerPhone: customerPhone.value.trim(),
           paymentMethod: paymentMethod.value,
           notes: notes.value.trim(),
-          currentStage: 2,     // أول ما يتنشئ نخلي currentStage=2 بحيث المرحلة 1 تعتبر منتهية في التتبع
-          stages: { s1: now }
+          currentStage: 1,
+          stages: { } // أول مرة بدون ختم، تقدر تختم من الزرار
         };
         await setDoc(doc(db, "orders", id), payload, { merge: true });
 
@@ -419,15 +418,15 @@
           doc(db, "orders", id, "public", "status"),
           {
             orderId: id,
-            currentStage: 2,
-            stages: { s1: now },
+            currentStage: 0, // لسه ولا مرحلة منتهية
+            stages: {},
             updatedAt: serverTimestamp()
           },
           { merge: true }
         );
 
         buildStagesUI(payload);
-        fillWooDetails(null); // الطلب اليدوي مش جاي من Woo
+        fillWooDetails(null);
         orderMsg.innerHTML = `<span class="ok">تم حفظ/إنشاء الطلب ومزامنته للعميل.</span>`;
       } catch (e) {
         orderMsg.innerHTML = `<span class="err">خطأ: ${e.message}</span>`;
@@ -436,8 +435,8 @@
 
     // عند الضغط على "تم الانتهاء" لأي مرحلة:
     // - نختم المرحلة (stages.sX = now)
-    // - currentStage = رقم المرحلة + 1 (عشان صفحة التتبع تعتبر المرحلة دي منتهية فورًا)
-    // - مزامنة document تبع العميل public/status
+    // - currentStage = نفس رقم المرحلة (مافيش +1)
+    // - مزامنة document تبع العميل public/status بنفس الرقم
     stagesList.addEventListener("click", async (e) => {
       const btn = e.target.closest("button[data-key]");
       if (!btn) return;
@@ -452,18 +451,17 @@
 
       try {
         const now = new Date();
-        const newCurrentStage = stageNumber + 1; // علشان تكون الخطوة اللي دوست عليها منتهية في صفحة التتبع
 
         await updateDoc(doc(db, "orders", id), {
           [`stages.${key}`]: now,
-          currentStage: newCurrentStage
+          currentStage: stageNumber
         });
 
         await setDoc(
           doc(db, "orders", id, "public", "status"),
           {
             [`stages.${key}`]: now,
-            currentStage: newCurrentStage,
+            currentStage: stageNumber,
             updatedAt: serverTimestamp()
           },
           { merge: true }
