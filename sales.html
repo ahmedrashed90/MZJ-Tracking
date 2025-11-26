@@ -246,29 +246,25 @@
 
     function buildStagesUI(data = {}) {
       stagesList.innerHTML = "";
-      const currentStage = data.currentStage || 0;
+      const stagesObj = data.stages || {};
 
       STAGES.forEach((label, idx) => {
         const stageNumber = idx + 1;
         const key = "s" + stageNumber;
-        const tsObj = data?.stages?.[key];
+        const tsObj = stagesObj[key];
         const ts = tsObj
           ? new Date(tsObj.toDate ? tsObj.toDate() : tsObj).toLocaleString("ar-SA")
           : null;
 
         const item = document.createElement("div");
         item.className = "stage";
-        if (stageNumber === currentStage) item.classList.add("done");
+        if (ts) item.classList.add("done"); // أي مرحلة فيها وقت تعتبر منتهية (لون أخضر)
 
         item.innerHTML = `
           <div>
             <strong>${label}</strong>
             <div class="muted">
-              ${
-                ts
-                  ? "تم الانتهاء في: " + ts
-                  : "لم يتم الانتهاء بعد"
-              }
+              ${ ts ? "تم الانتهاء في: " + ts : "لم يتم الانتهاء بعد" }
             </div>
           </div>
           <div>
@@ -407,14 +403,15 @@
       try {
         const id = orderId.value.trim();
         if (!id) throw new Error("أدخل رقم الطلب");
+        const now = new Date();
         const payload = {
           orderId: id,
           customerName: customerName.value.trim(),
           customerPhone: customerPhone.value.trim(),
           paymentMethod: paymentMethod.value,
           notes: notes.value.trim(),
-          currentStage: 1,
-          stages: { s1: new Date() }
+          currentStage: 2,     // أول ما يتنشئ نخلي currentStage=2 بحيث المرحلة 1 تعتبر منتهية في التتبع
+          stages: { s1: now }
         };
         await setDoc(doc(db, "orders", id), payload, { merge: true });
 
@@ -422,8 +419,8 @@
           doc(db, "orders", id, "public", "status"),
           {
             orderId: id,
-            currentStage: 1,
-            stages: { s1: new Date() },
+            currentStage: 2,
+            stages: { s1: now },
             updatedAt: serverTimestamp()
           },
           { merge: true }
@@ -439,8 +436,8 @@
 
     // عند الضغط على "تم الانتهاء" لأي مرحلة:
     // - نختم المرحلة (stages.sX = now)
-    // - نحدّث currentStage = رقم المرحلة
-    // - نحدّث document تبع العميل public/status بنفس القيمة
+    // - currentStage = رقم المرحلة + 1 (عشان صفحة التتبع تعتبر المرحلة دي منتهية فورًا)
+    // - مزامنة document تبع العميل public/status
     stagesList.addEventListener("click", async (e) => {
       const btn = e.target.closest("button[data-key]");
       if (!btn) return;
@@ -455,17 +452,18 @@
 
       try {
         const now = new Date();
+        const newCurrentStage = stageNumber + 1; // علشان تكون الخطوة اللي دوست عليها منتهية في صفحة التتبع
 
         await updateDoc(doc(db, "orders", id), {
           [`stages.${key}`]: now,
-          currentStage: stageNumber
+          currentStage: newCurrentStage
         });
 
         await setDoc(
           doc(db, "orders", id, "public", "status"),
           {
             [`stages.${key}`]: now,
-            currentStage: stageNumber,
+            currentStage: newCurrentStage,
             updatedAt: serverTimestamp()
           },
           { merge: true }
@@ -473,7 +471,7 @@
 
         const data = await loadOrder();
         buildStagesUI(data || {});
-        stageMsg.innerHTML = `<span class="ok">تم تعيين المرحلة رقم ${stageNumber} كآخر مرحلة ومزامنتها مع صفحة العميل.</span>`;
+        stageMsg.innerHTML = `<span class="ok">تم الانتهاء من المرحلة رقم ${stageNumber} ومزامنتها فورًا مع صفحة العميل.</span>`;
       } catch (err) {
         console.error(err);
         stageMsg.innerHTML = `<span class="err">خطأ أثناء تحديث المرحلة.</span>`;
@@ -486,4 +484,3 @@
   </script>
 </body>
 </html>
-
