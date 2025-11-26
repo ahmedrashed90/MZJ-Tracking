@@ -1,17 +1,7 @@
-const { initializeApp, cert, getApps } = require("firebase-admin/app");
-const { getFirestore } = require("firebase-admin/firestore");
-
-// تهيئة firebase-admin مرة واحدة فقط
-if (!getApps().length) {
-  const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
-  initializeApp({
-    credential: cert(serviceAccount),
-  });
-}
-
-const db = getFirestore();
+// api/woo-to-firebase.js
 
 module.exports = async (req, res) => {
+  // نسمح بس بـ POST من Webhook
   if (req.method !== "POST") {
     return res.status(405).json({ error: "Method Not Allowed" });
   }
@@ -20,6 +10,28 @@ module.exports = async (req, res) => {
   const key = req.query.key;
   if (!key || key !== process.env.WEBHOOK_KEY) {
     return res.status(401).json({ error: "Unauthorized" });
+  }
+
+  // نهيّأ firebase-admin داخل الفنكشن مع try/catch
+  let db;
+  try {
+    const { initializeApp, cert, getApps } = require("firebase-admin/app");
+    const { getFirestore } = require("firebase-admin/firestore");
+
+    if (!getApps().length) {
+      const raw = process.env.FIREBASE_SERVICE_ACCOUNT;
+      if (!raw) {
+        throw new Error("FIREBASE_SERVICE_ACCOUNT is missing");
+      }
+
+      const serviceAccount = JSON.parse(raw); // لو JSON مش سليم هيقع هنا
+      initializeApp({ credential: cert(serviceAccount) });
+    }
+
+    db = getFirestore();
+  } catch (err) {
+    console.error("Firebase init error:", err);
+    return res.status(500).json({ error: "Firebase config error" });
   }
 
   try {
@@ -33,8 +45,8 @@ module.exports = async (req, res) => {
     const billing = order.billing || {};
     const status = order.status || "pending";
 
-    // مابّينج مبدئي لحالة WooCommerce → مرحلة التتبع
-    let currentStage = 0; // 0 = طلب جديد / في انتظار تأكيد
+    // مابّينج مبدئي لحالة WooCommerce → مرحلة
+    let currentStage = 0; // 0 = طلب جديد
     switch (status) {
       case "pending":
         currentStage = 0;
@@ -57,8 +69,8 @@ module.exports = async (req, res) => {
       customerPhone: billing.phone || "",
       customerEmail: billing.email || "",
       paymentMethod: order.payment_method_title || "",
-      updatedAt: new Date(),
       currentStage,
+      updatedAt: new Date(),
     };
 
     const publicData = {
@@ -67,15 +79,12 @@ module.exports = async (req, res) => {
       updatedAt: new Date(),
     };
 
-    // كتابة في Firestore (للإدارة)
     await db.doc(`orders/${orderId}`).set(adminData, { merge: true });
-
-    // نسخة العميل
     await db.doc(`orders/${orderId}/public/status`).set(publicData, { merge: true });
 
     return res.status(200).json({ success: true });
   } catch (err) {
-    console.error("Woo webhook error:", err);
+    console.error("Woo webhook handler error:", err);
     return res.status(500).json({ error: "Internal Server Error" });
   }
 };
