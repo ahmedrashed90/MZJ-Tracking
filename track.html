@@ -30,6 +30,7 @@
       font-weight:800;
       color:var(--brown);
       margin-bottom:10px;
+      font-size:20px;
     }
     .card{
       background:#fff;
@@ -45,6 +46,7 @@
       border-radius:12px;
       border:1px solid #e5e7eb;
       outline:none;
+      font-family:inherit;
     }
     button{
       background:var(--brown);
@@ -55,21 +57,26 @@
       font-weight:800;
       cursor:pointer;
       white-space:nowrap;
+      font-family:inherit;
     }
     .row{
       display:flex;
-      gap:8px;
+      gap:10px;
       align-items:center;
     }
     @media(max-width:640px){
       .row{flex-direction:column;align-items:stretch}
       button{width:100%}
     }
-    #searchMsg{color:var(--muted);font-size:14px;margin-top:6px}
+    #searchMsg{
+      color:var(--muted);
+      font-size:14px;
+      margin-top:6px;
+    }
 
-    /* شريط التقدم */
+    /* ===== Progress Bar ===== */
     .progress-wrap{
-      margin-bottom:16px;
+      margin:16px 0;
     }
     .progress-label{
       font-size:14px;
@@ -89,42 +96,47 @@
       width:0;
       background:var(--ok);
       border-radius:999px;
-      transition:width .25s ease-out;
+      transition:width .30s ease-out;
     }
     .progress-percent{
       font-size:13px;
       color:var(--brown);
       margin-top:4px;
+      font-weight:700;
     }
 
+    /* ===== Timeline ===== */
     .timeline{list-style:none;padding:0;margin:0}
     .timeline li{
       display:flex;
       gap:10px;
       align-items:flex-start;
-      padding:8px 0;
+      padding:10px 0;
       border-bottom:1px dashed #eee;
     }
     .dot{
-      width:18px;
-      height:18px;
+      width:22px;
+      height:22px;
       border-radius:50%;
-      margin-top:4px;
       display:flex;
       align-items:center;
       justify-content:center;
-      font-size:11px;
+      font-size:12px;
       color:#fff;
       flex-shrink:0;
     }
-    .dot.done{background:var(--ok);}
-    .dot.current{background:var(--beige);}
-    .dot.next{background:var(--grey);}
-
+    .dot.done{
+      background:var(--ok);
+      font-size:12px;
+    }
+    .dot.next{
+      background:var(--grey);
+    }
     .stage-title{
       font-weight:700;
       color:var(--brown);
-      margin-bottom:2px;
+      margin-bottom:4px;
+      font-size:15px;
     }
     .ts{
       font-size:13px;
@@ -145,6 +157,7 @@
   <div class="wrap">
     <div class="brand">مع محمد بن ذعار العجمي للسيارات… أنت نجم الطريق ✨</div>
 
+    <!-- Input Section -->
     <div class="card">
       <label>أدخل رقم الطلب</label>
       <div class="row">
@@ -154,13 +167,14 @@
       <p id="searchMsg"></p>
     </div>
 
+    <!-- Results Section -->
     <div class="card" id="resultCard" style="display:none">
       <p>
         <span class="badge">حالة الطلب</span>
         <strong id="stageNow"></strong>
       </p>
 
-      <!-- شريط التقدم -->
+      <!-- Progress Bar -->
       <div class="progress-wrap">
         <div class="progress-label">تقدّم الطلب</div>
         <div class="progress-bar-bg">
@@ -172,7 +186,7 @@
       </div>
 
       <ul id="timeline" class="timeline"></ul>
-      <p id="updatedAt" class="ts" style="margin-top:8px"></p>
+      <p id="updatedAt" class="ts" style="margin-top:10px"></p>
     </div>
   </div>
 
@@ -180,7 +194,7 @@
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
     import { getFirestore, doc, getDoc, Timestamp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
 
-    // إعدادات مشروعك mzj-tracking
+    // Firebase config
     const firebaseConfig = {
       apiKey: "AIzaSyCorGtT5_Z68jCtLODvqnv0Fb7QW5eR6MQ",
       authDomain: "mzj-tracking.firebaseapp.com",
@@ -194,7 +208,7 @@
     const app = initializeApp(firebaseConfig);
     const db  = getFirestore(app);
 
-    // تعديل نصوص المراحل حسب طلبك
+    /* ==== Modified Stages ==== */
     const STAGES = [
       "1) إنشاء الطلب",
       "2) أمر الدفع",
@@ -208,6 +222,7 @@
       "10) إتمام عملية التسليم"
     ];
 
+    // Elements
     const input      = document.getElementById("orderIdInput");
     const btn        = document.getElementById("trackBtn");
     const msg        = document.getElementById("searchMsg");
@@ -228,59 +243,68 @@
       card.style.display = "";
       timeline.innerHTML = "";
 
-      const current = data.currentStage || 1;
-      const total   = STAGES.length;
-      const safeCurrent = Math.min(Math.max(current,1), total);
+      const stagesData = data.stages || {};
+      const total      = STAGES.length;
 
-      // نص الحالة أعلى
-      stageNow.textContent = `المرحلة ${safeCurrent} من ${total}`;
+      // Determine highest completed stage
+      let maxCompleted = 0;
+      for (let i = 1; i <= total; i++){
+        const key = "s" + i;
+        if (stagesData[key]) maxCompleted = i;
+      }
 
-      // شريط التقدم
-      const percent = Math.round((safeCurrent / total) * 100);
+      // fallback with currentStage if needed
+      const currentStage = data.currentStage || 0;
+      if (maxCompleted === 0 && currentStage > 0) {
+        maxCompleted = currentStage;
+      }
+
+      const safeCompleted = Math.min(Math.max(maxCompleted, 0), total);
+
+      // Status text
+      if (safeCompleted === 0){
+        stageNow.textContent = "الطلب مسجَّل ولم تبدأ مراحله بعد.";
+      } else if (safeCompleted === total){
+        stageNow.textContent = `اكتملت جميع المراحل (${total}/${total})`;
+      } else {
+        stageNow.textContent = `تم الانتهاء من المرحلة ${safeCompleted} من ${total}`;
+      }
+
+      // Progress bar
+      const percent = total === 0 ? 0 : Math.round((safeCompleted / total) * 100);
       progressFill.style.width = percent + "%";
       progressPercent.textContent = percent;
 
       updatedAt.textContent = data.updatedAt ? ("آخر تحديث: " + fmtTS(data.updatedAt)) : "";
 
+      // Timeline
       STAGES.forEach((label, idx) => {
-        const stageNumber = idx + 1;
-        const key = "s" + stageNumber;
-        const ts = data.stages && data.stages[key] ? fmtTS(data.stages[key]) : null;
-
-        const done = stageNumber < safeCurrent;        // المراحل اللي فاتت
-        const isCurrent = stageNumber === safeCurrent; // المرحلة الحالية
-        const upcoming = stageNumber > safeCurrent;    // اللي جاية
+        const num = idx + 1;
+        const key = "s" + num;
+        const ts  = stagesData[key] ? fmtTS(stagesData[key]) : null;
 
         const li  = document.createElement("li");
         const dot = document.createElement("div");
         dot.classList.add("dot");
 
-        if (done){
+        // Completed stages
+        if (num <= safeCompleted){
           dot.classList.add("done");
           dot.textContent = "✔";
-        } else if (isCurrent){
-          dot.classList.add("current");
-          dot.textContent = "●";
         } else {
           dot.classList.add("next");
-          dot.textContent = "";
         }
 
         const ct  = document.createElement("div");
-
-        let statusText = "";
-        if (ts){
-          // هنا غيرنا "مختومة" إلى "تم الانتهاء"
-          statusText = "تم الانتهاء: " + ts;
-        } else if (isCurrent){
-          statusText = "قيد التنفيذ الآن";
-        } else if (upcoming){
-          statusText = "لم تبدأ بعد";
-        }
-
         ct.innerHTML = `
           <div class="stage-title">${label}</div>
-          <div class="ts">${statusText}</div>
+          <div class="ts">
+            ${
+              num <= safeCompleted
+                ? (ts ? `تم الانتهاء: ${ts}` : "تم الانتهاء")
+                : "لم تبدأ بعد"
+            }
+          </div>
         `;
 
         li.appendChild(dot);
@@ -293,7 +317,7 @@
       msg.textContent = "";
       const id = input.value.trim();
       if (!id){
-        msg.textContent = "من فضلك اكتب رقم الطلب.";
+        msg.textContent = "من فضلك أدخل رقم الطلب.";
         card.style.display = "none";
         return;
       }
@@ -303,7 +327,7 @@
 
       if (!snap.exists()){
         card.style.display = "none";
-        msg.textContent = "لايوجد طلب بهذا الرقم. تأكد من الرقم أو تواصل مع خدمة العملاء.";
+        msg.textContent = "لا يوجد طلب بهذا الرقم. تأكد منه أو تواصل مع خدمة العملاء.";
         return;
       }
 
@@ -311,11 +335,9 @@
     }
 
     btn.addEventListener("click", fetchStatus);
-    input.addEventListener("keydown", e => {
-      if (e.key === "Enter") fetchStatus();
-    });
+    input.addEventListener("keydown", e => { if (e.key === "Enter") fetchStatus(); });
 
-    // دعم رابط مباشر: track.html?order=MZJ-2025-0001
+    // direct link support
     const params = new URLSearchParams(location.search);
     const qOrder = params.get("order");
     if (qOrder){
