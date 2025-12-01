@@ -610,9 +610,8 @@
       TaxName:      ["taxName","TaxName"],
       TaxRate:      ["taxRate","TaxRate"],
       TaxValue:     ["taxValue","TaxValue"],
-      SubtotalExclVAT: ["SubtotalExclVAT","subtotalExclVAT","subtotalExclVat"],
-      TotalInclVAT:    ["TotalInclVAT","totalInclVAT","totalInclVat"],
-
+      SubtotalExclVAT:["subtotalExclVat","SubtotalExclVAT","value"], // value كاحتياط
+      TotalInclVAT: ["totalInclVat","TotalInclVAT"]
     };
 
     function getFromPath(obj, path) {
@@ -1004,8 +1003,6 @@
   </script>
 </body>
 </html>
-
-
 
 
 
