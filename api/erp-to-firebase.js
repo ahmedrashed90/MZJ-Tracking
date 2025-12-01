@@ -80,8 +80,14 @@ module.exports = async (req, res) => {
     // لو حبيت مستقبلاً تخزن View مبسّط للعميل تقدر تضيف Collection ثالثة هنا
 
     return res.status(200).json({ success: true });
-  } catch (err) {
+    } catch (err) {
     console.error("ERP Webhook Error:", err);
-    return res.status(500).json({ error: "Internal Server Error" });
+
+    // نخلي الـ API ترجع رسالة الخطأ عشان نشوفها في Google Apps Script
+    return res.status(500).json({
+      error: err.message || String(err),
+    });
   }
 };
+
+
