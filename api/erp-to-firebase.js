@@ -1,5 +1,3 @@
-// api/erp-to-firebase.js
-
 const { initializeApp, cert, getApps } = require("firebase-admin/app");
 const { getFirestore } = require("firebase-admin/firestore");
 
@@ -30,7 +28,7 @@ module.exports = async (req, res) => {
     const data = req.body || {};
 
     const orderNo = data.orderNo || "";
-    const itemNo  = data.item?.no ? String(data.item.no) : "0";
+    const itemNo  = data.item?.no ? String(data.item.no) : "1";
 
     if (!orderNo) {
       return res.status(400).json({ error: "Missing orderNo" });
@@ -39,13 +37,13 @@ module.exports = async (req, res) => {
     const db = getDb();
     const nowIso = new Date().toISOString();
 
-    // 🧾 المستند الأساسي للطلب (سطر في الشيت = بند واحد)
-    const docId = `${orderNo}_${itemNo}`;
-    console.log("Saving order doc:", docId);
+    // ========== 1) erp_orders (البيانات الكاملة من الشيت) ==========
+    const erpDocId = `${orderNo}_${itemNo}`;
+    console.log("Saving erp_orders doc:", erpDocId);
 
     await db
       .collection("erp_orders")
-      .doc(docId)
+      .doc(erpDocId)
       .set(
         {
           ...data,
@@ -57,10 +55,32 @@ module.exports = async (req, res) => {
         { merge: true }
       );
 
-    // 🚗 تخزين حسب رقم الهيكل – فقط لو VIN غير فاضي
+    // ========== 2) orders (اللي النظام بيستخدمه في فتح الطلب) ==========
+    // هنا هنستخدم نفس رقم الطلب اللي بتكتبه في الفورم: SAL-ORD-2025-01109_1
+    const orderDocId = `${orderNo}_${itemNo}`;
+    console.log("Saving orders doc:", orderDocId);
+
+    await db
+      .collection("orders")
+      .doc(orderDocId)
+      .set(
+        {
+          orderNo: orderDocId,
+          branch: data.branch || "",
+          customerName: data.customerName || "",
+          customerVat: data.customerVat || "",
+          createdAt: nowIso,
+          source: "erp",
+          // تقدر تزود هنا أي حقول تحبها للنظام:
+          // paymentType, customerPhone, status, notes, ...
+        },
+        { merge: true }
+      );
+
+    // ========== 3) erp_vins (التتبع برقم الهيكل) ==========
     const vin = data.item?.vin ? String(data.item.vin).trim() : "";
     if (vin) {
-      console.log("Saving VIN doc:", vin);
+      console.log("Saving erp_vins doc:", vin);
       await db
         .collection("erp_vins")
         .doc(vin)
