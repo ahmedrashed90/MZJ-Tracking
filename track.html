@@ -1,332 +1,500 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>MZJ — تتبع الطلب</title>
-  <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;700;800&display=swap" rel="stylesheet">
+  <meta charset="UTF-8" />
+  <title>تتبع طلبك - محمد بن ذعار العجمي للسيارات</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
-    :root{
-      --brown:#3e2420;
-      --beige:#bc8f74;
-      --cream:#fff8ef;
-      --ok:#0e7a48;
-      --muted:#6b7280;
-      --grey:#d1d5db;
+    body {
+      margin: 0;
+      font-family: "Tajawal", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #f6f4f0;
+      color: #3e2420;
     }
-    *{box-sizing:border-box}
-    body{
-      font-family:"Tajawal",system-ui;
-      background:var(--cream);
-      margin:0;
-      color:#1f2937;
+    .page {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 24px 12px 40px;
     }
-    .wrap{
-      max-width:800px;
-      margin:40px auto;
-      padding:16px;
+    .card {
+      width: 100%;
+      max-width: 720px;
+      background: #ffffff;
+      border-radius: 16px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+      padding: 20px 18px 24px;
+      box-sizing: border-box;
     }
-    .brand{
-      font-weight:800;
-      color:var(--brown);
-      margin-bottom:10px;
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 18px;
     }
-    .card{
-      background:#fff;
-      border-radius:14px;
-      box-shadow:0 8px 30px rgba(62,36,32,.08);
-      padding:18px;
-      margin-bottom:20px;
+    .brand-mark {
+      width: 40px;
+      height: 40px;
+      border-radius: 12px;
+      background: linear-gradient(135deg, #3e2420, #bc8f74);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+      font-weight: 700;
+      font-size: 20px;
     }
-    label{font-weight:700;color:var(--brown);display:block;margin-bottom:6px}
-    input{
-      width:100%;
-      padding:12px 14px;
-      border-radius:12px;
-      border:1px solid #e5e7eb;
-      outline:none;
+    .brand-text-title {
+      font-weight: 700;
+      font-size: 18px;
+      color: #3e2420;
     }
-    button{
-      background:var(--brown);
-      color:#fff;
-      border:0;
-      padding:12px 18px;
-      border-radius:12px;
-      font-weight:800;
-      cursor:pointer;
-      white-space:nowrap;
-    }
-    .row{
-      display:flex;
-      gap:8px;
-      align-items:center;
-    }
-    @media(max-width:640px){
-      .row{flex-direction:column;align-items:stretch}
-      button{width:100%}
-    }
-    #searchMsg{color:var(--muted);font-size:14px;margin-top:6px}
-
-    /* شريط التقدم */
-    .progress-wrap{
-      margin-bottom:16px;
-    }
-    .progress-label{
-      font-size:14px;
-      color:var(--muted);
-      margin-bottom:6px;
-    }
-    .progress-bar-bg{
-      width:100%;
-      height:10px;
-      border-radius:999px;
-      background:#f3f4f6;
-      overflow:hidden;
-      position:relative;
-    }
-    .progress-bar-fill{
-      height:100%;
-      width:0;
-      background:var(--ok);
-      border-radius:999px;
-      transition:width .25s ease-out;
-    }
-    .progress-percent{
-      font-size:13px;
-      color:var(--brown);
+    .brand-text-sub {
+      font-size: 13px;
+      color: #7b6a63;
     }
 
-    .timeline{list-style:none;padding:0;margin:0}
-    .timeline li{
-      display:flex;
-      gap:10px;
-      align-items:flex-start;
-      padding:8px 0;
-      border-bottom:1px dashed #eee;
+    .search-section {
+      margin-bottom: 18px;
+      background: #fff8ef;
+      border-radius: 12px;
+      padding: 12px 14px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
     }
-    .dot{
-      width:18px;
-      height:18px;
-      border-radius:50%;
-      margin-top:4px;
-      display:flex;
-      align-items:center;
-      justify-content:center;
-      font-size:11px;
-      color:#fff;
-      flex-shrink:0;
+    .search-section label {
+      font-size: 13px;
+      color: #5b4035;
+      font-weight: 600;
     }
-    .dot.done{background:var(--ok);}
-    .dot.next{background:var(--grey);}
+    .search-input-wrap {
+      flex: 1 1 200px;
+      display: flex;
+      gap: 8px;
+    }
+    .search-input-wrap input {
+      flex: 1;
+      padding: 8px 10px;
+      border-radius: 10px;
+      border: 1px solid #d4c4b8;
+      font-size: 14px;
+      outline: none;
+    }
+    .search-input-wrap input:focus {
+      border-color: #bc8f74;
+      box-shadow: 0 0 0 2px rgba(188,143,116,0.25);
+    }
+    .btn {
+      border: none;
+      border-radius: 999px;
+      padding: 8px 16px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: transform 0.1s ease, box-shadow 0.1s ease, background 0.2s;
+    }
+    .btn-primary {
+      background: linear-gradient(135deg, #3e2420, #bc8f74);
+      color: #fff;
+      box-shadow: 0 4px 14px rgba(62,36,32,0.35);
+    }
+    .btn-primary:active {
+      transform: translateY(1px);
+      box-shadow: 0 2px 8px rgba(62,36,32,0.35);
+    }
 
-    .stage-title{
-      font-weight:700;
-      color:var(--brown);
-      margin-bottom:2px;
+    .status-bar {
+      margin-top: 4px;
+      font-size: 13px;
+      color: #7b6a63;
+      min-height: 18px;
     }
-    .ts{
-      font-size:13px;
-      color:var(--muted);
+
+    .section-title {
+      font-size: 15px;
+      font-weight: 700;
+      margin: 14px 0 8px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      color: #3e2420;
     }
-    .badge{
-      display:inline-block;
-      background:var(--beige);
-      color:#fff;
-      padding:4px 8px;
-      border-radius:999px;
-      font-size:12px;
-      margin-right:4px;
+    .section-title span.icon-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 999px;
+      background: #bc8f74;
+      display: inline-block;
+    }
+
+    .info-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      gap: 8px 12px;
+      margin-bottom: 6px;
+    }
+    .info-item {
+      padding: 8px 10px;
+      border-radius: 10px;
+      background: #faf3ea;
+      border: 1px solid #e4d6c8;
+    }
+    .info-label {
+      font-size: 11px;
+      color: #7b6a63;
+      margin-bottom: 3px;
+    }
+    .info-value {
+      font-size: 13px;
+      font-weight: 600;
+      color: #3e2420;
+      word-break: break-word;
+    }
+
+    .car-box {
+      margin-top: 8px;
+      border-radius: 12px;
+      background: linear-gradient(135deg, #3e2420 0%, #5b4035 45%, #bc8f74 100%);
+      padding: 12px 14px;
+      color: #fff;
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+    }
+    .car-main {
+      font-size: 14px;
+      font-weight: 700;
+    }
+    .car-meta {
+      font-size: 12px;
+      opacity: 0.9;
+    }
+
+    .timeline {
+      margin-top: 10px;
+      padding-top: 8px;
+      border-top: 1px solid #e5d6c7;
+    }
+    .timeline-title {
+      font-size: 14px;
+      font-weight: 700;
+      margin-bottom: 6px;
+    }
+    .timeline-steps {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+    .timeline-step {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      padding: 8px 0;
+    }
+    .timeline-step:not(:last-child) {
+      border-bottom: 1px dashed #e0d0c2;
+    }
+    .step-icon {
+      width: 18px;
+      height: 18px;
+      border-radius: 999px;
+      border: 2px solid #bc8f74;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      flex-shrink: 0;
+    }
+    .step-icon.done {
+      background: #bc8f74;
+      color: #fff;
+    }
+    .step-body {
+      flex: 1;
+    }
+    .step-title {
+      font-size: 13px;
+      font-weight: 600;
+      margin-bottom: 2px;
+    }
+    .step-sub {
+      font-size: 11px;
+      color: #7b6a63;
+    }
+
+    .empty-state {
+      padding: 14px 10px 6px;
+      font-size: 13px;
+      color: #7b6a63;
+    }
+
+    @media (max-width: 480px) {
+      .card {
+        padding: 16px 14px 20px;
+      }
+      .brand-text-title {
+        font-size: 16px;
+      }
+      .search-section {
+        padding: 10px 10px;
+      }
     }
   </style>
 </head>
 <body>
-  <div class="wrap">
-    <div class="brand">مع محمد بن ذعار العجمي للسيارات… أنت نجم الطريق ✨</div>
-
+  <div class="page">
     <div class="card">
-      <label>أدخل رقم الطلب</label>
-      <div class="row">
-        <input id="orderIdInput" placeholder="مثال: MZJ-2025-0001">
-        <button id="trackBtn">تتبّع الطلب</button>
-      </div>
-      <p id="searchMsg"></p>
-    </div>
-
-    <div class="card" id="resultCard" style="display:none">
-      <p>
-        <span class="badge">حالة الطلب</span>
-        <strong id="stageNow"></strong>
-      </p>
-
-      <!-- شريط التقدم -->
-      <div class="progress-wrap">
-        <div class="progress-label">تقدّم الطلب</div>
-        <div class="progress-bar-bg">
-          <div id="progressFill" class="progress-bar-fill"></div>
-        </div>
-        <div class="progress-percent">
-          مكتمل بنسبة <span id="progressPercent">0</span>%
+      <!-- Brand header -->
+      <div class="brand">
+        <div class="brand-mark">★</div>
+        <div>
+          <div class="brand-text-title">تتبع طلبك</div>
+          <div class="brand-text-sub">مع محمد بن ذعار العجمي للسيارات… أنت نجم الطريق ✨</div>
         </div>
       </div>
 
-      <ul id="timeline" class="timeline"></ul>
-      <p id="updatedAt" class="ts" style="margin-top:8px"></p>
+      <!-- Search -->
+      <div class="search-section">
+        <div>
+          <label for="vinInput">اكتب رقم الهيكل (الشاصي):</label>
+        </div>
+        <div class="search-input-wrap">
+          <input id="vinInput" type="text" placeholder="مثال: KMHXXXXXXXXXXXXX" />
+          <button id="searchBtn" class="btn btn-primary">
+            🔍 تتبع
+          </button>
+        </div>
+        <div class="status-bar" id="statusBar"></div>
+      </div>
+
+      <!-- Result -->
+      <div id="resultContainer">
+        <div class="empty-state">
+          اكتب رقم الهيكل واضغط "تتبع" لعرض تفاصيل طلبك وحالة السيارة.
+        </div>
+      </div>
     </div>
   </div>
 
+  <!-- Firebase SDK v9 (Modules) -->
   <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
-    import { getFirestore, doc, getDoc, Timestamp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
-
-    // إعدادات مشروعك mzj-tracking
+    // TODO: ضع إعدادات Firebase هنا:
+    // يمكنك نسخها من صفحة إعدادات الويب في Firebase Console
+    // مثال:
+    /*
     const firebaseConfig = {
-      apiKey: "AIzaSyCorGtT5_Z68jCtLODvqnv0Fb7QW5eR6MQ",
-      authDomain: "mzj-tracking.firebaseapp.com",
-      projectId: "mzj-tracking",
-      storageBucket: "mzj-tracking.appspot.com",
-      messagingSenderId: "655452217491",
-      appId: "1:655452217491:web:9348d172c47bdd411fad66",
-      measurementId: "G-QT7KTRWS4J"
+      apiKey: "YOUR_API_KEY",
+      authDomain: "YOUR_DOMAIN.firebaseapp.com",
+      projectId: "YOUR_PROJECT_ID",
+      storageBucket: "YOUR_PROJECT_ID.appspot.com",
+      messagingSenderId: "XXXX",
+      appId: "XXXX"
+    };
+    */
+
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.11/firebase-app.js";
+    import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/9.6.11/firebase-firestore.js";
+
+    // ========= 1) إعداد Firebase =========
+    const firebaseConfig = {
+      // ⚠️ استبدل القيم دي بقيم مشروعك الحقيقي
+      apiKey: "YOUR_API_KEY",
+      authDomain: "YOUR_DOMAIN.firebaseapp.com",
+      projectId: "YOUR_PROJECT_ID",
+      storageBucket: "YOUR_PROJECT_ID.appspot.com",
+      messagingSenderId: "XXXXXXX",
+      appId: "XXXXXXXX"
     };
 
     const app = initializeApp(firebaseConfig);
     const db  = getFirestore(app);
 
-    // نصوص المراحل
-    const STAGES = [
-      "1) إنشاء الطلب",
-      "2) أمر الدفع",
-      "3) تواصل خدمة العملاء وإرسال البطاقة الجمركية",
-      "4) سداد رسوم التسجيل",
-      "5) التأمين (شرط الربط على السيستم)",
-      "6) استيفاء الأوراق والمبالغ",
-      "7) تجيير البطاقة الجمركية",
-      "8) إصدار اللوحات أو نقل الملكية",
-      "9) جاهزية السيارة للاستلام أو الشحن",
-      "10) إتمام عملية التسليم"
-    ];
+    // ========= 2) عناصر الصفحة =========
+    const vinInput      = document.getElementById("vinInput");
+    const searchBtn     = document.getElementById("searchBtn");
+    const statusBar     = document.getElementById("statusBar");
+    const resultContainer = document.getElementById("resultContainer");
 
-    const input      = document.getElementById("orderIdInput");
-    const btn        = document.getElementById("trackBtn");
-    const msg        = document.getElementById("searchMsg");
-    const card       = document.getElementById("resultCard");
-    const stageNow   = document.getElementById("stageNow");
-    const timeline   = document.getElementById("timeline");
-    const updatedAt  = document.getElementById("updatedAt");
-    const progressFill    = document.getElementById("progressFill");
-    const progressPercent = document.getElementById("progressPercent");
-
-    function fmtTS(v){
-      if (!v) return null;
-      const d = v instanceof Timestamp ? v.toDate() : (v.toDate ? v.toDate() : new Date(v));
-      return new Date(d).toLocaleString("ar-SA");
+    function setStatus(msg, isError = false) {
+      statusBar.textContent = msg || "";
+      statusBar.style.color = isError ? "#b00020" : "#7b6a63";
     }
 
-    function render(data){
-      card.style.display = "";
-      timeline.innerHTML = "";
-
-      const stagesData = data.stages || {};
-      const total      = STAGES.length;
-
-      // نحسب:
-      // 1) عدد المراحل المنتهية فعليًا (عليها Timestamp)
-      // 2) رقم آخر مرحلة منتهية (قد تكون 5 حتى لو 4 لسه)
-      let completedCount = 0;
-      let lastCompleted  = 0;
-
-      for (let i = 1; i <= total; i++){
-        const key = "s" + i;
-        if (stagesData[key]){
-          completedCount++;
-          lastCompleted = i;
-        }
-      }
-
-      // نص الحالة أعلى
-      if (completedCount === 0){
-        stageNow.textContent = "الطلب مسجَّل ولم تبدأ مراحله بعد.";
-      } else if (completedCount === total){
-        stageNow.textContent = `اكتملت جميع المراحل (${total}/${total})`;
-      } else {
-        // مثال: "تم الانتهاء من 3 مراحل من 10 (آخر مرحلة منتهية: 5)"
-        stageNow.textContent =
-          `تم الانتهاء من ${completedCount} مرحلة من ${total}` +
-          (lastCompleted ? ` (آخر مرحلة منتهية: ${lastCompleted})` : "");
-      }
-
-      // شريط التقدم بناءً على عدد المراحل المنتهية فعليًا
-      const percent = total === 0 ? 0 : Math.round((completedCount / total) * 100);
-      progressFill.style.width = percent + "%";
-      progressPercent.textContent = percent;
-
-      updatedAt.textContent = data.updatedAt ? ("آخر تحديث: " + fmtTS(data.updatedAt)) : "";
-
-      // كل مرحلة تتحدد لوحدها (فيه ختم؟ يبقى ✅، مفيش؟ يبقى لسه)
-      STAGES.forEach((label, idx) => {
-        const stageNumber = idx + 1;
-        const key = "s" + stageNumber;
-        const ts  = stagesData[key] ? fmtTS(stagesData[key]) : null;
-
-        const li  = document.createElement("li");
-        const dot = document.createElement("div");
-        dot.classList.add("dot");
-
-        if (ts){
-          dot.classList.add("done");
-          dot.textContent = "✔";
-        } else {
-          dot.classList.add("next");
-          dot.textContent = "";
-        }
-
-        const ct  = document.createElement("div");
-        const statusText = ts ? (`تم الانتهاء: ${ts}`) : "لم تبدأ بعد";
-
-        ct.innerHTML = `
-          <div class="stage-title">${label}</div>
-          <div class="ts">${statusText}</div>
-        `;
-
-        li.appendChild(dot);
-        li.appendChild(ct);
-        timeline.appendChild(li);
-      });
+    function renderEmptyState() {
+      resultContainer.innerHTML = `
+        <div class="empty-state">
+          اكتب رقم الهيكل واضغط "تتبع" لعرض تفاصيل طلبك وحالة السيارة.
+        </div>
+      `;
     }
 
-    async function fetchStatus(){
-      msg.textContent = "";
-      const id = input.value.trim();
-      if (!id){
-        msg.textContent = "من فضلك اكتب رقم الطلب.";
-        card.style.display = "none";
+    function renderResult(docData) {
+      // docData = محتوى مستند erp_vins/{vin}
+      const lastOrderNo = docData.lastOrderNo || "";
+      const lastItemNo  = docData.lastItemNo || "";
+      const lastUpdate  = docData.lastUpdate || "";
+      const payload     = docData.lastData || {};
+
+      const customerName = payload.customerName || "";
+      const customerVat  = payload.customerVat || "";
+      const branch       = payload.branch || "";
+      const orderDate    = payload.orderDate || "";
+      const deliveryDate = payload.deliveryDate || "";
+      const salesPerson  = payload.salesPerson || "";
+
+      const item = payload.item || {};
+      const carType     = item.type || "";
+      const carCategory = item.category || "";
+      const carModel    = item.model || "";
+      const extColor    = item.exteriorColor || item.extColor || "";
+      const intColor    = item.interiorColor || item.intColor || "";
+      const dealer      = item.dealer || "";
+      const vin         = item.vin || "";
+
+      const totals = payload.totals || {};
+      const totalInclVAT  = totals.totalInclVAT  || "";
+      const subtotalExcl  = totals.subtotalExclVAT || "";
+      const taxName       = totals.taxName || "";
+      const taxValue      = totals.taxValue || "";
+
+      // مؤقتًا: Timeline ثابت – بعدين نربطه من Firestore collection أخرى (tracking_orders)
+      const steps = [
+        { title: "تم إنشاء الطلب", sub: "تم تسجيل طلبك في النظام بنجاح.", done: true },
+        { title: "الموافقات والإجراءات", sub: "تتم مراجعة البيانات واستكمال الموافقات المطلوبة.", done: true },
+        { title: "تجهيز السيارة", sub: "يتم تجهيز السيارة حسب المواصفات المتفق عليها.", done: false },
+        { title: "جاهزة للاستلام / الشحن", sub: "سيتم إشعارك فور جاهزية السيارة للاستلام أو الشحن.", done: false }
+      ];
+
+      resultContainer.innerHTML = `
+        <div>
+          <div class="section-title">
+            <span class="icon-dot"></span>
+            <span>بيانات الطلب</span>
+          </div>
+          <div class="info-grid">
+            <div class="info-item">
+              <div class="info-label">رقم الطلب</div>
+              <div class="info-value">${lastOrderNo || "-"}</div>
+            </div>
+            <div class="info-item">
+              <div class="info-label">رقم البند</div>
+              <div class="info-value">${lastItemNo || "-"}</div>
+            </div>
+            <div class="info-item">
+              <div class="info-label">اسم العميل</div>
+              <div class="info-value">${customerName || "-"}</div>
+            </div>
+            <div class="info-item">
+              <div class="info-label">الرقم الضريبي</div>
+              <div class="info-value">${customerVat || "-"}</div>
+            </div>
+            <div class="info-item">
+              <div class="info-label">الفرع</div>
+              <div class="info-value">${branch || "-"}</div>
+            </div>
+            <div class="info-item">
+              <div class="info-label">تاريخ الطلب</div>
+              <div class="info-value">${orderDate || "-"}</div>
+            </div>
+            <div class="info-item">
+              <div class="info-label">تاريخ التسليم المتوقع</div>
+              <div class="info-value">${deliveryDate || "-"}</div>
+            </div>
+            <div class="info-item">
+              <div class="info-label">مسؤول المبيعات</div>
+              <div class="info-value">${salesPerson || "-"}</div>
+            </div>
+          </div>
+
+          <div class="section-title">
+            <span class="icon-dot"></span>
+            <span>بيانات السيارة</span>
+          </div>
+          <div class="car-box">
+            <div class="car-main">
+              ${carType || "-"} ${carCategory || ""} ${carModel || ""}
+            </div>
+            <div class="car-meta">
+              رقم الهيكل: ${vin || "-"}
+            </div>
+            <div class="car-meta">
+              اللون الخارجي: ${extColor || "-"} – اللون الداخلي: ${intColor || "-"}
+            </div>
+            <div class="car-meta">
+              الوكيل: ${dealer || "-"}
+            </div>
+            <div class="car-meta">
+              الإجمالي شامل الضريبة: ${totalInclVAT || "-"}
+            </div>
+          </div>
+
+          <div class="section-title">
+            <span class="icon-dot"></span>
+            <span>حالة الطلب</span>
+          </div>
+          <div class="timeline">
+            <div class="timeline-title">خطوات الطلب (نسخة أولية – قابلة للتطوير)</div>
+            <ul class="timeline-steps">
+              ${steps.map((step, idx) => `
+                <li class="timeline-step">
+                  <div class="step-icon ${step.done ? "done" : ""}">
+                    ${step.done ? "✓" : idx + 1}
+                  </div>
+                  <div class="step-body">
+                    <div class="step-title">${step.title}</div>
+                    <div class="step-sub">${step.sub}</div>
+                  </div>
+                </li>
+              `).join("")}
+            </ul>
+          </div>
+        </div>
+      `;
+    }
+
+    // ========= 3) حدث البحث =========
+    async function handleSearch() {
+      const rawVin = (vinInput.value || "").trim();
+      if (!rawVin) {
+        setStatus("من فضلك أدخل رقم الهيكل أولاً.", true);
+        renderEmptyState();
         return;
       }
 
-      const ref  = doc(db, "orders", id, "public", "status");
-      const snap = await getDoc(ref);
+      setStatus("جاري البحث عن الطلب المرتبط بهذا الرقم…");
 
-      if (!snap.exists()){
-        card.style.display = "none";
-        msg.textContent = "لايوجد طلب بهذا الرقم. تأكد من الرقم أو تواصل مع خدمة العملاء.";
-        return;
+      try {
+        const vinDocRef = doc(db, "erp_vins", rawVin);
+        const vinSnap   = await getDoc(vinDocRef);
+
+        if (!vinSnap.exists()) {
+          setStatus("لم يتم العثور على طلب مرتبط بهذا رقم الهيكل. تأكد من الرقم وحاول مرة أخرى.", true);
+          renderEmptyState();
+          return;
+        }
+
+        const vinData = vinSnap.data();
+        setStatus("تم العثور على الطلب. يتم عرض التفاصيل الآن.");
+        renderResult(vinData);
+      } catch (err) {
+        console.error("Error fetching VIN:", err);
+        setStatus("حدث خطأ أثناء جلب البيانات. حاول مرة أخرى لاحقاً.", true);
+        renderEmptyState();
       }
-
-      render(snap.data());
     }
 
-    btn.addEventListener("click", fetchStatus);
-    input.addEventListener("keydown", e => {
-      if (e.key === "Enter") fetchStatus();
+    searchBtn.addEventListener("click", handleSearch);
+    vinInput.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") {
+        handleSearch();
+      }
     });
-
-    // دعم رابط مباشر: track.html?order=XXXX
-    const params = new URLSearchParams(location.search);
-    const qOrder = params.get("order");
-    if (qOrder){
-      input.value = qOrder;
-      fetchStatus();
-    }
   </script>
 </body>
 </html>
