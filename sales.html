@@ -6,61 +6,80 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>MZJ — إدارة المبيعات</title>
   <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;700;800&display=swap" rel="stylesheet">
+  
   <style>
     :root{
       --brown:#3e2420;
       --beige:#bc8f74;
       --cream:#fff8ef;
+      --cream-soft:#fff3e2;
       --text:#111827;
       --muted:#6b7280;
-      --radius:16px;
+      --border:#e5e7eb;
+      --radius-lg:18px;
+      --radius-md:12px;
     }
-    *{box-sizing:border-box}
+    *{box-sizing:border-box;}
     body{
       margin:0;
-      background:var(--cream);
-      color:var(--text);
+      min-height:100vh;
       font-family:"Tajawal",system-ui,Arial,sans-serif;
+      background:radial-gradient(circle at top left,#fff,#ffeedd 55%,#f5e7db 100%);
+      color:var(--text);
     }
     a{color:inherit;text-decoration:none}
     .topbar{
-      background:var(--brown);
+      position:sticky;
+      top:0;
+      z-index:20;
+      background:linear-gradient(90deg,var(--brown),#2b1916);
       color:#fff;
-      padding:12px 20px;
+      padding:10px 20px;
       display:flex;
       align-items:center;
       justify-content:space-between;
-      box-shadow:0 6px 20px rgba(0,0,0,.18);
+      box-shadow:0 6px 25px rgba(0,0,0,0.25);
     }
     .topbar-title{
       font-weight:800;
-      letter-spacing:.5px;
+      letter-spacing:.4px;
+      font-size:16px;
+      display:flex;
+      align-items:center;
+      gap:8px;
+    }
+    .topbar-title::before{
+      content:"★";
+      font-size:17px;
+      color:var(--beige);
     }
     .wrap{
-      max-width:1150px;
-      margin:24px auto 40px;
-      padding:0 16px;
+      max-width:1200px;
+      margin:18px auto 40px;
+      padding:0 16px 24px;
     }
     .card{
       background:#fff;
-      border-radius:var(--radius);
-      box-shadow:0 10px 30px rgba(62,36,32,.08);
+      border-radius:var(--radius-lg);
+      border:1px solid rgba(188,143,116,0.18);
+      box-shadow:0 18px 45px rgba(62,36,32,0.08);
       padding:18px 18px 20px;
-      margin-bottom:18px;
+      margin-bottom:16px;
     }
     .title{
       display:flex;
       align-items:center;
       gap:10px;
-      margin:0 0 12px 0;
+      margin:0 0 14px 0;
       color:var(--brown);
       font-size:18px;
+      font-weight:700;
     }
     .title span.icon{
-      width:26px;
-      height:26px;
+      width:30px;
+      height:30px;
       border-radius:999px;
-      background:rgba(188,143,116,.15);
+      background:rgba(188,143,116,.16);
       display:inline-flex;
       align-items:center;
       justify-content:center;
@@ -84,23 +103,24 @@
     input{
       width:100%;
       padding:8px 10px;
-      border-radius:10px;
-      border:1px solid #e5e7eb;
+      border-radius:var(--radius-md);
+      border:1px solid var(--border);
       font-family:inherit;
       font-size:14px;
       outline:none;
       background:#f9fafb;
+      transition:border-color .15s, box-shadow .15s, background .15s;
     }
     input:focus{
       border-color:var(--beige);
-      box-shadow:0 0 0 1px rgba(188,143,116,.4);
+      box-shadow:0 0 0 1px rgba(188,143,116,.45);
       background:#fff;
     }
     .btn{
       border:0;
       background:var(--brown);
       color:#fff;
-      padding:8px 16px;
+      padding:9px 18px;
       border-radius:999px;
       font-family:inherit;
       font-size:14px;
@@ -108,25 +128,39 @@
       display:inline-flex;
       align-items:center;
       gap:6px;
+      transition:transform .12s, box-shadow .12s, background .12s;
+      box-shadow:0 10px 25px rgba(62,36,32,0.25);
+    }
+    .btn:hover{
+      transform:translateY(-1px);
+      box-shadow:0 14px 30px rgba(62,36,32,0.3);
+      background:#2b1916;
     }
     .btn-outline{
       border-radius:999px;
       border:1px solid var(--brown);
       background:transparent;
       color:var(--brown);
-      padding:8px 14px;
+      padding:9px 16px;
       font-size:14px;
       cursor:pointer;
       font-family:inherit;
+      transition:background .12s,color .12s,border-color .12s;
+    }
+    .btn-outline:hover{
+      background:rgba(62,36,32,0.06);
+      border-color:var(--brown);
     }
     .btn:disabled,.btn-outline:disabled{
-      opacity:.5;
+      opacity:.55;
       cursor:not-allowed;
+      box-shadow:none;
+      transform:none;
     }
     .muted{color:var(--muted);font-size:13px}
     .hint{color:var(--muted);font-size:12px;margin-top:4px}
     .ok{color:#047857;font-weight:700}
-    .err{color:#b00020;font-weight:700}
+    .err{color:#b91c1c;font-weight:700}
     .logout{
       background:#fff;
       color:var(--brown);
@@ -135,20 +169,59 @@
       border:0;
       cursor:pointer;
       font-size:13px;
+      box-shadow:0 8px 20px rgba(0,0,0,0.15);
     }
     .badge{
       display:inline-block;
-      padding:3px 8px;
+      padding:4px 9px;
       border-radius:999px;
       font-size:11px;
-      background:rgba(188,143,116,.15);
+      background:rgba(188,143,116,.12);
       color:var(--brown);
-      margin-right:6px;
+      margin-inline-start:4px;
     }
-    /* table */
+    /* Tabs */
+    .tabs{
+      display:none;
+      margin:10px 0 10px;
+      background:rgba(255,255,255,0.6);
+      border-radius:999px;
+      padding:4px;
+      box-shadow:0 8px 25px rgba(62,36,32,0.08);
+      width:max-content;
+    }
+    .tab-btn{
+      padding:6px 16px;
+      border-radius:999px;
+      border:0;
+      background:transparent;
+      color:var(--muted);
+      font-size:13px;
+      cursor:pointer;
+      font-family:inherit;
+      transition:background .15s,color .15s, box-shadow .15s;
+    }
+    .tab-btn.tab-active{
+      background:var(--brown);
+      color:#fff;
+      box-shadow:0 10px 24px rgba(62,36,32,0.4);
+    }
+    .link-btn{
+      border:0;
+      background:none;
+      color:#1d4ed8;
+      text-decoration:underline;
+      cursor:pointer;
+      font-size:13px;
+      font-family:inherit;
+      padding:0;
+    }
+    /* ERP table */
     .erp-table-wrap{
       overflow-x:auto;
       margin-top:8px;
+      border-radius:var(--radius-md);
+      border:1px solid rgba(0,0,0,0.04);
     }
     table{
       width:100%;
@@ -159,7 +232,7 @@
       background:#f3f4f6;
     }
     th,td{
-      padding:6px 8px;
+      padding:7px 10px;
       border-bottom:1px solid #e5e7eb;
       white-space:nowrap;
     }
@@ -171,11 +244,14 @@
     td{
       color:#111827;
     }
+    tbody tr:nth-child(even){
+      background:#fafafa;
+    }
     /* stages */
     .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
     .stage{
-      background:#fffaf3;
-      border-radius:12px;
+      background:var(--cream-soft);
+      border-radius:var(--radius-md);
       padding:10px 12px;
       border:1px dashed rgba(188,143,116,.55);
       display:flex;
@@ -200,8 +276,11 @@
       .col-3,.col-4,.col-6,.col-12{grid-column:span 1}
       .grid-2{grid-template-columns:1fr}
       .topbar{flex-direction:column;align-items:flex-start;gap:6px}
+      .tabs{width:100%;justify-content:space-between;}
+      .tab-btn{flex:1;text-align:center;}
     }
   </style>
+</style>
 </head>
 <body>
   <div class="topbar">
@@ -231,6 +310,12 @@
       </div>
       <div id="authMsg" class="muted" style="margin-top:6px"></div>
       <div class="hint">الدخول مطلوب لإدارة الطلبات وتحديث المراحل.</div>
+
+    </div>
+
+    <div class="tabs" id="tabsBar">
+      <button class="tab-btn tab-active" id="tabSearchBtn">بحث عن طلب</button>
+      <button class="tab-btn" id="tabListBtn">كل الطلبات</button>
     </div>
 
     <div class="card" id="orderCard" style="display:none">
@@ -282,7 +367,7 @@
               <th>نسبة الضريبة</th>
               <th>قيمة الضريبة</th>
               <th>الإجمالي قبل الضريبة</th>
-              <th>الاجمالي شامل الضريبة</th>
+              <th>الإجمالي شامل الضريبة</th>
             </tr>
           </thead>
           <tbody id="erpBody">
@@ -304,13 +389,34 @@
               <td data-field="Qty"></td>
               <td data-field="UnitPrice"></td>
               <td data-field="ItemValue"></td>
-              <td data-field="TaxCode"></td>
-              <td data-field="TaxName"></td>
-              <td data-field="TaxRate"></td>
-              <td data-field="TaxValue"></td>
+              <td data-field="taxCode"></td>
+              <td data-field="taxName"></td>
+              <td data-field="taxRate"></td>
+              <td data-field="taxValue"></td>
               <td data-field="SubtotalExclVAT"></td>
-              <td data-field="TotalInclVAT"></td>
+              <td data-field="totalInclVAT"></td>
             </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="card" id="ordersListCard" style="display:none">
+      <h3 class="title"><span class="icon">📋</span>كل الطلبات</h3>
+      <div class="hint">اضغط على رقم الطلب لنسخه وفتحه في تبويب البحث بالأعلى.</div>
+      <div class="erp-table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>رقم الطلب</th>
+              <th>اسم العميل</th>
+              <th>الفرع</th>
+              <th>رقم الهيكل VIN</th>
+              <th>تاريخ التسليم</th>
+              <th>حالة الطلب (أحدث مرحلة)</th>
+            </tr>
+          </thead>
+          <tbody id="ordersListBody">
           </tbody>
         </table>
       </div>
@@ -345,7 +451,8 @@
       collection,
       query,
       where,
-      getDocs
+      getDocs,
+      limit
     } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
 
     const firebaseConfig = {
@@ -369,6 +476,11 @@
     const orderCard  = document.getElementById("orderCard");
     const erpCard    = document.getElementById("erpCard");
     const stagesCard = document.getElementById("stagesCard");
+    const tabsBar    = document.getElementById("tabsBar");
+    const tabSearchBtn = document.getElementById("tabSearchBtn");
+    const tabListBtn   = document.getElementById("tabListBtn");
+    const ordersListCard = document.getElementById("ordersListCard");
+
     const whoami     = document.getElementById("whoami");
     const logoutBtn  = document.getElementById("logoutBtn");
 
@@ -386,6 +498,7 @@
 
     const erpMetaEl    = document.getElementById("erpMeta");
     const erpBody      = document.getElementById("erpBody");
+    const ordersListBody = document.getElementById("ordersListBody");
 
     const stagesList   = document.getElementById("stagesList");
     const stageMsg     = document.getElementById("stageMsg");
@@ -450,14 +563,21 @@
         whoami.textContent = "مسجّل: " + (user.email || "");
         logoutBtn.style.display = "";
         authCard.style.display  = "none";
+        tabsBar.style.display   = "flex";
         orderCard.style.display = "";
+        erpCard.style.display   = "none";
+        ordersListCard.style.display = "none";
         stagesCard.style.display = "";
+        tabSearchBtn.classList.add("tab-active");
+        tabListBtn.classList.remove("tab-active");
       } else {
         whoami.textContent = "";
         logoutBtn.style.display = "none";
         authCard.style.display  = "";
+        tabsBar.style.display   = "none";
         orderCard.style.display = "none";
         erpCard.style.display   = "none";
+        ordersListCard.style.display = "none";
         stagesCard.style.display = "none";
       }
     });
@@ -789,10 +909,97 @@
       buildStagesUI({});
     };
 
+
+    // ---- orders list (tab) ----
+    async function loadOrdersList() {
+      ordersListBody.innerHTML = "<tr><td class='muted' colspan='6'>جاري تحميل الطلبات...</td></tr>";
+      try {
+        const q = query(collection(db, ERP_COLLECTION), limit(100));
+        const snap = await getDocs(q);
+        if (snap.empty) {
+          ordersListBody.innerHTML = "<tr><td class='muted' colspan='6'>لا توجد طلبات مسجلة حالياً.</td></tr>";
+          return;
+        }
+        const rows = [];
+        for (const docSnap of snap.docs) {
+          const d = docSnap.data();
+          const orderNo = d.orderNo || d.OrderNo || docSnap.id;
+          const vinVal  = getFieldFlex(d, "VIN") || "";
+          const customerName = getFieldFlex(d, "CustomerName") || "";
+          const branch = getFieldFlex(d, "Branch") || "";
+          const deliveryDate = getFieldFlex(d, "DeliveryDate") || "";
+          let statusLabel = "لم يبدأ";
+          try {
+            const tSnap = await getDoc(doc(db, TRACK_COLLECTION, orderNo));
+            if (tSnap.exists()) {
+              const t = tSnap.data();
+              const currentStage = t.currentStage || 0;
+              if (currentStage > 0 && currentStage <= STAGES.length) {
+                statusLabel = STAGES[currentStage - 1];
+              }
+            }
+          } catch (e) {
+            console.error("track read error", e);
+          }
+          rows.push({ orderNo, vinVal, customerName, branch, deliveryDate, statusLabel });
+        }
+        ordersListBody.innerHTML = "";
+        rows.forEach(r => {
+          const tr = document.createElement("tr");
+          tr.innerHTML = `
+            <td><button class="link-btn" data-order="${r.orderNo}">${r.orderNo}</button></td>
+            <td>${r.customerName || "—"}</td>
+            <td>${r.branch || "—"}</td>
+            <td>${r.vinVal || "—"}</td>
+            <td>${r.deliveryDate || "—"}</td>
+            <td>${r.statusLabel || "—"}</td>
+          `;
+          ordersListBody.appendChild(tr);
+        });
+      } catch (err) {
+        console.error(err);
+        ordersListBody.innerHTML = "<tr><td class='err' colspan='6'>تعذر تحميل قائمة الطلبات.</td></tr>";
+      }
+    }
+
+    function activateTab(which) {
+      if (which === "list") {
+        orderCard.style.display = "none";
+        erpCard.style.display   = "none";
+        stagesCard.style.display = "none";
+        ordersListCard.style.display = "";
+        tabSearchBtn.classList.remove("tab-active");
+        tabListBtn.classList.add("tab-active");
+        loadOrdersList();
+      } else {
+        orderCard.style.display = "";
+        erpCard.style.display   = currentOrderId ? "" : "none";
+        stagesCard.style.display = "";
+        ordersListCard.style.display = "none";
+        tabSearchBtn.classList.add("tab-active");
+        tabListBtn.classList.remove("tab-active");
+      }
+    }
+
+    tabSearchBtn.addEventListener("click", () => activateTab("search"));
+    tabListBtn.addEventListener("click", () => activateTab("list"));
+
+    ordersListBody.addEventListener("click", async (e) => {
+      const btn = e.target.closest("button.link-btn");
+      if (!btn) return;
+      const ord = btn.dataset.order;
+      try {
+        await navigator.clipboard.writeText(ord);
+      } catch (e2) {
+        console.warn("clipboard error", e2);
+      }
+      orderIdInput.value = ord;
+      vinInput.value = "";
+      activateTab("search");
+      loadOrder();
+    });
     clearErpTable();
     buildStagesUI({});
   </script>
 </body>
 </html>
-
-
