@@ -33,11 +33,13 @@ module.exports = async (req, res) => {
   }
 
   try {
-    const order = req.body || {};
-    const orderId = String(order.id || "");
-    if (!orderId) {
-      return res.status(400).json({ error: "Missing order id" });
-    }
+  const order = req.body || {};
+// نقبل الـ id بتاع Woo أو orderNo بتاع ERP
+const orderId = String(order.id || order.orderNo || "");
+if (!orderId) {
+  return res.status(400).json({ error: "Missing order id" });
+}
+
 
     const billing = order.billing || {};
     const shipping = order.shipping || {};
@@ -148,3 +150,4 @@ module.exports = async (req, res) => {
     return res.status(500).json({ error: "Internal Server Error" });
   }
 };
+
