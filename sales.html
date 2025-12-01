@@ -1,172 +1,323 @@
+
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>MZJ — إدارة مبيعات</title>
+  <title>MZJ — إدارة المبيعات</title>
   <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;700;800&display=swap" rel="stylesheet">
   <style>
-    :root{ --brown:#3e2420; --beige:#bc8f74; --cream:#fff8ef; --text:#1f2937; --muted:#6b7280; --radius:14px }
+    :root{
+      --brown:#3e2420;
+      --beige:#bc8f74;
+      --cream:#fff8ef;
+      --text:#111827;
+      --muted:#6b7280;
+      --radius:16px;
+    }
     *{box-sizing:border-box}
-    body{margin:0;background:var(--cream);color:var(--text);font-family:"Tajawal",system-ui,Arial}
+    body{
+      margin:0;
+      background:var(--cream);
+      color:var(--text);
+      font-family:"Tajawal",system-ui,Arial,sans-serif;
+    }
     a{color:inherit;text-decoration:none}
-    .wrap{max-width:1100px;margin:24px auto;padding:16px}
-    .card{background:#fff;border-radius:var(--radius);box-shadow:0 8px 30px rgba(62,36,32,.08);padding:18px;margin-bottom:16px}
-    .title{display:flex;align-items:center;gap:10px;color:var(--brown);margin:0 0 12px 0}
-    .row{display:grid;grid-template-columns:repeat(12,1fr);gap:12px}
-    .col-6{grid-column:span 6}
-    .col-4{grid-column:span 4}
+    .topbar{
+      background:var(--brown);
+      color:#fff;
+      padding:12px 20px;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      box-shadow:0 6px 20px rgba(0,0,0,.18);
+    }
+    .topbar-title{
+      font-weight:800;
+      letter-spacing:.5px;
+    }
+    .wrap{
+      max-width:1150px;
+      margin:24px auto 40px;
+      padding:0 16px;
+    }
+    .card{
+      background:#fff;
+      border-radius:var(--radius);
+      box-shadow:0 10px 30px rgba(62,36,32,.08);
+      padding:18px 18px 20px;
+      margin-bottom:18px;
+    }
+    .title{
+      display:flex;
+      align-items:center;
+      gap:10px;
+      margin:0 0 12px 0;
+      color:var(--brown);
+      font-size:18px;
+    }
+    .title span.icon{
+      width:26px;
+      height:26px;
+      border-radius:999px;
+      background:rgba(188,143,116,.15);
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      font-size:16px;
+    }
+    .row{
+      display:grid;
+      grid-template-columns:repeat(12,1fr);
+      gap:12px;
+    }
     .col-3{grid-column:span 3}
-    .col-2{grid-column:span 2}
+    .col-4{grid-column:span 4}
+    .col-6{grid-column:span 6}
     .col-12{grid-column:span 12}
-    label{font-weight:700;color:var(--brown);display:block;margin-bottom:6px}
-    input,select,textarea{width:100%;padding:12px 14px;border:1px solid #e8e2dc;border-radius:12px;background:#fff}
-    textarea{min-height:90px}
-    button{border:0;border-radius:12px;padding:12px 16px;font-weight:800;cursor:pointer}
-    .btn{background:var(--brown);color:#fff}
-    .btn-outline{background:#fff;border:1px solid var(--beige);color:var(--brown)}
-    .stage{display:flex;align-items:center;justify-content:space-between;border:1px dashed #efd9cb;padding:12px;border-radius:12px;margin-bottom:8px;background:#fffaf3}
-    .stage strong{color:var(--brown)}
-    .stage.done{background:#ecfdf5;border-color:#bbf7d0;}
-    .muted{color:var(--muted);font-size:14px}
-    .badge{display:inline-block;background:var(--beige);color:#fff;padding:4px 8px;border-radius:999px;font-size:12px}
-    .topbar{background:var(--brown);color:#fff;padding:12px 16px;display:flex;justify-content:space-between;align-items:center}
-    .logout{background:#fff;color:var(--brown);padding:6px 10px;border-radius:10px;border:0;cursor:pointer}
-    .hint{font-size:13px;color:var(--muted)}
-    .ok{color:#0e7a48;font-weight:700}
+    label{
+      display:block;
+      font-size:13px;
+      margin-bottom:4px;
+      color:var(--muted);
+    }
+    input{
+      width:100%;
+      padding:8px 10px;
+      border-radius:10px;
+      border:1px solid #e5e7eb;
+      font-family:inherit;
+      font-size:14px;
+      outline:none;
+      background:#f9fafb;
+    }
+    input:focus{
+      border-color:var(--beige);
+      box-shadow:0 0 0 1px rgba(188,143,116,.4);
+      background:#fff;
+    }
+    .btn{
+      border:0;
+      background:var(--brown);
+      color:#fff;
+      padding:8px 16px;
+      border-radius:999px;
+      font-family:inherit;
+      font-size:14px;
+      cursor:pointer;
+      display:inline-flex;
+      align-items:center;
+      gap:6px;
+    }
+    .btn-outline{
+      border-radius:999px;
+      border:1px solid var(--brown);
+      background:transparent;
+      color:var(--brown);
+      padding:8px 14px;
+      font-size:14px;
+      cursor:pointer;
+      font-family:inherit;
+    }
+    .btn:disabled,.btn-outline:disabled{
+      opacity:.5;
+      cursor:not-allowed;
+    }
+    .muted{color:var(--muted);font-size:13px}
+    .hint{color:var(--muted);font-size:12px;margin-top:4px}
+    .ok{color:#047857;font-weight:700}
     .err{color:#b00020;font-weight:700}
-    .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-    .pill{display:inline-block;padding:2px 8px;border-radius:999px;background:#f3f4ff;color:#1d4ed8;font-size:12px}
-    .items-list{margin:0;padding-right:18px;font-size:14px}
-    .items-list li{margin-bottom:4px}
+    .logout{
+      background:#fff;
+      color:var(--brown);
+      padding:6px 12px;
+      border-radius:999px;
+      border:0;
+      cursor:pointer;
+      font-size:13px;
+    }
+    .badge{
+      display:inline-block;
+      padding:3px 8px;
+      border-radius:999px;
+      font-size:11px;
+      background:rgba(188,143,116,.15);
+      color:var(--brown);
+      margin-right:6px;
+    }
+    /* table */
+    .erp-table-wrap{
+      overflow-x:auto;
+      margin-top:8px;
+    }
+    table{
+      width:100%;
+      border-collapse:collapse;
+      font-size:13px;
+    }
+    thead{
+      background:#f3f4f6;
+    }
+    th,td{
+      padding:6px 8px;
+      border-bottom:1px solid #e5e7eb;
+      white-space:nowrap;
+    }
+    th{
+      text-align:right;
+      font-weight:600;
+      color:#374151;
+    }
+    td{
+      color:#111827;
+    }
+    /* stages */
+    .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    .stage{
+      background:#fffaf3;
+      border-radius:12px;
+      padding:10px 12px;
+      border:1px dashed rgba(188,143,116,.55);
+      display:flex;
+      flex-direction:column;
+      gap:4px;
+    }
+    .stage.done{
+      background:#ecfdf5;
+      border-style:solid;
+      border-color:#22c55e;
+    }
+    .stage-header{
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      gap:8px;
+    }
+    .stage strong{color:var(--brown);font-size:13px}
+    .stage small{font-size:11px;color:var(--muted)}
     @media (max-width:900px){
       .row{grid-template-columns:1fr}
-      .col-6,.col-4,.col-3,.col-2,.col-12{grid-column:span 1}
+      .col-3,.col-4,.col-6,.col-12{grid-column:span 1}
       .grid-2{grid-template-columns:1fr}
+      .topbar{flex-direction:column;align-items:flex-start;gap:6px}
     }
   </style>
 </head>
 <body>
   <div class="topbar">
-    <div><strong>MZJ — إدارة المبيعات</strong></div>
-    <div id="authArea">
+    <div class="topbar-title">MZJ — إدارة المبيعات</div>
+    <div>
       <span id="whoami" class="hint"></span>
       <button id="logoutBtn" class="logout" style="display:none">تسجيل الخروج</button>
     </div>
   </div>
 
   <div class="wrap">
-    <!-- Auth Card -->
     <div class="card" id="authCard">
-      <h3 class="title">تسجيل الدخول</h3>
+      <h3 class="title"><span class="icon">🔐</span>تسجيل الدخول</h3>
       <div class="row">
         <div class="col-4">
-          <label>البريد</label>
-          <input id="email" type="email" placeholder="admin@yourdomain.com" />
+          <label>البريد الإلكتروني</label>
+          <input id="email" type="email" placeholder="user@mzjcars.com" />
         </div>
         <div class="col-4">
           <label>كلمة السر</label>
           <input id="password" type="password" placeholder="••••••••" />
         </div>
-        <div class="col-4" style="display:flex;align-items:end;gap:8px">
+        <div class="col-4" style="display:flex;align-items:flex-end;gap:8px">
           <button class="btn" id="loginBtn">دخول</button>
-          <button class="btn-outline" id="signupBtn" title="إنشاء مستخدم جديد">تسجيل جديد</button>
+          <button class="btn-outline" id="signupBtn">تسجيل جديد</button>
         </div>
       </div>
-      <div class="hint">الدخول مطلوب لإضافة/تحديث الطلبات.</div>
-      <div id="authMsg" class="muted"></div>
+      <div id="authMsg" class="muted" style="margin-top:6px"></div>
+      <div class="hint">الدخول مطلوب لإدارة الطلبات وتحديث المراحل.</div>
     </div>
 
-    <!-- Create/Find Order -->
     <div class="card" id="orderCard" style="display:none">
-      <h3 class="title">إنشاء/فتح طلب</h3>
+      <h3 class="title"><span class="icon">📄</span>البحث عن طلب</h3>
       <div class="row">
-        <div class="col-3">
-          <label>رقم الطلب (مهم جدًا)</label>
-          <input id="orderId" placeholder="مثال: 18790" />
+        <div class="col-4">
+          <label>رقم الطلب</label>
+          <input id="orderId" placeholder="SAL-ORD-2025-01109_1 أو بدون _1" />
         </div>
-        <div class="col-3">
-          <label>اسم العميل</label>
-          <input id="customerName" placeholder="اسم ثلاثي" />
+        <div class="col-4">
+          <label>رقم الهيكل (VIN)</label>
+          <input id="vinInput" placeholder="11409 مثلاً" />
         </div>
-        <div class="col-3">
-          <label>جوال العميل</label>
-          <input id="customerPhone" placeholder="05xxxxxxxx" />
+        <div class="col-4" style="display:flex;align-items:flex-end;gap:8px">
+          <button class="btn" id="loadBtn">فتح الطلب</button>
+          <button class="btn-outline" id="clearBtn">تفريغ</button>
         </div>
-        <div class="col-3">
-          <label>أمر الدفع</label>
-          <select id="paymentMethod">
-            <option value="تحويل">تحويل</option>
-            <option value="شبكة">شبكة</option>
-            <option value="كاش">كاش</option>
-          </select>
-        </div>
-        <div class="col-12">
-          <label>ملاحظات</label>
-          <textarea id="notes" placeholder="تفاصيل إضافية للإدارة"></textarea>
-        </div>
-        <div class="col-12" style="display:flex;gap:8px;align-items:center">
-          <button id="createBtn" class="btn">حفظ/إنشاء</button>
-          <button id="loadBtn" class="btn-outline">فتح طلب موجود</button>
-          <span id="orderMsg" class="muted"></span>
-        </div>
+      </div>
+      <div id="orderMsg" class="muted" style="margin-top:6px"></div>
+      <div class="hint">تقدر تبحث يا برقم الطلب يا برقم الهيكل — واحد منهم يكفي.</div>
+    </div>
+
+    <div class="card" id="erpCard" style="display:none">
+      <h3 class="title"><span class="icon">📊</span>تفاصيل الطلب من نظام المبيعات (ERP)</h3>
+      <div id="erpMeta" class="muted" style="margin-bottom:6px"></div>
+      <div class="erp-table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>اسم العميل</th>
+              <th>الرقم الضريبي للعميل</th>
+              <th>الفرع</th>
+              <th>تاريخ الطلب</th>
+              <th>تاريخ التسليم</th>
+              <th>مسؤول المبيعات</th>
+              <th>رقم الصنف</th>
+              <th>نوع الصنف</th>
+              <th>فئة الصنف</th>
+              <th>الموديل</th>
+              <th>رقم الهيكل VIN</th>
+              <th>اللون الداخلي</th>
+              <th>اللون الخارجي</th>
+              <th>الوكيل</th>
+              <th>الكمية</th>
+              <th>سعر الوحدة</th>
+              <th>قيمة الصنف</th>
+              <th>كود الضريبة</th>
+              <th>نوع الضريبة</th>
+              <th>نسبة الضريبة</th>
+              <th>قيمة الضريبة</th>
+              <th>الإجمالي قبل الضريبة</th>
+              <th>الإجمالي شامل الضريبة</th>
+            </tr>
+          </thead>
+          <tbody id="erpBody">
+            <tr>
+              <td data-field="CustomerName"></td>
+              <td data-field="CustomerVAT"></td>
+              <td data-field="Branch"></td>
+              <td data-field="OrderDate"></td>
+              <td data-field="DeliveryDate"></td>
+              <td data-field="SalesPerson"></td>
+              <td data-field="ItemNo"></td>
+              <td data-field="ItemType"></td>
+              <td data-field="ItemCategory"></td>
+              <td data-field="ItemModel"></td>
+              <td data-field="VIN"></td>
+              <td data-field="InteriorColor"></td>
+              <td data-field="ExteriorColor"></td>
+              <td data-field="Dealer"></td>
+              <td data-field="Qty"></td>
+              <td data-field="UnitPrice"></td>
+              <td data-field="ItemValue"></td>
+              <td data-field="TaxCode"></td>
+              <td data-field="TaxName"></td>
+              <td data-field="TaxRate"></td>
+              <td data-field="TaxValue"></td>
+              <td data-field="SubtotalExclVAT"></td>
+              <td data-field="TotalInclVAT"></td>
+            </tr>
+          </tbody>
+        </table>
       </div>
     </div>
 
-    <!-- Woo Order Details -->
-    <div class="card" id="wooDetailsCard" style="display:none">
-      <h3 class="title">تفاصيل الطلب من المتجر (WooCommerce)</h3>
-      <div class="row">
-        <div class="col-3">
-          <label>رقم الطلب في المتجر</label>
-          <input id="wooOrderNumber" readonly />
-        </div>
-        <div class="col-3">
-          <label>حالة الطلب في المتجر</label>
-          <input id="wooStatus" readonly />
-        </div>
-        <div class="col-3">
-          <label>إجمالي الطلب</label>
-          <input id="wooTotal" readonly />
-        </div>
-        <div class="col-3">
-          <label>طريقة الدفع (المتجر)</label>
-          <input id="wooPaymentTitle" readonly />
-        </div>
-
-        <div class="col-3">
-          <label>اسم العميل (الفاتورة)</label>
-          <input id="wooBillingName" readonly />
-        </div>
-        <div class="col-3">
-          <label>جوال العميل (الفاتورة)</label>
-          <input id="wooBillingPhone" readonly />
-        </div>
-        <div class="col-3">
-          <label>البريد الإلكتروني</label>
-          <input id="wooBillingEmail" readonly />
-        </div>
-        <div class="col-3">
-          <label>المدينة / الدولة</label>
-          <input id="wooBillingCityCountry" readonly />
-        </div>
-
-        <div class="col-12">
-          <label>عنوان الفاتورة</label>
-          <input id="wooBillingAddress" readonly />
-        </div>
-
-        <div class="col-12">
-          <label>المنتجات في الطلب</label>
-          <ul id="wooItemsList" class="items-list"></ul>
-        </div>
-      </div>
-      <div class="hint">هذه التفاصيل تُجلب مباشرةً من طلب WooCommerce عن طريق Webhook.</div>
-    </div>
-
-    <!-- Stages -->
     <div class="card" id="stagesCard" style="display:none">
-      <h3 class="title">مراحل التتبع</h3>
+      <h3 class="title"><span class="icon">🚦</span>مراحل التتبع</h3>
       <div class="grid-2" id="stagesList"></div>
       <div class="hint" style="margin-top:8px">
         اضغط على <strong>تم الانتهاء</strong> أمام أي مرحلة ليتم ختمها وتعيينها كآخر مرحلة للطلب مع مزامنتها فورًا في صفحة العميل.
@@ -177,8 +328,25 @@
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
-    import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-auth.js";
-    import { getFirestore, doc, getDoc, setDoc, updateDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
+    import {
+      getAuth,
+      onAuthStateChanged,
+      signInWithEmailAndPassword,
+      createUserWithEmailAndPassword,
+      signOut
+    } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-auth.js";
+    import {
+      getFirestore,
+      doc,
+      getDoc,
+      setDoc,
+      updateDoc,
+      serverTimestamp,
+      collection,
+      query,
+      where,
+      getDocs
+    } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyCorGtT5_Z68jCtLODvqnv0Fb7QW5eR6MQ",
@@ -189,46 +357,41 @@
       appId: "1:655452217491:web:9348d172c47bdd411fad66"
     };
 
+    const ERP_COLLECTION = "erp_orders";
+    const TRACK_COLLECTION = "orders";
+
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
     const db = getFirestore(app);
 
-    // UI
-    const authCard = document.getElementById("authCard");
-    const orderCard = document.getElementById("orderCard");
+    // UI refs
+    const authCard   = document.getElementById("authCard");
+    const orderCard  = document.getElementById("orderCard");
+    const erpCard    = document.getElementById("erpCard");
     const stagesCard = document.getElementById("stagesCard");
-    const whoami = document.getElementById("whoami");
-    const logoutBtn = document.getElementById("logoutBtn");
-    const email = document.getElementById("email");
-    const password = document.getElementById("password");
-    const loginBtn = document.getElementById("loginBtn");
-    const signupBtn = document.getElementById("signupBtn");
-    const authMsg = document.getElementById("authMsg");
+    const whoami     = document.getElementById("whoami");
+    const logoutBtn  = document.getElementById("logoutBtn");
 
-    const orderId = document.getElementById("orderId");
-    const customerName = document.getElementById("customerName");
-    const customerPhone = document.getElementById("customerPhone");
-    const paymentMethod = document.getElementById("paymentMethod");
-    const notes = document.getElementById("notes");
-    const createBtn = document.getElementById("createBtn");
-    const loadBtn = document.getElementById("loadBtn");
-    const orderMsg = document.getElementById("orderMsg");
+    const email      = document.getElementById("email");
+    const password   = document.getElementById("password");
+    const loginBtn   = document.getElementById("loginBtn");
+    const signupBtn  = document.getElementById("signupBtn");
+    const authMsg    = document.getElementById("authMsg");
 
-    const stagesList = document.getElementById("stagesList");
-    const stageMsg = document.getElementById("stageMsg");
+    const orderIdInput = document.getElementById("orderId");
+    const vinInput     = document.getElementById("vinInput");
+    const loadBtn      = document.getElementById("loadBtn");
+    const clearBtn     = document.getElementById("clearBtn");
+    const orderMsg     = document.getElementById("orderMsg");
 
-    // Woo details
-    const wooDetailsCard      = document.getElementById("wooDetailsCard");
-    const wooOrderNumberEl    = document.getElementById("wooOrderNumber");
-    const wooStatusEl         = document.getElementById("wooStatus");
-    const wooTotalEl          = document.getElementById("wooTotal");
-    const wooPaymentTitleEl   = document.getElementById("wooPaymentTitle");
-    const wooBillingNameEl    = document.getElementById("wooBillingName");
-    const wooBillingPhoneEl   = document.getElementById("wooBillingPhone");
-    const wooBillingEmailEl   = document.getElementById("wooBillingEmail");
-    const wooBillingCityCountryEl = document.getElementById("wooBillingCityCountry");
-    const wooBillingAddressEl = document.getElementById("wooBillingAddress");
-    const wooItemsListEl      = document.getElementById("wooItemsList");
+    const erpMetaEl    = document.getElementById("erpMeta");
+    const erpBody      = document.getElementById("erpBody");
+
+    const stagesList   = document.getElementById("stagesList");
+    const stageMsg     = document.getElementById("stageMsg");
+
+    let currentOrderId = null;
+    let currentVin     = null;
 
     const STAGES = [
       "1) إنشاء الطلب",
@@ -243,251 +406,391 @@
       "10) إتمام التسليم بنجاح"
     ];
 
-    function buildStagesUI(data = {}) {
-      stagesList.innerHTML = "";
-      const stagesObj = data.stages || {};
-
-      STAGES.forEach((label, idx) => {
-        const stageNumber = idx + 1;
-        const key = "s" + stageNumber;
-        const tsObj = stagesObj[key];
-        const ts = tsObj
-          ? new Date(tsObj.toDate ? tsObj.toDate() : tsObj).toLocaleString("ar-SA")
-          : null;
-
-        const item = document.createElement("div");
-        item.className = "stage";
-        if (ts) item.classList.add("done"); // أي مرحلة فيها وقت تعتبر منتهية (لون أخضر)
-
-        item.innerHTML = `
-          <div>
-            <strong>${label}</strong>
-            <div class="muted">
-              ${ ts ? "تم الانتهاء في: " + ts : "لم يتم الانتهاء بعد" }
-            </div>
-          </div>
-          <div>
-            <button class="btn-outline" data-key="${key}" data-stage="${stageNumber}">
-              تم الانتهاء
-            </button>
-          </div>
-        `;
-        stagesList.appendChild(item);
-      });
-    }
-
-    function fillWooDetails(data) {
-      if (!data || !data.wooOrderNumber) {
-        wooDetailsCard.style.display = "none";
-        wooItemsListEl.innerHTML = "";
-        return;
-      }
-      wooDetailsCard.style.display = "";
-
-      wooOrderNumberEl.value  = data.wooOrderNumber || data.orderId || "";
-      wooStatusEl.value       = data.wooStatus || "";
-      wooTotalEl.value        = data.orderTotal
-        ? `${data.orderTotal} ${data.orderCurrency || ""}`
-        : "";
-      wooPaymentTitleEl.value = data.paymentMethodTitle || data.wooPaymentTitle || "";
-
-      const billingName = data.customerName || "";
-      const billingPhone = data.customerPhone || "";
-      const billingEmail = data.customerEmail || "";
-      const cityCountry = [
-        data.billingCity || "",
-        data.billingCountry || "",
-      ].filter(Boolean).join(" / ");
-      const address = [
-        data.billingAddress1 || "",
-        data.billingPostcode || "",
-      ]
-        .filter(Boolean)
-        .join(" - ");
-
-      wooBillingNameEl.value        = billingName;
-      wooBillingPhoneEl.value       = billingPhone;
-      wooBillingEmailEl.value       = billingEmail;
-      wooBillingCityCountryEl.value = cityCountry;
-      wooBillingAddressEl.value     = address;
-
-      const items = data.lineItems || (data.wooDetails && data.wooDetails.items) || [];
-      wooItemsListEl.innerHTML = "";
-      if (!items.length) {
-        wooItemsListEl.innerHTML = "<li class='muted'>لا توجد منتجات مسجلة في هذا الطلب.</li>";
-      } else {
-        items.forEach((it) => {
-          const li = document.createElement("li");
-          li.textContent = `${it.name || ""} — عدد: ${it.quantity || 1} — إجمالي: ${it.total || ""}`;
-          wooItemsListEl.appendChild(li);
-        });
-      }
-    }
-
-    // Auth state
-    onAuthStateChanged(auth, (user) => {
-      if (user) {
-        authCard.style.display = "none";
-        orderCard.style.display = "";
-        stagesCard.style.display = "";
-        whoami.textContent = "مسجّل: " + (user.email || "");
-        logoutBtn.style.display = "";
-      } else {
-        authCard.style.display = "";
-        orderCard.style.display = "none";
-        stagesCard.style.display = "none";
-        wooDetailsCard.style.display = "none";
-        whoami.textContent = "";
-        logoutBtn.style.display = "none";
-      }
-    });
-
-    // Auth actions
+    // ---- Auth ----
     loginBtn.onclick = async () => {
       authMsg.textContent = "";
       try {
-        await signInWithEmailAndPassword(auth, email.value.trim(), password.value.trim());
-      } catch (e) {
-        authMsg.innerHTML = `<span class="err">فشل الدخول: ${e.message}</span>`;
+        const emailVal = email.value.trim();
+        const passVal  = password.value;
+        if (!emailVal || !passVal) {
+          authMsg.innerHTML = "<span class='err'>أدخل البريد وكلمة السر.</span>";
+          return;
+        }
+        await signInWithEmailAndPassword(auth, emailVal, passVal);
+        authMsg.innerHTML = "<span class='ok'>تم تسجيل الدخول بنجاح.</span>";
+      } catch (err) {
+        console.error(err);
+        authMsg.innerHTML = "<span class='err'>تعذر تسجيل الدخول. تأكد من البيانات أو الصلاحيات.</span>";
       }
     };
 
     signupBtn.onclick = async () => {
       authMsg.textContent = "";
       try {
-        await createUserWithEmailAndPassword(auth, email.value.trim(), password.value.trim());
-        authMsg.innerHTML = `<span class="ok">تم إنشاء المستخدم.</span>`;
-      } catch (e) {
-        authMsg.innerHTML = `<span class="err">فشل الإنشاء: ${e.message}</span>`;
+        const emailVal = email.value.trim();
+        const passVal  = password.value;
+        if (!emailVal || !passVal) {
+          authMsg.innerHTML = "<span class='err'>أدخل البريد وكلمة السر لإنشاء الحساب.</span>";
+          return;
+        }
+        await createUserWithEmailAndPassword(auth, emailVal, passVal);
+        authMsg.innerHTML = "<span class='ok'>تم إنشاء المستخدم وتسجيل الدخول.</span>";
+      } catch (err) {
+        console.error(err);
+        authMsg.innerHTML = "<span class='err'>تعذر إنشاء المستخدم. ربما ليس لديك صلاحية.</span>";
       }
     };
 
-    logoutBtn.onclick = () => signOut(auth);
+    logoutBtn.onclick = async () => {
+      try { await signOut(auth); } catch (err) { console.error(err); }
+    };
 
-    async function loadOrder() {
+    onAuthStateChanged(auth, (user) => {
+      if (user) {
+        whoami.textContent = "مسجّل: " + (user.email || "");
+        logoutBtn.style.display = "";
+        authCard.style.display  = "none";
+        orderCard.style.display = "";
+        stagesCard.style.display = "";
+      } else {
+        whoami.textContent = "";
+        logoutBtn.style.display = "none";
+        authCard.style.display  = "";
+        orderCard.style.display = "none";
+        erpCard.style.display   = "none";
+        stagesCard.style.display = "none";
+      }
+    });
+
+    // ---- helpers ----
+    function clearErpTable() {
+      erpMetaEl.textContent = "";
+      erpBody.querySelectorAll("td").forEach(td => td.textContent = "");
+    }
+
+    const FIELD_SYNONYMS = {
+      CustomerName: ["customerName","CustomerName"],
+      CustomerVAT:  ["customerVat","CustomerVAT","customerVAT"],
+      Branch:       ["branch","Branch"],
+      OrderDate:    ["orderDate","OrderDate"],
+      DeliveryDate: ["deliveryDate","DeliveryDate"],
+      SalesPerson:  ["salesPerson","SalesPerson"],
+      ItemNo:       ["itemNo","ItemNo","no"],
+      ItemType:     ["itemType","ItemType","type"],
+      ItemCategory: ["itemCategory","ItemCategory","category"],
+      ItemModel:    ["itemModel","ItemModel","model"],
+      VIN:          ["VIN","vin","item.vin"],
+      InteriorColor:["interiorColor","InteriorColor"],
+      ExteriorColor:["exteriorColor","ExteriorColor"],
+      Dealer:       ["dealer","Dealer"],
+      Qty:          ["qty","Qty"],
+      UnitPrice:    ["unitPrice","UnitPrice"],
+      ItemValue:    ["ItemValue","itemValue","value"],
+      TaxCode:      ["taxCode","TaxCode"],
+      TaxName:      ["taxName","TaxName"],
+      TaxRate:      ["taxRate","TaxRate"],
+      TaxValue:     ["taxValue","TaxValue"],
+      SubtotalExclVAT:["subtotalExclVat","SubtotalExclVAT","value"], // value كاحتياط
+      TotalInclVAT: ["totalInclVat","TotalInclVAT"]
+    };
+
+    function getFromPath(obj, path) {
+      return path.split(".").reduce((acc, key) => (acc && acc[key] !== undefined ? acc[key] : undefined), obj);
+    }
+
+    function getFieldFlex(data, fieldKey) {
+      const syns = FIELD_SYNONYMS[fieldKey] || [fieldKey];
+      for (const key of syns) {
+        let val;
+        if (key.includes(".")) {
+          val = getFromPath(data, key);
+        } else {
+          if (data[key] !== undefined) return data[key];
+          if (data.item && data.item[key] !== undefined) return data.item[key];
+          continue;
+        }
+        if (val !== undefined) return val;
+      }
+      return undefined;
+    }
+
+    function fillErpTable(data) {
+      if (!data) {
+        erpCard.style.display = "none";
+        clearErpTable();
+        return;
+      }
+      erpCard.style.display = "";
+      clearErpTable();
+
+      erpBody.querySelectorAll("td").forEach(td => {
+        const key = td.dataset.field;
+        const val = getFieldFlex(data, key);
+        td.textContent = (val !== undefined && val !== null && val !== "") ? val : "—";
+      });
+
+      const orderNo = data.orderNo || data.OrderNo || currentOrderId || "";
+      const vin     = getFieldFlex(data, "VIN") || currentVin || "";
+
+      erpMetaEl.innerHTML =
+        "<span class='badge'>رقم الطلب: " + (orderNo || "غير متوفر") + "</span>" +
+        "<span class='badge'>VIN: " + (vin || "غير متوفر") + "</span>";
+    }
+
+    // ---- stages ----
+    function buildStagesUI(orderData = {}) {
+      stagesList.innerHTML = "";
+      const stagesObj = orderData.stages || {};
+      const current   = orderData.currentStage || 0;
+
+      STAGES.forEach((label, idx) => {
+        const stageNumber = idx + 1;
+        const key  = "s" + stageNumber;
+        const ts   = stagesObj[key];
+        const tsStr = ts
+          ? new Date(ts.toDate ? ts.toDate() : ts).toLocaleString("ar-SA")
+          : null;
+
+        const wrapper = document.createElement("div");
+        wrapper.className = "stage";
+        if (tsStr) wrapper.classList.add("done");
+
+        const header = document.createElement("div");
+        header.className = "stage-header";
+
+        const titleEl = document.createElement("div");
+        titleEl.innerHTML = "<strong>" + label + "</strong>";
+
+        const metaEl = document.createElement("div");
+        metaEl.innerHTML = tsStr
+          ? "<small>تم الانتهاء: " + tsStr + "</small>"
+          : "<small>لم تُنفّذ بعد</small>";
+
+        header.appendChild(titleEl);
+        header.appendChild(metaEl);
+
+        const actions = document.createElement("div");
+        const btn = document.createElement("button");
+        btn.className = "btn-outline";
+        btn.textContent = "تم الانتهاء";
+        btn.style.fontSize = "12px";
+        btn.onclick = () => completeStage(stageNumber);
+        actions.appendChild(btn);
+
+        wrapper.appendChild(header);
+        wrapper.appendChild(actions);
+
+        if (current === stageNumber) {
+          const badge = document.createElement("div");
+          badge.className = "hint";
+          badge.textContent = "هذه هي المرحلة الحالية للطلب.";
+          wrapper.appendChild(badge);
+        }
+
+        stagesList.appendChild(wrapper);
+      });
+    }
+
+    async function completeStage(stageNumber) {
       stageMsg.textContent = "";
+      if (!currentOrderId) {
+        stageMsg.innerHTML = "<span class='err'>افتح طلب أولاً قبل تحديث المراحل.</span>";
+        return;
+      }
+      try {
+        const orderRef = doc(db, TRACK_COLLECTION, currentOrderId);
+        await updateDoc(orderRef, {
+          currentStage: stageNumber,
+          ["stages.s" + stageNumber]: serverTimestamp()
+        }).catch(async () => {
+          await setDoc(orderRef, {
+            orderId: currentOrderId,
+            vin: currentVin || "",
+            currentStage: stageNumber,
+            ["stages.s" + stageNumber]: serverTimestamp()
+          }, { merge: true });
+        });
+
+        const publicRef = doc(db, TRACK_COLLECTION, currentOrderId, "public", "status");
+        await setDoc(publicRef, {
+          orderId: currentOrderId,
+          vin: currentVin || "",
+          currentStage: stageNumber,
+          ["stages.s" + stageNumber]: serverTimestamp(),
+          updatedAt: serverTimestamp()
+        }, { merge: true });
+
+        const snap = await getDoc(orderRef);
+        const data = snap.exists() ? snap.data() : {};
+        buildStagesUI(data);
+
+        stageMsg.innerHTML = "<span class='ok'>تم ختم المرحلة رقم " + stageNumber + " وتحديث صفحة العميل.</span>";
+      } catch (err) {
+        console.error(err);
+        stageMsg.innerHTML = "<span class='err'>حدث خطأ أثناء تحديث المرحلة.</span>";
+      }
+    }
+
+    // ---- find by VIN with multiple patterns ----
+    async function findErpDocByVin(vinRaw) {
+      const vinStr = vinRaw.trim();
+      if (!vinStr) return null;
+      const candidates = [];
+      const isNumber = /^\d+$/.test(vinStr);
+      // string patterns
+      ["vin","VIN","item.vin"].forEach(field => {
+        candidates.push([field, vinStr]);
+      });
+      if (isNumber) {
+        const vinNum = Number(vinStr);
+        ["vin","VIN","item.vin"].forEach(field => {
+          candidates.push([field, vinNum]);
+        });
+      }
+      for (const [field, value] of candidates) {
+        try {
+          const q = query(collection(db, ERP_COLLECTION), where(field, "==", value));
+          const snap = await getDocs(q);
+          if (!snap.empty) return snap.docs[0];
+        } catch (err) {
+          console.error("VIN query error on field", field, err);
+        }
+      }
+      return null;
+    }
+
+    // ---- load order ----
+    async function loadOrder() {
       orderMsg.textContent = "";
-      const id = orderId.value.trim();
-      if (!id) {
-        orderMsg.innerHTML = `<span class="err">أدخل رقم الطلب.</span>`;
-        buildStagesUI();
-        fillWooDetails(null);
-        return null;
+      stageMsg.textContent = "";
+      clearErpTable();
+      currentOrderId = null;
+      currentVin     = null;
+
+      const idRaw  = orderIdInput.value.trim();
+      const vinRaw = vinInput.value.trim();
+
+      if (!idRaw && !vinRaw) {
+        orderMsg.innerHTML = "<span class='err'>أدخل رقم الطلب أو رقم الهيكل.</span>";
+        erpCard.style.display = "none";
+        buildStagesUI({});
+        return;
       }
-      const ref = doc(db, "orders", id);
-      const snap = await getDoc(ref);
-      if (!snap.exists()) {
-        buildStagesUI();
-        fillWooDetails(null);
-        orderMsg.innerHTML = `<span class="err">الطلب غير موجود — يمكنك إنشاؤه.</span>`;
-        return null;
+
+      try {
+        let erpSnap = null;
+        let erpData = null;
+        let erpDocId = null;
+
+        // 1) لو كتب ID كامل
+        if (idRaw) {
+          const directRef = doc(db, ERP_COLLECTION, idRaw);
+          const directSnap = await getDoc(directRef);
+          if (directSnap.exists()) {
+            erpSnap = directSnap;
+            erpData = directSnap.data();
+            erpDocId = directSnap.id;
+          }
+        }
+
+        // 2) لو مش موجود، جرّب OrderNo بدون _1
+        let orderNoBase = idRaw;
+        if (orderNoBase && orderNoBase.includes("_")) {
+          orderNoBase = orderNoBase.split("_")[0];
+        }
+        if (!erpData && orderNoBase) {
+          const q = query(collection(db, ERP_COLLECTION), where("orderNo", "==", orderNoBase));
+          const qsnap = await getDocs(q);
+          if (!qsnap.empty) {
+            erpSnap = qsnap.docs[0];
+            erpData = erpSnap.data();
+            erpDocId = erpSnap.id;
+          }
+        }
+
+        // 3) لو مفيش رقم طلب أو لسه مش لاقيين، جرّب VIN
+        if (!erpData && vinRaw) {
+          const vinDoc = await findErpDocByVin(vinRaw);
+          if (vinDoc) {
+            erpSnap = vinDoc;
+            erpData = vinDoc.data();
+            erpDocId = vinDoc.id;
+          }
+        }
+
+        if (!erpData) {
+          orderMsg.innerHTML = "<span class='err'>لا يوجد طلب مطابق في بيانات ERP.</span>";
+          erpCard.style.display = "none";
+          buildStagesUI({});
+          return;
+        }
+
+        // استنتاج orderId النهائي و VIN
+        const detectedOrderNo = erpData.orderNo || erpData.OrderNo || erpDocId || idRaw;
+        const finalOrderId = detectedOrderNo;
+        const finalVin = getFieldFlex(erpData, "VIN") || vinRaw || "";
+
+        currentOrderId = finalOrderId;
+        currentVin     = finalVin;
+
+        orderIdInput.value = finalOrderId;
+        vinInput.value     = finalVin;
+
+        fillErpTable(erpData);
+
+        // تجهيز وثيقة التتبع
+        const trackRef = doc(db, TRACK_COLLECTION, finalOrderId);
+        const trackSnap = await getDoc(trackRef);
+        let trackData = {};
+        if (trackSnap.exists()) {
+          trackData = trackSnap.data();
+        } else {
+          trackData = {
+            orderId: finalOrderId,
+            vin: finalVin || "",
+            currentStage: 0,
+            stages: {}
+          };
+          await setDoc(trackRef, trackData, { merge: true });
+          const publicRef = doc(db, TRACK_COLLECTION, finalOrderId, "public", "status");
+          await setDoc(publicRef, {
+            orderId: finalOrderId,
+            vin: finalVin || "",
+            currentStage: 0,
+            stages: {},
+            updatedAt: serverTimestamp()
+          }, { merge: true });
+        }
+
+        buildStagesUI(trackData);
+        erpCard.style.display = "";
+        stagesCard.style.display = "";
+
+        orderMsg.innerHTML = "<span class='ok'>تم تحميل الطلب بنجاح من نظام ERP وربطه بالتتبع.</span>";
+      } catch (err) {
+        console.error(err);
+        orderMsg.innerHTML = "<span class='err'>حدث خطأ أثناء تحميل الطلب.</span>";
+        erpCard.style.display = "none";
+        buildStagesUI({});
       }
-      const data = snap.data();
-      customerName.value = data.customerName || "";
-      customerPhone.value = data.customerPhone || "";
-      paymentMethod.value = data.paymentMethod || "تحويل";
-      notes.value = data.notes || "";
-      buildStagesUI(data);
-      fillWooDetails(data);
-      orderMsg.innerHTML = `<span class="ok">تم تحميل الطلب.</span>`;
-      return data;
     }
 
     loadBtn.onclick = loadOrder;
 
-    // Create/Save basic order
-    createBtn.onclick = async () => {
+    clearBtn.onclick = () => {
+      orderIdInput.value = "";
+      vinInput.value = "";
       orderMsg.textContent = "";
       stageMsg.textContent = "";
-      try {
-        const id = orderId.value.trim();
-        if (!id) throw new Error("أدخل رقم الطلب");
-        const payload = {
-          orderId: id,
-          customerName: customerName.value.trim(),
-          customerPhone: customerPhone.value.trim(),
-          paymentMethod: paymentMethod.value,
-          notes: notes.value.trim(),
-          currentStage: 0,   // ولا مرحلة منتهية في البداية
-          stages: { }        // الختم من زرار تم الانتهاء
-        };
-        await setDoc(doc(db, "orders", id), payload, { merge: true });
-
-        // doc الخاص بالعميل: المصدر اللي صفحة العميل بتقرأ منه
-        await setDoc(
-          doc(db, "orders", id, "public", "status"),
-          {
-            orderId: id,
-            currentStage: 0,
-            stages: {},
-            updatedAt: serverTimestamp()
-          },
-          { merge: true }
-        );
-
-        buildStagesUI(payload);
-        fillWooDetails(null);
-        orderMsg.innerHTML = `<span class="ok">تم حفظ/إنشاء الطلب ومزامنته للعميل.</span>`;
-      } catch (e) {
-        orderMsg.innerHTML = `<span class="err">خطأ: ${e.message}</span>`;
-      }
+      currentOrderId = null;
+      currentVin = null;
+      clearErpTable();
+      erpCard.style.display = "none";
+      buildStagesUI({});
     };
 
-    // عند الضغط على "تم الانتهاء" لأي مرحلة:
-    // - نختم المرحلة في doc الإدارة
-    // - ونختم نفس المرحلة جوّه object stages في doc العميل public/status
-    stagesList.addEventListener("click", async (e) => {
-      const btn = e.target.closest("button[data-key]");
-      if (!btn) return;
-
-      const id = orderId.value.trim();
-      if (!id) {
-        stageMsg.innerHTML = `<span class="err">أدخل/حمّل رقم الطلب أولاً.</span>`;
-        return;
-      }
-
-      const key = btn.getAttribute("data-key");              // s1 / s2 / ...
-      const stageNumber = parseInt(btn.getAttribute("data-stage"), 10) || 0;
-
-      try {
-        const now = new Date();
-
-        const adminRef  = doc(db, "orders", id);
-        const publicRef = doc(db, "orders", id, "public", "status");
-
-        // 1) تحديث doc الإدارة
-        await updateDoc(adminRef, {
-          [`stages.${key}`]: now,
-          currentStage: stageNumber
-        });
-
-        // 2) نقرأ doc العميل، نحدّث object stages ثم نرجّعه
-        const publicSnap   = await getDoc(publicRef);
-        const existingData = publicSnap.exists() ? (publicSnap.data().stages || {}) : {};
-        existingData[key]  = now;
-
-        await setDoc(
-          publicRef,
-          {
-            stages: existingData,
-            currentStage: stageNumber,
-            updatedAt: serverTimestamp()
-          },
-          { merge: true }
-        );
-
-        const data = await loadOrder();
-        buildStagesUI(data || {});
-        stageMsg.innerHTML = `<span class="ok">تم الانتهاء من المرحلة رقم ${stageNumber} ومزامنتها فورًا مع صفحة العميل.</span>`;
-      } catch (err) {
-        console.error(err);
-        stageMsg.innerHTML = `<span class="err">خطأ أثناء تحديث المرحلة.</span>`;
-      }
-    });
-
-    // init
-    buildStagesUI();
-    fillWooDetails(null);
+    clearErpTable();
+    buildStagesUI({});
   </script>
 </body>
 </html>
