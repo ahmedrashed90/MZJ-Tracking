@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
@@ -303,13 +304,12 @@
 
     // ========= 1) إعداد Firebase =========
     const firebaseConfig = {
-      // ⚠️ استبدل القيم دي بقيم مشروعك الحقيقي
-      apiKey: "YOUR_API_KEY",
-      authDomain: "YOUR_DOMAIN.firebaseapp.com",
-      projectId: "YOUR_PROJECT_ID",
-      storageBucket: "YOUR_PROJECT_ID.appspot.com",
-      messagingSenderId: "XXXXXXX",
-      appId: "XXXXXXXX"
+      apiKey: "AIzaSyCorGtT5_Z68jCtLODvqnv0Fb7QW5eR6MQ",
+      authDomain: "mzj-tracking.firebaseapp.com",
+      projectId: "mzj-tracking",
+      storageBucket: "mzj-tracking.firebasestorage.app",
+      messagingSenderId: "655452217491",
+      appId: "1:655452217491:web:9348d172c47bdd411fad66"
     };
 
     const app = initializeApp(firebaseConfig);
@@ -334,12 +334,56 @@
       `;
     }
 
-    function renderResult(docData) {
-      // docData = محتوى مستند erp_vins/{vin}
-      const lastOrderNo = docData.lastOrderNo || "";
-      const lastItemNo  = docData.lastItemNo || "";
-      const lastUpdate  = docData.lastUpdate || "";
-      const payload     = docData.lastData || {};
+
+    const STAGES = [
+      {
+        title: "1) إنشاء الطلب",
+        sub: "تم تسجيل طلبك في النظام بنجاح."
+      },
+      {
+        title: "2) أمر الدفع (تحويل/شبكة/كاش)",
+        sub: "يتم استلام مبلغ الدفعة أو ترتيب خيار الدفع المناسب."
+      },
+      {
+        title: "3) تواصل خدمة العملاء + إرسال البطاقة الجمركية",
+        sub: "خدمة العملاء تتواصل معك لاستكمال البيانات وإرسال البطاقة الجمركية."
+      },
+      {
+        title: "4) سداد رسوم التسجيل",
+        sub: "يتم سداد رسوم التسجيل الرسمية الخاصة بالمركبة."
+      },
+      {
+        title: "5) التأمين (شرط الربط على السيستم)",
+        sub: "إصدار وثيقة التأمين وربطها بنظام المرور."
+      },
+      {
+        title: "6) استيفاء الأوراق والمبالغ",
+        sub: "استكمال جميع المستندات والمبالغ المطلوبة للتسجيل."
+      },
+      {
+        title: "7) تجيير البطاقة الجمركية",
+        sub: "تحويل وتجيير البطاقة الجمركية باسم المالك الجديد."
+      },
+      {
+        title: "8) إصدار اللوحات أو نقل الملكية",
+        sub: "إصدار لوحات جديدة أو إتمام إجراء نقل الملكية."
+      },
+      {
+        title: "9) جاهزية السيارة للاستلام/طلب الشحن",
+        sub: "سيارتك جاهزة للاستلام من المعرض أو لطلب الشحن للمدينة المطلوبة."
+      },
+      {
+        title: "10) إتمام التسليم بنجاح",
+        sub: "تم تسليم السيارة وإغلاق الطلب بنجاح. نتمنى لك رحلة سعيدة."
+      }
+    ];
+
+    function renderResult(vinDocData, statusData) {
+      // vinDocData = محتوى مستند erp_vins/{vin}
+      const lastOrderNo = vinDocData.lastOrderNo || "";
+      const lastItemNo  = vinDocData.lastItemNo || "";
+      const lastUpdate  = vinDocData.lastUpdate || "";
+      const payload     = vinDocData.lastData || {};
 
       const customerName = payload.customerName || "";
       const customerVat  = payload.customerVat || "";
@@ -358,18 +402,21 @@
       const vin         = item.vin || "";
 
       const totals = payload.totals || {};
-      const totalInclVAT  = totals.totalInclVAT  || "";
-      const subtotalExcl  = totals.subtotalExclVAT || "";
-      const taxName       = totals.taxName || "";
-      const taxValue      = totals.taxValue || "";
+      const totalInclVAT  = totals.totalInclVAT  || totals.TotalInclVAT || "";
+      const subtotalExcl  = totals.subtotalExclVAT || totals.SubtotalExclVAT || "";
+      const taxName       = totals.taxName || totals.TaxName || "";
+      const taxValue      = totals.taxValue || totals.TaxValue || "";
 
-      // مؤقتًا: Timeline ثابت – بعدين نربطه من Firestore collection أخرى (tracking_orders)
-      const steps = [
-        { title: "تم إنشاء الطلب", sub: "تم تسجيل طلبك في النظام بنجاح.", done: true },
-        { title: "الموافقات والإجراءات", sub: "تتم مراجعة البيانات واستكمال الموافقات المطلوبة.", done: true },
-        { title: "تجهيز السيارة", sub: "يتم تجهيز السيارة حسب المواصفات المتفق عليها.", done: false },
-        { title: "جاهزة للاستلام / الشحن", sub: "سيتم إشعارك فور جاهزية السيارة للاستلام أو الشحن.", done: false }
-      ];
+      // بيانات التتبع
+      const track = statusData || {};
+      const currentStage = track.currentStage || 0;
+      const stages = track.stages || {};
+      const updatedAt = track.updatedAt ? new Date(track.updatedAt.toDate ? track.updatedAt.toDate() : track.updatedAt).toLocaleString("ar-SA") : "";
+
+      const currentStageLabel =
+        currentStage > 0 && currentStage <= STAGES.length
+          ? STAGES[currentStage - 1].title
+          : (currentStage === 0 ? "لم يبدأ بعد" : "جارٍ التحديث");
 
       resultContainer.innerHTML = `
         <div>
@@ -410,6 +457,14 @@
               <div class="info-label">مسؤول المبيعات</div>
               <div class="info-value">${salesPerson || "-"}</div>
             </div>
+            <div class="info-item">
+              <div class="info-label">حالة الطلب الحالية</div>
+              <div class="info-value">${currentStageLabel}</div>
+            </div>
+            <div class="info-item">
+              <div class="info-label">آخر تحديث للحالة</div>
+              <div class="info-value">${updatedAt || "-"}</div>
+            </div>
           </div>
 
           <div class="section-title">
@@ -439,26 +494,37 @@
             <span>حالة الطلب</span>
           </div>
           <div class="timeline">
-            <div class="timeline-title">خطوات الطلب (نسخة أولية – قابلة للتطوير)</div>
+            <div class="timeline-title">خطوات طلبك من أول حجز حتى استلام السيارة</div>
             <ul class="timeline-steps">
-              ${steps.map((step, idx) => `
-                <li class="timeline-step">
-                  <div class="step-icon ${step.done ? "done" : ""}">
-                    ${step.done ? "✓" : idx + 1}
-                  </div>
-                  <div class="step-body">
-                    <div class="step-title">${step.title}</div>
-                    <div class="step-sub">${step.sub}</div>
-                  </div>
-                </li>
-              `).join("")}
+              ${STAGES.map((step, idx) => {
+                const stepIndex = idx + 1;
+                const doneTs = stages["s" + stepIndex];
+                const isDone = currentStage >= stepIndex || !!doneTs;
+                const tsLabel = doneTs
+                  ? new Date(doneTs.toDate ? doneTs.toDate() : doneTs).toLocaleString("ar-SA")
+                  : "";
+                return `
+                  <li class="timeline-step">
+                    <div class="step-icon ${isDone ? "done" : ""}">
+                      ${isDone ? "✓" : stepIndex}
+                    </div>
+                    <div class="step-body">
+                      <div class="step-title">${step.title}</div>
+                      <div class="step-sub">
+                        ${step.sub}
+                        ${tsLabel ? " — <span>تم في: " + tsLabel + "</span>" : ""}
+                      </div>
+                    </div>
+                  </li>
+                `;
+              }).join("")}
             </ul>
           </div>
         </div>
       `;
     }
-
     // ========= 3) حدث البحث =========
+
     async function handleSearch() {
       const rawVin = (vinInput.value || "").trim();
       if (!rawVin) {
@@ -480,15 +546,30 @@
         }
 
         const vinData = vinSnap.data();
+
+        // قراءة حالة التتبع من orders/{orderId}/public/status
+        let statusData = null;
+        const orderId = vinData.lastOrderNo || vinData.orderId || "";
+        if (orderId) {
+          try {
+            const statusRef = doc(db, "orders", orderId, "public", "status");
+            const statusSnap = await getDoc(statusRef);
+            if (statusSnap.exists()) {
+              statusData = statusSnap.data();
+            }
+          } catch (errStatus) {
+            console.error("Error fetching status:", errStatus);
+          }
+        }
+
         setStatus("تم العثور على الطلب. يتم عرض التفاصيل الآن.");
-        renderResult(vinData);
+        renderResult(vinData, statusData);
       } catch (err) {
         console.error("Error fetching VIN:", err);
         setStatus("حدث خطأ أثناء جلب البيانات. حاول مرة أخرى لاحقاً.", true);
         renderEmptyState();
       }
     }
-
     searchBtn.addEventListener("click", handleSearch);
     vinInput.addEventListener("keydown", (e) => {
       if (e.key === "Enter") {
