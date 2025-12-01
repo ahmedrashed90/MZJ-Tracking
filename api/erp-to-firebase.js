@@ -3,7 +3,6 @@
 const { initializeApp, cert, getApps } = require("firebase-admin/app");
 const { getFirestore } = require("firebase-admin/firestore");
 
-// نهيّأ firebase-admin مرة واحدة ونرجّع db
 let db;
 function getDb() {
   if (!db) {
@@ -23,7 +22,6 @@ function getDb() {
 }
 
 module.exports = async (req, res) => {
-  // نسمح فقط بـ POST من Google Sheets
   if (req.method !== "POST") {
     return res.status(405).json({ error: "Method Not Allowed" });
   }
@@ -31,7 +29,6 @@ module.exports = async (req, res) => {
   try {
     const data = req.body || {};
 
-    // بنتوقع يجيلنا orderNo و item.no من Google Sheets
     const orderNo = data.orderNo || "";
     const itemNo  = data.item?.no ? String(data.item.no) : "0";
 
@@ -40,13 +37,12 @@ module.exports = async (req, res) => {
     }
 
     const db = getDb();
-
-    // Doc ID أساسي: رقم الطلب + رقم البند
-    const docId = `${orderNo}_${itemNo}`;
-
     const nowIso = new Date().toISOString();
 
-    // 👇 نخزّن الطلب في Collection رئيسية
+    // 🧾 المستند الأساسي للطلب (سطر في الشيت = بند واحد)
+    const docId = `${orderNo}_${itemNo}`;
+    console.log("Saving order doc:", docId);
+
     await db
       .collection("erp_orders")
       .doc(docId)
@@ -61,11 +57,13 @@ module.exports = async (req, res) => {
         { merge: true }
       );
 
-    // 👇 لو فيه VIN نخزّنه في Collection حسب رقم الهيكل
-    if (data.item && data.item.vin) {
+    // 🚗 تخزين حسب رقم الهيكل – فقط لو VIN غير فاضي
+    const vin = data.item?.vin ? String(data.item.vin).trim() : "";
+    if (vin) {
+      console.log("Saving VIN doc:", vin);
       await db
         .collection("erp_vins")
-        .doc(data.item.vin)
+        .doc(vin)
         .set(
           {
             lastOrderNo: orderNo,
@@ -75,19 +73,15 @@ module.exports = async (req, res) => {
           },
           { merge: true }
         );
+    } else {
+      console.log("No VIN in payload, skipping erp_vins doc.");
     }
 
-    // لو حبيت مستقبلاً تخزن View مبسّط للعميل تقدر تضيف Collection ثالثة هنا
-
     return res.status(200).json({ success: true });
-    } catch (err) {
+  } catch (err) {
     console.error("ERP Webhook Error:", err);
-
-    // نخلي الـ API ترجع رسالة الخطأ عشان نشوفها في Google Apps Script
     return res.status(500).json({
       error: err.message || String(err),
     });
   }
 };
-
-
