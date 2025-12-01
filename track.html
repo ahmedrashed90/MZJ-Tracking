@@ -1,4 +1,5 @@
 
+
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
@@ -430,10 +431,6 @@
               <div class="info-value">${lastOrderNo || "-"}</div>
             </div>
             <div class="info-item">
-              <div class="info-label">رقم البند</div>
-              <div class="info-value">${lastItemNo || "-"}</div>
-            </div>
-            <div class="info-item">
               <div class="info-label">اسم العميل</div>
               <div class="info-value">${customerName || "-"}</div>
             </div>
@@ -444,10 +441,6 @@
             <div class="info-item">
               <div class="info-label">الفرع</div>
               <div class="info-value">${branch || "-"}</div>
-            </div>
-            <div class="info-item">
-              <div class="info-label">تاريخ الطلب</div>
-              <div class="info-value">${orderDate || "-"}</div>
             </div>
             <div class="info-item">
               <div class="info-label">تاريخ التسليم المتوقع</div>
@@ -483,6 +476,12 @@
             </div>
             <div class="car-meta">
               الوكيل: ${dealer || "-"}
+            </div>
+            <div class="car-meta">
+              الإجمالي قبل الضريبة: ${subtotalExcl || "-"}
+            </div>
+            <div class="car-meta">
+              قيمة الضريبة${taxName ? " (" + taxName + ")" : ""}: ${taxValue || "-"}
             </div>
             <div class="car-meta">
               الإجمالي شامل الضريبة: ${totalInclVAT || "-"}
