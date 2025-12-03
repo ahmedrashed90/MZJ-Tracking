@@ -19,6 +19,17 @@ function getDb() {
   return db;
 }
 
+// تحويل "ر.س 83,000.00" → 83000
+function parseAmount(value) {
+  if (value === null || value === undefined) return null;
+  if (typeof value === "number") return value;
+  const s = String(value)
+    .replace(/[^\d.,\-]/g, "") // شيل ر.س وأي حروف
+    .replace(/,/g, "");
+  const n = parseFloat(s);
+  return isNaN(n) ? null : n;
+}
+
 module.exports = async (req, res) => {
   if (req.method !== "POST") {
     return res.status(405).json({ error: "Method Not Allowed" });
@@ -27,54 +38,154 @@ module.exports = async (req, res) => {
   try {
     const data = req.body || {};
 
-    const orderNo = data.orderNo || "";
-    const itemNo  = data.item?.no ? String(data.item.no) : "1";
+    // رقم الطلب
+    const orderNo =
+      data.orderNo ||
+      data.OrderNo ||
+      "";
 
     if (!orderNo) {
       return res.status(400).json({ error: "Missing orderNo" });
     }
 
+    // رقم الصنف/السطر
+    const itemNo =
+      (data.item && data.item.no && String(data.item.no)) ||
+      data.ItemNo ||
+      data.itemNo ||
+      "1";
+
     const db = getDb();
     const nowIso = new Date().toISOString();
 
-    // ========== 1) erp_orders (البيانات الكاملة من الشيت) ==========
+    // 1) استخراج القيمة الفعلية للسيارة من ItemValue
+    const rawItemValue =
+      data.ItemValue ||
+      data.itemValue ||
+      (data.item && data.item.value) ||
+      data.UnitPrice ||
+      data.unitPrice;
+
+    let itemValueNum = parseAmount(rawItemValue);
+
+    // لو مش لاقي، جرّب UnitPrice كاحتياط
+    if (itemValueNum === null) {
+      const backupPrice =
+        data.UnitPrice ||
+        data.unitPrice ||
+        (data.item && data.item.unitPrice);
+      itemValueNum = parseAmount(backupPrice);
+    }
+
+    // نسبة الضريبة
+    let rawTaxRate =
+      data.TaxRate ||
+      data.taxRate ||
+      (data.item && data.item.taxRate) ||
+      0.15;
+
+    let taxRateNum;
+    if (typeof rawTaxRate === "number") {
+      taxRateNum = rawTaxRate;
+    } else {
+      const cleaned = String(rawTaxRate).replace("%", "");
+      const r = parseFloat(cleaned);
+      taxRateNum = isNaN(r) ? 0.15 : r;
+      if (String(rawTaxRate).includes("%")) {
+        taxRateNum = taxRateNum / 100; // لو جاي 15%
+      }
+    }
+
+    // إجماليات الطلب (زي ما هي من الشيت)
+    const rawOrderSubtotal =
+      data.SubtotalExclVAT ||
+      data.subtotalExclVAT ||
+      data.SubtotalExclVat;
+    const rawOrderTotal =
+      data.TotalInclVAT ||
+      data.totalInclVAT ||
+      data.totalInclVat;
+
+    const orderSubtotalNum = parseAmount(rawOrderSubtotal);
+    const orderTotalNum = parseAmount(rawOrderTotal);
+
+    // حساب السعر الصحيح لكل سيارة
+    const subtotalPerCar =
+      itemValueNum !== null ? itemValueNum : orderSubtotalNum;
+    const totalInclPerCar =
+      itemValueNum !== null
+        ? Number((itemValueNum * (1 + taxRateNum)).toFixed(2))
+        : orderTotalNum;
+
+    // ========== 1) erp_orders (سطر خام من ERP + تصحيح الأرقام لكل سيارة) ==========
     const erpDocId = `${orderNo}_${itemNo}`;
     console.log("Saving erp_orders doc:", erpDocId);
 
-    await db
-      .collection("erp_orders")
-      .doc(erpDocId)
-      .set(
-        {
-          ...data,
-          orderNo,
-          itemNo,
-          source: "erp",
-          updatedAt: nowIso,
-        },
-        { merge: true }
-      );
+    const erpDocData = {
+      ...data,
+      orderNo,
+      itemNo,
+      source: "erp",
+      updatedAt: nowIso,
+
+      // أرقام صحيحة لكل سيارة
+      subtotalExclVAT: subtotalPerCar,
+      totalInclVAT: totalInclPerCar,
+
+      // إجماليات الطلب الكامل (لو حابب تستخدمهم في التقارير)
+      orderSubtotalExclVAT: orderSubtotalNum,
+      orderTotalInclVAT: orderTotalNum,
+    };
+
+    await db.collection("erp_orders").doc(erpDocId).set(erpDocData, {
+      merge: true,
+    });
 
     // ========== 2) orders (طلب واحد فيه كل الهياكل) ==========
-    // هنا هنخلي الـ Doc ID هو رقم الطلب فقط
     const orderDocId = orderNo;
 
-    // تجهيز بيانات العنصر (السيارة) عشان نضيفها في items[]
-    const vin = data.item?.vin ? String(data.item.vin).trim() : "";
+    const vin =
+      (data.item && String(data.item.vin || data.item.VIN || "").trim()) ||
+      String(data.VIN || data.vin || "").trim();
+
     const itemPayload = {
       itemNo,
       vin,
-      itemCode: data.item?.code || "",
-      itemName: data.item?.name || "",
+      itemCode:
+        (data.item && (data.item.code || data.item.Code)) ||
+        data.ItemCode ||
+        data.itemCode ||
+        "",
+      itemName:
+        (data.item && (data.item.name || data.item.Name)) ||
+        data.ItemType ||
+        data.ItemName ||
+        "",
+      itemModel:
+        data.ItemModel ||
+        (data.item && data.item.model) ||
+        "",
       chassisNo: vin,
-      qty: data.item?.qty || 1,
-      unit: data.item?.unit || "",
-      itemValue: data.item?.value || "",
-      taxCode: data.taxCode || data.item?.taxCode || "",
-      taxRate: data.taxRate || data.item?.taxRate || "",
-      taxValue: data.taxValue || data.item?.taxValue || "",
-      subtotalExclVAT: data.subtotalExclVAT || data.SubtotalExclVAT || "",
-      totalInclVAT: data.totalInclVAT || data.TotalInclVAT || "",
+      qty:
+        (data.item && data.item.qty) ||
+        data.Qty ||
+        data.qty ||
+        1,
+
+      // الأسعار الصحيحة لكل سيارة
+      subtotalExclVAT: subtotalPerCar,
+      totalInclVAT: totalInclPerCar,
+
+      // بيانات الضريبة
+      taxCode: data.TaxCode || data.taxCode || "",
+      taxRate: taxRateNum,
+      taxValue:
+        parseAmount(data.TaxValue || data.taxValue) || null,
+
+      // إجماليات الطلب (للسجّل كامل)
+      orderSubtotalExclVAT: orderSubtotalNum,
+      orderTotalInclVAT: orderTotalNum,
+
       updatedAt: nowIso,
     };
 
@@ -86,21 +197,29 @@ module.exports = async (req, res) => {
       .set(
         {
           orderNo,
-          branch: data.branch || "",
-          customerName: data.customerName || "",
-          customerVat: data.customerVat || "",
-          orderDate: data.orderDate || data.OrderDate || "",
-          deliveryDate: data.deliveryDate || data.DeliveryDate || "",
+          branch: data.Branch || data.branch || "",
+          customerName:
+            data.CustomerName || data.customerName || "",
+          customerVat:
+            data.CustomerVAT || data.customerVat || "",
+          orderDate:
+            data.OrderDate || data.orderDate || "",
+          deliveryDate:
+            data.DeliveryDate || data.deliveryDate || "",
           source: "erp",
           updatedAt: nowIso,
 
-          // هنستخدم arrayUnion عشان نضيف العربية (الهيكل) الجديدة لنفس الطلب
+          // Array فيها كل العربيات لنفس الطلب
           items: FieldValue.arrayUnion(itemPayload),
+
+          // نحفظ إجماليات الطلب على مستوى المستند برضه
+          orderSubtotalExclVAT: orderSubtotalNum,
+          orderTotalInclVAT: orderTotalNum,
         },
         { merge: true }
       );
 
-    // ========== 3) erp_vins (التتبع برقم الهيكل) ==========
+    // ========== 3) erp_vins (تتبع آخر طلب لكل VIN) ==========
     if (vin) {
       console.log("Saving erp_vins doc:", vin);
       await db
