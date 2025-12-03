@@ -230,6 +230,22 @@
       padding:0;
     }
 
+    .totals-box{
+      margin:6px 0 10px;
+      padding:8px 10px;
+      border-radius:10px;
+      background:#fffaf3;
+      border:1px solid rgba(188,143,116,.4);
+      font-size:13px;
+      color:var(--brown);
+      display:flex;
+      flex-wrap:wrap;
+      gap:10px;
+    }
+    .totals-box span{
+      white-space:nowrap;
+    }
+
     @media(max-width:900px){
       .row{grid-template-columns:1fr;}
       .col-3,.col-4,.col-6,.col-12{grid-column:span 1;}
@@ -305,6 +321,7 @@
         تفاصيل الطلب من نظام المبيعات (ERP)
       </h3>
       <div id="erpMeta" class="muted" style="margin-bottom:6px;"></div>
+      <div id="erpTotals" class="totals-box" style="display:none;"></div>
       <div class="erp-table-wrap">
         <table>
           <thead>
@@ -447,6 +464,7 @@
 
     const erpMetaEl    = document.getElementById("erpMeta");
     const erpBody      = document.getElementById("erpBody");
+    const erpTotals    = document.getElementById("erpTotals");
 
     const stagesList   = document.getElementById("stagesList");
     const stageMsg     = document.getElementById("stageMsg");
@@ -536,9 +554,22 @@
       return "-";
     }
 
+    // تحويل "ر.س 95,450.00" -> 95450 (للواجهة فقط)
+    function parseAmountFront(value) {
+      if (value === null || value === undefined || value === "-") return null;
+      if (typeof value === "number") return value;
+      const s = String(value)
+        .replace(/[^\d.,\-]/g, "")
+        .replace(/,/g, "");
+      const n = parseFloat(s);
+      return isNaN(n) ? null : n;
+    }
+
     function clearErpTable() {
       erpMetaEl.textContent = "";
       erpBody.innerHTML = "";
+      erpTotals.style.display = "none";
+      erpTotals.innerHTML = "";
     }
 
     function fillErpTable(records) {
@@ -565,6 +596,7 @@
         '<span class="badge">رقم الطلب: ' + (orderNo || "غير متوفر") + '</span>' +
         '<span class="badge">' + vinBadgeLabel + '</span>';
 
+      // تعبئة جدول ERP (سعر/إجمالي لكل سيارة)
       records.forEach(rec => {
         const tr = document.createElement("tr");
         ERP_FIELDS.forEach(field => {
@@ -574,6 +606,60 @@
         });
         erpBody.appendChild(tr);
       });
+
+      // حساب إجمالي الطلب
+      const totalCars = records.length;
+
+      let orderSubtotal = parseAmountFront(
+        first.orderSubtotalExclVAT ||
+        first.orderSubtotalExclVat ||
+        first.orderSubtotal
+      );
+
+      let orderTotal = parseAmountFront(
+        first.orderTotalInclVAT ||
+        first.orderTotalInclVat ||
+        first.orderTotal
+      );
+
+      // لو مش مخزّن على مستوى الطلب، نحسبه من كل السيارات
+      if (orderSubtotal === null || orderTotal === null) {
+        let subSum = 0;
+        let totalSum = 0;
+        records.forEach(rec => {
+          const subVal = parseAmountFront(
+            rec.subtotalExclVAT ||
+            rec.SubtotalExclVAT ||
+            getFieldFlex("SubtotalExclVAT", rec)
+          );
+          const totVal = parseAmountFront(
+            rec.totalInclVAT ||
+            rec.TotalInclVAT ||
+            getFieldFlex("TotalInclVAT", rec)
+          );
+          if (subVal !== null) subSum += subVal;
+          if (totVal !== null) totalSum += totVal;
+        });
+        if (orderSubtotal === null) orderSubtotal = subSum;
+        if (orderTotal === null) orderTotal = totalSum;
+      }
+
+      if (orderSubtotal !== null || orderTotal !== null) {
+        const parts = [];
+        parts.push(`<span>عدد السيارات في الطلب: <strong>${totalCars}</strong></span>`);
+        if (orderSubtotal !== null) {
+          parts.push(
+            `<span>إجمالي قبل الضريبة: <strong>${orderSubtotal.toLocaleString('ar-SA', {minimumFractionDigits:2})} ر.س</strong></span>`
+          );
+        }
+        if (orderTotal !== null) {
+          parts.push(
+            `<span>إجمالي شامل الضريبة: <strong>${orderTotal.toLocaleString('ar-SA', {minimumFractionDigits:2})} ر.س</strong></span>`
+          );
+        }
+        erpTotals.innerHTML = parts.join("");
+        erpTotals.style.display = "flex";
+      }
     }
 
     // STAGES UI
