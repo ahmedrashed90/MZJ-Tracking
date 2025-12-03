@@ -1,5 +1,3 @@
-
-
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
@@ -99,7 +97,7 @@
       display: inline-flex;
       align-items: center;
       gap: 6px;
-      transition: transform 0.1s ease, box-shadow 0.1s ease, background 0.2s;
+      transition: transform 0.1s.ease, box-shadow 0.1s ease, background 0.2s;
     }
     .btn-primary {
       background: linear-gradient(135deg, #3e2420, #bc8f74);
@@ -236,6 +234,30 @@
       color: #7b6a63;
     }
 
+    /* Tabs for multiple cars */
+    .cars-tabs {
+      margin: 6px 0 4px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+    .car-tab {
+      border-radius: 999px;
+      border: 1px solid #e4d6c8;
+      background: #f9f2ea;
+      color: #5b4035;
+      padding: 6px 10px;
+      font-size: 12px;
+      cursor: pointer;
+      font-family: inherit;
+      transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+    }
+    .car-tab.active {
+      background: #3e2420;
+      color: #fff;
+      border-color: #3e2420;
+    }
+
     @media (max-width: 480px) {
       .card {
         padding: 16px 14px 20px;
@@ -286,22 +308,16 @@
 
   <!-- Firebase SDK v9 (Modules) -->
   <script type="module">
-    // TODO: ضع إعدادات Firebase هنا:
-    // يمكنك نسخها من صفحة إعدادات الويب في Firebase Console
-    // مثال:
-    /*
-    const firebaseConfig = {
-      apiKey: "YOUR_API_KEY",
-      authDomain: "YOUR_DOMAIN.firebaseapp.com",
-      projectId: "YOUR_PROJECT_ID",
-      storageBucket: "YOUR_PROJECT_ID.appspot.com",
-      messagingSenderId: "XXXX",
-      appId: "XXXX"
-    };
-    */
-
     import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.11/firebase-app.js";
-    import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/9.6.11/firebase-firestore.js";
+    import {
+      getFirestore,
+      doc,
+      getDoc,
+      collection,
+      query,
+      where,
+      getDocs
+    } from "https://www.gstatic.com/firebasejs/9.6.11/firebase-firestore.js";
 
     // ========= 1) إعداد Firebase =========
     const firebaseConfig = {
@@ -334,7 +350,6 @@
         </div>
       `;
     }
-
 
     const STAGES = [
       {
@@ -379,8 +394,19 @@
       }
     ];
 
+    // تحويل "ر.س 95,450.00" -> 95450 (للواجهه)
+    function parseAmountFront(value) {
+      if (value === null || value === undefined || value === "-") return null;
+      if (typeof value === "number") return value;
+      const s = String(value)
+        .replace(/[^\d.,\-]/g, "")
+        .replace(/,/g, "");
+      const n = parseFloat(s);
+      return isNaN(n) ? null : n;
+    }
+
+    // ========== عرض النتيجة (Single car – نفس النظام القديم كـ fallback) ==========
     function renderResult(vinDocData, statusData) {
-      // vinDocData = محتوى مستند erp_vins/{vin}
       const lastOrderNo = vinDocData.lastOrderNo || "";
       const lastItemNo  = vinDocData.lastItemNo || "";
       const lastUpdate  = vinDocData.lastUpdate || "";
@@ -408,7 +434,6 @@
       const taxName       = totals.taxName || totals.TaxName || "";
       const taxValue      = totals.taxValue || totals.TaxValue || "";
 
-      // بيانات التتبع
       const track = statusData || {};
       const currentStage = track.currentStage || 0;
       const stages = track.stages || {};
@@ -522,8 +547,276 @@
         </div>
       `;
     }
-    // ========= 3) حدث البحث =========
 
+    // ====== Multi–car helpers ======
+    function buildOrderAndCars(erpRecords, vinData, rawVin) {
+      const first = erpRecords[0] || {};
+      const payloadFallback = vinData.lastData || {};
+
+      const orderInfo = {
+        orderNo: first.orderNo || first.OrderNo || vinData.lastOrderNo || "",
+        customerName: first.customerName || payloadFallback.customerName || "",
+        customerVat: first.customerVat || payloadFallback.customerVat || "",
+        branch: first.branch || payloadFallback.branch || "",
+        orderDate: first.orderDate || payloadFallback.orderDate || "",
+        deliveryDate: first.deliveryDate || payloadFallback.deliveryDate || "",
+        salesPerson: first.salesPerson || payloadFallback.salesPerson || ""
+      };
+
+      const cars = erpRecords.map((rec) => {
+        const item   = rec.item || {};
+        const totals = rec.totals || {};
+
+        const vin =
+          item.vin || item.VIN ||
+          rec.vin  || rec.VIN  || "";
+
+        const carType     = item.type     || rec.ItemType     || "";
+        const carCategory = item.category || rec.ItemCategory || "";
+        const carModel    = item.model    || rec.ItemModel    || "";
+
+        const extColor = item.exteriorColor || item.extColor || rec.ExteriorColor || "";
+        const intColor = item.interiorColor || item.intColor || rec.InteriorColor || "";
+        const dealer   = item.dealer || rec.dealer || rec.Dealer || "";
+
+        const subtotal =
+          rec.subtotalExclVAT ??
+          rec.SubtotalExclVAT ??
+          totals.subtotalExclVAT ??
+          totals.SubtotalExclVAT ??
+          "";
+
+        const total =
+          rec.totalInclVAT ??
+          rec.TotalInclVAT ??
+          totals.totalInclVAT ??
+          totals.TotalInclVAT ??
+          "";
+
+        const taxName =
+          rec.taxName ??
+          rec.TaxName ??
+          totals.taxName ??
+          totals.TaxName ??
+          "";
+
+        const taxValue =
+          rec.taxValue ??
+          rec.TaxValue ??
+          totals.taxValue ??
+          totals.TaxValue ??
+          "";
+
+        return {
+          vin,
+          label: [carType, carCategory, carModel].filter(Boolean).join(" "),
+          carType,
+          carCategory,
+          carModel,
+          extColor,
+          intColor,
+          dealer,
+          subtotal,
+          total,
+          taxName,
+          taxValue
+        };
+      });
+
+      let activeIndex = 0;
+      if (rawVin) {
+        const normalized = rawVin.replace(/\s+/g, "").toLowerCase();
+        const idx = cars.findIndex(
+          (c) => (c.vin || "").replace(/\s+/g, "").toLowerCase() === normalized
+        );
+        if (idx >= 0) activeIndex = idx;
+      }
+
+      return { orderInfo, cars, activeIndex };
+    }
+
+    function renderMultiResult(orderInfo, cars, statusData, activeIndex) {
+      if (!cars || !cars.length) {
+        renderEmptyState();
+        return;
+      }
+      if (activeIndex < 0 || activeIndex >= cars.length) activeIndex = 0;
+
+      const track = statusData || {};
+      const currentStage = track.currentStage || 0;
+      const stagesMap = track.stages || {};
+      const updatedAt = track.updatedAt
+        ? new Date(
+            track.updatedAt.toDate ? track.updatedAt.toDate() : track.updatedAt
+          ).toLocaleString("ar-SA")
+        : "";
+
+      const currentStageLabel =
+        currentStage > 0 && currentStage <= STAGES.length
+          ? STAGES[currentStage - 1].title
+          : currentStage === 0
+          ? "لم يبدأ بعد"
+          : "جارٍ التحديث";
+
+      function formatAmount(val) {
+        if (val === null || val === undefined || val === "") return "-";
+        if (typeof val === "number") {
+          return val.toLocaleString("ar-SA", { minimumFractionDigits: 2 });
+        }
+        const n = parseAmountFront(val);
+        if (n === null) return val;
+        return n.toLocaleString("ar-SA", { minimumFractionDigits: 2 });
+      }
+
+      function renderCarBox(car) {
+        return `
+          <div class="car-box">
+            <div class="car-main">
+              ${car.label || "-"}
+            </div>
+            <div class="car-meta">
+              رقم الهيكل: ${car.vin || "-"}
+            </div>
+            <div class="car-meta">
+              اللون الخارجي: ${car.extColor || "-"} – اللون الداخلي: ${car.intColor || "-"}
+            </div>
+            <div class="car-meta">
+              الوكيل: ${car.dealer || "-"}
+            </div>
+            <div class="car-meta">
+              الإجمالي قبل الضريبة: ${formatAmount(car.subtotal)} ر.س
+            </div>
+            <div class="car-meta">
+              قيمة الضريبة${car.taxName ? " (" + car.taxName + ")" : ""}: ${formatAmount(car.taxValue)} ر.س
+            </div>
+            <div class="car-meta">
+              الإجمالي شامل الضريبة: ${formatAmount(car.total)} ر.س
+            </div>
+          </div>
+        `;
+      }
+
+      const orderHeaderHtml = `
+        <div class="section-title">
+          <span class="icon-dot"></span>
+          <span>بيانات الطلب</span>
+        </div>
+        <div class="info-grid">
+          <div class="info-item">
+            <div class="info-label">رقم الطلب</div>
+            <div class="info-value">${orderInfo.orderNo || "-"}</div>
+          </div>
+          <div class="info-item">
+            <div class="info-label">اسم العميل</div>
+            <div class="info-value">${orderInfo.customerName || "-"}</div>
+          </div>
+          <div class="info-item">
+            <div class="info-label">الرقم الضريبي</div>
+            <div class="info-value">${orderInfo.customerVat || "-"}</div>
+          </div>
+          <div class="info-item">
+            <div class="info-label">الفرع</div>
+            <div class="info-value">${orderInfo.branch || "-"}</div>
+          </div>
+          <div class="info-item">
+            <div class="info-label">تاريخ التسليم المتوقع</div>
+            <div class="info-value">${orderInfo.deliveryDate || "-"}</div>
+          </div>
+          <div class="info-item">
+            <div class="info-label">مسؤول المبيعات</div>
+            <div class="info-value">${orderInfo.salesPerson || "-"}</div>
+          </div>
+          <div class="info-item">
+            <div class="info-label">حالة الطلب الحالية</div>
+            <div class="info-value">${currentStageLabel}</div>
+          </div>
+          <div class="info-item">
+            <div class="info-label">آخر تحديث للحالة</div>
+            <div class="info-value">${updatedAt || "-"}</div>
+          </div>
+        </div>
+      `;
+
+      const tabsHtml = `
+        <div class="section-title">
+          <span class="icon-dot"></span>
+          <span>السيارات في هذا الطلب</span>
+        </div>
+        <div class="cars-tabs">
+          ${cars
+            .map(
+              (car, idx) => `
+            <button class="car-tab ${
+              idx === activeIndex ? "active" : ""
+            }" data-idx="${idx}">
+              سيارة ${idx + 1} – ${(car.label || car.vin || "").slice(0, 40)}
+            </button>
+          `
+            )
+            .join("")}
+        </div>
+        <div id="carDetailsArea">
+          ${renderCarBox(cars[activeIndex])}
+        </div>
+      `;
+
+      const timelineHtml = `
+        <div class="section-title">
+          <span class="icon-dot"></span>
+          <span>حالة الطلب</span>
+        </div>
+        <div class="timeline">
+          <div class="timeline-title">خطوات طلبك من أول حجز حتى استلام السيارة</div>
+          <ul class="timeline-steps">
+            ${STAGES.map((step, idx) => {
+              const stepIndex = idx + 1;
+              const doneTs = stagesMap["s" + stepIndex];
+              const isDone = currentStage >= stepIndex || !!doneTs;
+              const tsLabel = doneTs
+                ? new Date(
+                    doneTs.toDate ? doneTs.toDate() : doneTs
+                  ).toLocaleString("ar-SA")
+                : "";
+              return `
+                <li class="timeline-step">
+                  <div class="step-icon ${isDone ? "done" : ""}">
+                    ${isDone ? "✓" : stepIndex}
+                  </div>
+                  <div class="step-body">
+                    <div class="step-title">${step.title}</div>
+                    <div class="step-sub">
+                      ${step.sub}
+                      ${tsLabel ? " — <span>تم في: " + tsLabel + "</span>" : ""}
+                    </div>
+                  </div>
+                </li>
+              `;
+            }).join("")}
+          </ul>
+        </div>
+      `;
+
+      resultContainer.innerHTML = `
+        <div>
+          ${orderHeaderHtml}
+          ${tabsHtml}
+          ${timelineHtml}
+        </div>
+      `;
+
+      const tabs = resultContainer.querySelectorAll(".car-tab");
+      const carDetailsArea = resultContainer.querySelector("#carDetailsArea");
+      tabs.forEach((tab) => {
+        tab.addEventListener("click", () => {
+          const idx = parseInt(tab.getAttribute("data-idx"), 10);
+          tabs.forEach((t) => t.classList.remove("active"));
+          tab.classList.add("active");
+          carDetailsArea.innerHTML = renderCarBox(cars[idx]);
+        });
+      });
+    }
+
+    // ========= 3) حدث البحث =========
     async function handleSearch() {
       const rawVin = (vinInput.value || "").trim();
       if (!rawVin) {
@@ -535,6 +828,7 @@
       setStatus("جاري البحث عن الطلب المرتبط بهذا الرقم…");
 
       try {
+        // 1) نجيب erp_vins/{vin}
         const vinDocRef = doc(db, "erp_vins", rawVin);
         const vinSnap   = await getDoc(vinDocRef);
 
@@ -546,7 +840,7 @@
 
         const vinData = vinSnap.data();
 
-        // قراءة حالة التتبع من orders/{orderId}/public/status
+        // 2) قراءة حالة التتبع من orders/{orderId}/public/status
         let statusData = null;
         const orderId = vinData.lastOrderNo || vinData.orderId || "";
         if (orderId) {
@@ -561,14 +855,45 @@
           }
         }
 
-        setStatus("تم العثور على الطلب. يتم عرض التفاصيل الآن.");
-        renderResult(vinData, statusData);
+        // 3) محاولة جلب كل السيارات في نفس الطلب من erp_orders
+        let handledMulti = false;
+        if (orderId) {
+          try {
+            const colRef = collection(db, "erp_orders");
+            const q = query(colRef, where("orderNo", "==", orderId));
+            const qsnap = await getDocs(q);
+            if (!qsnap.empty) {
+              const erpRecords = qsnap.docs.map((d) => d.data());
+              if (erpRecords.length > 0) {
+                const { orderInfo, cars, activeIndex } = buildOrderAndCars(
+                  erpRecords,
+                  vinData,
+                  rawVin
+                );
+                renderMultiResult(orderInfo, cars, statusData, activeIndex);
+                setStatus(
+                  `تم العثور على الطلب. هذا الطلب يحتوي على ${cars.length} سيارة.`
+                );
+                handledMulti = true;
+              }
+            }
+          } catch (multiErr) {
+            console.error("Error fetching multi-car order:", multiErr);
+          }
+        }
+
+        // 4) لو مفيش تعدد سيارات (أو حصل خطأ) نرجع للعرض القديم
+        if (!handledMulti) {
+          setStatus("تم العثور على الطلب. يتم عرض تفاصيل السيارة.");
+          renderResult(vinData, statusData);
+        }
       } catch (err) {
         console.error("Error fetching VIN:", err);
         setStatus("حدث خطأ أثناء جلب البيانات. حاول مرة أخرى لاحقاً.", true);
         renderEmptyState();
       }
     }
+
     searchBtn.addEventListener("click", handleSearch);
     vinInput.addEventListener("keydown", (e) => {
       if (e.key === "Enter") {
