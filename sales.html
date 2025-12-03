@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
@@ -336,31 +335,6 @@
           </tr>
           </thead>
           <tbody id="erpBody">
-          <tr>
-            <td data-field="CustomerName"></td>
-            <td data-field="CustomerVAT"></td>
-            <td data-field="Branch"></td>
-            <td data-field="OrderDate"></td>
-            <td data-field="DeliveryDate"></td>
-            <td data-field="SalesPerson"></td>
-            <td data-field="ItemNo"></td>
-            <td data-field="ItemType"></td>
-            <td data-field="ItemCategory"></td>
-            <td data-field="ItemModel"></td>
-            <td data-field="VIN"></td>
-            <td data-field="InteriorColor"></td>
-            <td data-field="ExteriorColor"></td>
-            <td data-field="Dealer"></td>
-            <td data-field="Qty"></td>
-            <td data-field="UnitPrice"></td>
-            <td data-field="ItemValue"></td>
-            <td data-field="TaxCode"></td>
-            <td data-field="TaxName"></td>
-            <td data-field="TaxRate"></td>
-            <td data-field="TaxValue"></td>
-            <td data-field="SubtotalExclVAT"></td>
-            <td data-field="TotalInclVAT"></td>
-          </tr>
           </tbody>
         </table>
       </div>
@@ -433,6 +407,13 @@
     const ERP_COLLECTION      = "erp_orders";
     const ERP_VINS_COLLECTION = "erp_vins";
     const TRACK_COLLECTION    = "orders";
+
+    // ترتيب الحقول في جدول ERP (لكل صف/هيكل)
+    const ERP_FIELDS = [
+      "CustomerName","CustomerVAT","Branch","OrderDate","DeliveryDate","SalesPerson",
+      "ItemNo","ItemType","ItemCategory","ItemModel","VIN","InteriorColor","ExteriorColor","Dealer",
+      "Qty","UnitPrice","ItemValue","TaxCode","TaxName","TaxRate","TaxValue","SubtotalExclVAT","TotalInclVAT"
+    ];
 
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
@@ -549,7 +530,7 @@
       v = lookupIn(data.item, candidates);
       if (v !== undefined) return v;
 
-      v = lookupIn(data.totals, candidates); // الضريبة داخل totals
+      v = lookupIn(data.totals, candidates);
       if (v !== undefined) return v;
 
       return "-";
@@ -557,11 +538,11 @@
 
     function clearErpTable() {
       erpMetaEl.textContent = "";
-      erpBody.querySelectorAll("td").forEach(td => td.textContent = "");
+      erpBody.innerHTML = "";
     }
 
-    function fillErpTable(data) {
-      if (!data) {
+    function fillErpTable(records) {
+      if (!records || !records.length) {
         erpCard.style.display = "none";
         clearErpTable();
         return;
@@ -569,17 +550,30 @@
       erpCard.style.display = "";
       clearErpTable();
 
-      erpBody.querySelectorAll("td").forEach(td => {
-        const key = td.dataset.field;
-        td.textContent = getFieldFlex(key, data);
-      });
+      const first = records[0] || {};
+      const orderNo = first.orderNo || first.OrderNo || currentOrderId || "";
+      let vinBadgeLabel = "";
 
-      const orderNo = data.orderNo || data.OrderNo || currentOrderId || "";
-      const vinVal  = getFieldFlex("VIN", data) || currentVin || "";
+      if (records.length === 1) {
+        const vinVal = getFieldFlex("VIN", first) || currentVin || "";
+        vinBadgeLabel = "VIN: " + (vinVal || "غير متوفر");
+      } else {
+        vinBadgeLabel = "أكثر من هيكل (" + records.length + ")";
+      }
 
       erpMetaEl.innerHTML =
         '<span class="badge">رقم الطلب: ' + (orderNo || "غير متوفر") + '</span>' +
-        '<span class="badge">VIN: ' + (vinVal || "غير متوفر") + '</span>';
+        '<span class="badge">' + vinBadgeLabel + '</span>';
+
+      records.forEach(rec => {
+        const tr = document.createElement("tr");
+        ERP_FIELDS.forEach(field => {
+          const td = document.createElement("td");
+          td.textContent = getFieldFlex(field, rec);
+          tr.appendChild(td);
+        });
+        erpBody.appendChild(tr);
+      });
     }
 
     // STAGES UI
@@ -802,47 +796,61 @@
       }
 
       try{
-        let erpData = null;
+        let erpRecords = [];
         let erpDocId = null;
 
         if(idRaw){
           const ref = doc(db, ERP_COLLECTION, idRaw);
           const snap = await getDoc(ref);
           if(snap.exists()){
-            erpData = snap.data();
+            erpRecords.push(snap.data());
             erpDocId = snap.id;
           }
         }
 
         let baseOrder = idRaw;
-        if(!erpData && baseOrder){
+        if(!erpRecords.length && baseOrder){
           if(baseOrder.includes("_")) baseOrder = baseOrder.split("_")[0];
           const q = query(collection(db, ERP_COLLECTION), where("orderNo","==",baseOrder));
           const qsnap = await getDocs(q);
           if(!qsnap.empty){
-            const d = qsnap.docs[0];
-            erpData = d.data();
-            erpDocId = d.id;
+            erpRecords = qsnap.docs.map(d => d.data());
+            erpDocId = qsnap.docs[0].id;
           }
         }
 
-        if(!erpData && vinRaw){
+        if(!erpRecords.length && vinRaw){
           const d = await findByVin(vinRaw);
           if(d){
-            erpData = d.data();
+            const data = d.data();
             erpDocId = d.id;
+            const ordNo = data.orderNo || data.OrderNo || null;
+            if (ordNo) {
+              const q2 = query(collection(db, ERP_COLLECTION), where("orderNo","==",ordNo));
+              const s2 = await getDocs(q2);
+              if (!s2.empty) {
+                erpRecords = s2.docs.map(docSnap => docSnap.data());
+              } else {
+                erpRecords = [data];
+              }
+            } else {
+              erpRecords = [data];
+            }
           }
         }
 
-        if(!erpData){
+        if(!erpRecords.length){
           orderMsg.innerHTML = "<span class='err'>لا يوجد طلب مطابق في بيانات ERP.</span>";
           erpCard.style.display = "none";
           buildStagesUI({});
           return;
         }
 
-        const detectedOrderNo = erpData.orderNo || erpData.OrderNo || (erpDocId || idRaw);
-        const vinVal = getFieldFlex("VIN", erpData) || vinRaw || "";
+        const firstRec = erpRecords[0] || {};
+        const detectedOrderNo = firstRec.orderNo || firstRec.OrderNo || (erpDocId || idRaw);
+        const vinVal = (erpRecords.length === 1)
+          ? (getFieldFlex("VIN", firstRec) || vinRaw || "")
+          : (vinRaw || "");
 
         currentOrderId = detectedOrderNo;
         currentVin     = vinVal;
@@ -850,7 +858,7 @@
         orderIdInput.value = detectedOrderNo;
         vinInput.value     = vinVal;
 
-        fillErpTable(erpData);
+        fillErpTable(erpRecords);
 
         const trackRef = doc(db, TRACK_COLLECTION, detectedOrderNo);
         const trackSnap = await getDoc(trackRef);
@@ -878,7 +886,7 @@
         buildStagesUI(trackData);
         erpCard.style.display = "";
         stagesCard.style.display = "";
-        ordersListCard.style.display = ordersListCard.style.display; // ما نلمس التاب
+        ordersListCard.style.display = ordersListCard.style.display;
 
         orderMsg.innerHTML = "<span class='ok'>تم تحميل الطلب وربطه بالتتبع.</span>";
       }catch(e){
