@@ -647,11 +647,7 @@
       if (orderSubtotal !== null || orderTotal !== null) {
         const parts = [];
         parts.push(`<span>عدد السيارات في الطلب: <strong>${totalCars}</strong></span>`);
-        if (orderSubtotal !== null) {
-          parts.push(
-            `<span>إجمالي قبل الضريبة: <strong>${orderSubtotal.toLocaleString('ar-SA', {minimumFractionDigits:2})} ر.س</strong></span>`
-          );
-        }
+       
         if (orderTotal !== null) {
           parts.push(
             `<span>إجمالي شامل الضريبة: <strong>${orderTotal.toLocaleString('ar-SA', {minimumFractionDigits:2})} ر.س</strong></span>`
@@ -1088,3 +1084,4 @@
   </script>
 </body>
 </html>
+
