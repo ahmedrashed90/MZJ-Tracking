@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
@@ -471,6 +472,7 @@
 
     let currentOrderId = null;
     let currentVin     = null;
+    let currentItemNo  = null;
 
     const STAGES = [
       "1) إنشاء الطلب",
@@ -596,17 +598,27 @@
         '<span class="badge">رقم الطلب: ' + (orderNo || "غير متوفر") + '</span>' +
         '<span class="badge">' + vinBadgeLabel + '</span>';
 
+      
       // تعبئة جدول ERP (سعر/إجمالي لكل سيارة)
       records.forEach(rec => {
         const tr = document.createElement("tr");
         ERP_FIELDS.forEach(field => {
           const td = document.createElement("td");
-          td.textContent = getFieldFlex(field, rec);
+          let val = getFieldFlex(field, rec);
+
+          // تنسيق قيمة الضريبة والإجمالي شامل الضريبة بنفس شكل الإجمالي قبل الضريبة
+          if (field === "TotalInclVAT" || field === "TaxValue") {
+            const num = parseAmountFront(val);
+            if (num !== null) {
+              val = num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " ر.س";
+            }
+          }
+
+          td.textContent = val;
           tr.appendChild(td);
         });
         erpBody.appendChild(tr);
       });
-
       // حساب إجمالي الطلب
       const totalCars = records.length;
 
@@ -720,23 +732,32 @@
         return;
       }
       try {
-        const orderRef = doc(db, TRACK_COLLECTION, currentOrderId);
+        const baseId = currentOrderId;
+        const itemNoPart = currentItemNo ? "_" + currentItemNo : "";
+        const docId = baseId + itemNoPart;
+
+        const orderRef = doc(db, TRACK_COLLECTION, docId);
         await updateDoc(orderRef, {
+          orderId: baseId,
+          vin: currentVin || "",
+          itemNo: currentItemNo || 1,
           currentStage: num,
           ["stages.s" + num]: serverTimestamp()
         }).catch(async () => {
           await setDoc(orderRef, {
-            orderId: currentOrderId,
+            orderId: baseId,
             vin: currentVin || "",
+            itemNo: currentItemNo || 1,
             currentStage: num,
             ["stages.s" + num]: serverTimestamp()
           }, { merge:true });
         });
 
-        const publicRef = doc(db, TRACK_COLLECTION, currentOrderId, "public", "status");
+        const publicRef = doc(db, TRACK_COLLECTION, docId, "public", "status");
         await setDoc(publicRef, {
-          orderId: currentOrderId,
+          orderId: baseId,
           vin: currentVin || "",
+          itemNo: currentItemNo || 1,
           currentStage: num,
           ["stages.s" + num]: serverTimestamp(),
           updatedAt: serverTimestamp()
@@ -935,7 +956,27 @@
           : (vinRaw || "");
 
         currentOrderId = detectedOrderNo;
-        currentVin     = vinVal;
+        currentVin     = vinVal || "";
+
+// تحديد رقم البند المرتبط بهذا الـ VIN (إن وجد)
+        let itemNoForCurrent = null;
+        if (currentVin) {
+          const matched = erpRecords.find(r => {
+            const v = (getFieldFlex("VIN", r) || "").toString().trim();
+            return v && v === currentVin.toString().trim();
+          });
+          if (matched) {
+            itemNoForCurrent = getFieldFlex("ItemNo", matched);
+          }
+        }
+        if (!itemNoForCurrent) {
+          const firstItem = erpRecords[0] || null;
+          if (firstItem) {
+            itemNoForCurrent = getFieldFlex("ItemNo", firstItem);
+          }
+        }
+        const parsedItemNo = parseInt(itemNoForCurrent, 10);
+        currentItemNo = !isNaN(parsedItemNo) && parsedItemNo > 0 ? parsedItemNo : 1;
 
         orderIdInput.value = detectedOrderNo;
         vinInput.value     = vinVal;
@@ -988,6 +1029,7 @@
       stageMsg.textContent = "";
       currentOrderId = null;
       currentVin = null;
+      currentItemNo = null;
       clearErpTable();
       erpCard.style.display = "none";
       buildStagesUI({});
