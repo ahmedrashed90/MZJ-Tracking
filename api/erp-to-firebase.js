@@ -1,5 +1,5 @@
 const { initializeApp, cert, getApps } = require("firebase-admin/app");
-const { getFirestore } = require("firebase-admin/firestore");
+const { getFirestore, FieldValue } = require("firebase-admin/firestore");
 
 let db;
 function getDb() {
@@ -55,30 +55,52 @@ module.exports = async (req, res) => {
         { merge: true }
       );
 
-    // ========== 2) orders (اللي النظام بيستخدمه في فتح الطلب) ==========
-    // هنا هنستخدم نفس رقم الطلب اللي بتكتبه في الفورم: SAL-ORD-2025-01109_1
-    const orderDocId = `${orderNo}_${itemNo}`;
-    console.log("Saving orders doc:", orderDocId);
+    // ========== 2) orders (طلب واحد فيه كل الهياكل) ==========
+    // هنا هنخلي الـ Doc ID هو رقم الطلب فقط
+    const orderDocId = orderNo;
+
+    // تجهيز بيانات العنصر (السيارة) عشان نضيفها في items[]
+    const vin = data.item?.vin ? String(data.item.vin).trim() : "";
+    const itemPayload = {
+      itemNo,
+      vin,
+      itemCode: data.item?.code || "",
+      itemName: data.item?.name || "",
+      chassisNo: vin,
+      qty: data.item?.qty || 1,
+      unit: data.item?.unit || "",
+      itemValue: data.item?.value || "",
+      taxCode: data.taxCode || data.item?.taxCode || "",
+      taxRate: data.taxRate || data.item?.taxRate || "",
+      taxValue: data.taxValue || data.item?.taxValue || "",
+      subtotalExclVAT: data.subtotalExclVAT || data.SubtotalExclVAT || "",
+      totalInclVAT: data.totalInclVAT || data.TotalInclVAT || "",
+      updatedAt: nowIso,
+    };
+
+    console.log("Saving/merging orders doc:", orderDocId);
 
     await db
       .collection("orders")
       .doc(orderDocId)
       .set(
         {
-          orderNo: orderDocId,
+          orderNo,
           branch: data.branch || "",
           customerName: data.customerName || "",
           customerVat: data.customerVat || "",
-          createdAt: nowIso,
+          orderDate: data.orderDate || data.OrderDate || "",
+          deliveryDate: data.deliveryDate || data.DeliveryDate || "",
           source: "erp",
-          // تقدر تزود هنا أي حقول تحبها للنظام:
-          // paymentType, customerPhone, status, notes, ...
+          updatedAt: nowIso,
+
+          // هنستخدم arrayUnion عشان نضيف العربية (الهيكل) الجديدة لنفس الطلب
+          items: FieldValue.arrayUnion(itemPayload),
         },
         { merge: true }
       );
 
     // ========== 3) erp_vins (التتبع برقم الهيكل) ==========
-    const vin = data.item?.vin ? String(data.item.vin).trim() : "";
     if (vin) {
       console.log("Saving erp_vins doc:", vin);
       await db
