@@ -19,12 +19,12 @@ function getDb() {
   return db;
 }
 
-// تحويل "ر.س 83,000.00" → 83000
+// تحويل "ر.س 95,450.00" → 95450
 function parseAmount(value) {
   if (value === null || value === undefined) return null;
   if (typeof value === "number") return value;
   const s = String(value)
-    .replace(/[^\d.,\-]/g, "") // شيل ر.س وأي حروف
+    .replace(/[^\d.,\-]/g, "")
     .replace(/,/g, "");
   const n = parseFloat(s);
   return isNaN(n) ? null : n;
@@ -58,7 +58,9 @@ module.exports = async (req, res) => {
     const db = getDb();
     const nowIso = new Date().toISOString();
 
-    // 1) استخراج القيمة الفعلية للسيارة (سعر قبل الضريبة) من ItemValue أو UnitPrice
+    // ===================== 1) حساب سعر وضريبة كل سيارة =====================
+
+    // سعر السيارة قبل الضريبة من ItemValue أو UnitPrice
     const rawItemValue =
       data.ItemValue ||
       data.itemValue ||
@@ -66,15 +68,15 @@ module.exports = async (req, res) => {
       data.UnitPrice ||
       data.unitPrice;
 
-    let itemValueNum = parseAmount(rawItemValue);
+    let pricePerCar = parseAmount(rawItemValue);
 
-    // لو مش لاقي، جرّب UnitPrice كاحتياط
-    if (itemValueNum === null) {
+    // لو مش لاقي، جرّب UnitPrice كاحتياطي
+    if (pricePerCar === null) {
       const backupPrice =
         data.UnitPrice ||
         data.unitPrice ||
         (data.item && data.item.unitPrice);
-      itemValueNum = parseAmount(backupPrice);
+      pricePerCar = parseAmount(backupPrice);
     }
 
     // نسبة الضريبة
@@ -92,11 +94,11 @@ module.exports = async (req, res) => {
       const r = parseFloat(cleaned);
       taxRateNum = isNaN(r) ? 0.15 : r;
       if (String(rawTaxRate).includes("%")) {
-        taxRateNum = taxRateNum / 100; // لو جاي 15%
+        taxRateNum = taxRateNum / 100; // لو مكتوبة 15%
       }
     }
 
-    // إجماليات الطلب (زي ما هي من الشيت – لكل الطلب)
+    // إجماليات الطلب من الشيت (لكل الطلب كله)
     const rawOrderSubtotal =
       data.SubtotalExclVAT ||
       data.subtotalExclVAT ||
@@ -109,36 +111,27 @@ module.exports = async (req, res) => {
     const orderSubtotalNum = parseAmount(rawOrderSubtotal);
     const orderTotalNum = parseAmount(rawOrderTotal);
 
-    // حساب السعر الصحيح لكل سيارة
-    const subtotalPerCar =
-      itemValueNum !== null ? itemValueNum : orderSubtotalNum;
-
     // ضريبة السيارة
-    let taxPerCar =
-      subtotalPerCar !== null
-        ? Number((subtotalPerCar * taxRateNum).toFixed(2))
-        : null;
-
-    // لو فشل الحساب من النسبة – استخدم القيمة القادمة من الشيت و قسّمها لو لزم
-    if (taxPerCar === null) {
-      const rawTaxValue =
-        data.TaxValue ||
-        data.taxValue ||
-        (data.item && data.item.taxValue);
-      const taxTotalNum = parseAmount(rawTaxValue);
-      if (taxTotalNum !== null && orderSubtotalNum && subtotalPerCar) {
-        // نفترض الضريبة متوزعة بنفس نسبة السعر
-        const ratio = subtotalPerCar / orderSubtotalNum;
-        taxPerCar = Number((taxTotalNum * ratio).toFixed(2));
-      }
+    let taxPerCar = null;
+    if (pricePerCar !== null) {
+      taxPerCar = Number((pricePerCar * taxRateNum).toFixed(2));
     }
 
-    const totalInclPerCar =
-      subtotalPerCar !== null && taxPerCar !== null
-        ? Number((subtotalPerCar + taxPerCar).toFixed(2))
-        : orderTotalNum;
+    // إجمالي السيارة شامل الضريبة
+    let totalInclPerCar = null;
+    if (pricePerCar !== null && taxPerCar !== null) {
+      totalInclPerCar = Number((pricePerCar + taxPerCar).toFixed(2));
+    }
 
-    // ========== 1) erp_orders (سطر خام من ERP + تصحيح الأرقام لكل سيارة) ==========
+    // احتياط: لو مفيش أرقام واضحة نخليها زي الشيت
+    if (pricePerCar === null && orderSubtotalNum !== null) {
+      pricePerCar = orderSubtotalNum;
+    }
+    if (totalInclPerCar === null && orderTotalNum !== null) {
+      totalInclPerCar = orderTotalNum;
+    }
+
+    // ===================== 2) حفظ erp_orders =====================
     const erpDocId = `${orderNo}_${itemNo}`;
     console.log("Saving erp_orders doc:", erpDocId);
 
@@ -149,17 +142,17 @@ module.exports = async (req, res) => {
       source: "erp",
       updatedAt: nowIso,
 
-      // أرقام صحيحة لكل سيارة (lowerCamelCase)
-      subtotalExclVAT: subtotalPerCar,
+      // أرقام صحيحة لكل سيارة (المطلوب تعرضها في صفحة إدارة المبيعات)
+      subtotalExclVAT: pricePerCar,
       totalInclVAT: totalInclPerCar,
       taxValue: taxPerCar,
 
-      // وأيضاً نفس الأرقام على شكل الحقول الأصلية في الشيت (PascalCase)
-      SubtotalExclVAT: subtotalPerCar,
+      // نفس القيم بصيغ الحقول الأصلية (في حال كود الواجهة يستخدمها)
+      SubtotalExclVAT: pricePerCar,
       TotalInclVAT: totalInclPerCar,
       TaxValue: taxPerCar,
 
-      // إجماليات الطلب الكامل (لو حابب تستخدمهم في التقارير)
+      // إجماليات الطلب الكامل
       orderSubtotalExclVAT: orderSubtotalNum,
       orderTotalInclVAT: orderTotalNum,
     };
@@ -168,7 +161,7 @@ module.exports = async (req, res) => {
       merge: true,
     });
 
-    // ========== 2) orders (طلب واحد فيه كل الهياكل) ==========
+    // ===================== 3) حفظ orders (طلب واحد يحتوي كل السيارات) =====================
     const orderDocId = orderNo;
 
     const vin =
@@ -200,7 +193,7 @@ module.exports = async (req, res) => {
         1,
 
       // الأسعار الصحيحة لكل سيارة
-      subtotalExclVAT: subtotalPerCar,
+      subtotalExclVAT: pricePerCar,
       totalInclVAT: totalInclPerCar,
 
       // بيانات الضريبة لكل سيارة
@@ -208,7 +201,7 @@ module.exports = async (req, res) => {
       taxRate: taxRateNum,
       taxValue: taxPerCar,
 
-      // إجماليات الطلب (للسجل كامل)
+      // إجماليات الطلب (لكل الطلب كله)
       orderSubtotalExclVAT: orderSubtotalNum,
       orderTotalInclVAT: orderTotalNum,
 
@@ -238,14 +231,14 @@ module.exports = async (req, res) => {
           // Array فيها كل العربيات لنفس الطلب
           items: FieldValue.arrayUnion(itemPayload),
 
-          // نحفظ إجماليات الطلب على مستوى المستند برضه
+          // إجماليات الطلب على مستوى المستند
           orderSubtotalExclVAT: orderSubtotalNum,
           orderTotalInclVAT: orderTotalNum,
         },
         { merge: true }
       );
 
-    // ========== 3) erp_vins (تتبع آخر طلب لكل VIN) ==========
+    // ===================== 4) حفظ erp_vins (آخر طلب لكل VIN) =====================
     if (vin) {
       console.log("Saving erp_vins doc:", vin);
       await db
@@ -256,12 +249,15 @@ module.exports = async (req, res) => {
             lastOrderNo: orderNo,
             lastItemNo: itemNo,
             lastUpdate: nowIso,
-            // نخزن نسخة الداتا لكن مع الأرقام المعدلة لكل سيارة
             lastData: {
               ...data,
-              SubtotalExclVAT: subtotalPerCar,
+              // نخزن القيم المصححة مع البيانات الخام
+              SubtotalExclVAT: pricePerCar,
               TotalInclVAT: totalInclPerCar,
               TaxValue: taxPerCar,
+              subtotalExclVAT: pricePerCar,
+              totalInclVAT: totalInclPerCar,
+              taxValue: taxPerCar,
             },
           },
           { merge: true }
