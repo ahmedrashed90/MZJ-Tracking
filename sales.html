@@ -1,4 +1,5 @@
 
+
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
@@ -340,7 +341,7 @@
           <label>رقم الطلب</label>
           <input id="orderId" placeholder="SAL-ORD-2025-01109 أو SAL-ORD-2025-01109_1" />
         </div>
-        <div class="col-4">
+        <div class="col-4" style="display:none;">
           <label>رقم الهيكل (VIN)</label>
           <input id="vinInput" placeholder="اكتب رقم الهيكل (VIN)" />
         </div>
@@ -350,7 +351,7 @@
         </div>
       </div>
       <div id="orderMsg" class="muted" style="margin-top:6px;"></div>
-      <div class="hint">اكتب رقم الطلب أو رقم الهيكل – واحد منهم يكفي.</div>
+      <div class="hint">اكتب رقم الطلب ثم اضغط فتح الطلب.</div>
     </div>
 
     <!-- Tabs -->
@@ -697,7 +698,12 @@
           const td = document.createElement("td");
           let val = getFieldFlex(field, rec);
 
-          if (field === "TotalInclVAT" || field === "TaxValue") {
+          if (field === "TaxRate") {
+            const num = parseAmountFront(val);
+            let pc = num !== null ? (num <= 1 ? num * 100 : num) : 15;
+            const pcStr = pc.toString().replace(/\.0+$/, "");
+            val = pcStr + " %";
+          } else if (field === "TotalInclVAT" || field === "TaxValue" || field === "SubtotalExclVAT") {
             const num = parseAmountFront(val);
             if (num !== null) {
               val = num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " ر.س";
@@ -729,7 +735,7 @@
       } else if (vins.length === 1) {
         vinPickerBox.style.display = "block";
         vinPicker.innerHTML = `<option value="${vins[0]}">${vins[0]}</option>`;
-        vinPicker.disabled = true;
+        vinPicker.disabled = false;
         vinCountChip.textContent = "هيكل واحد في هذا الطلب";
         selectedVin = vins[0];
       } else {
