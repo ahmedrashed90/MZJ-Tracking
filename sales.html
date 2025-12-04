@@ -112,6 +112,22 @@
       border-color:var(--beige);
       box-shadow:0 0 0 1px rgba(188,143,116,.45);
     }
+    select{
+      width:100%;
+      padding:8px 10px;
+      border-radius:10px;
+      border:1px solid #e5e7eb;
+      background:#f9fafb;
+      font-family:inherit;
+      font-size:14px;
+      outline:none;
+      appearance:none;
+    }
+    select:focus{
+      background:#fff;
+      border-color:var(--beige);
+      box-shadow:0 0 0 1px rgba(188,143,116,.45);
+    }
     .btn{
       border:0;
       border-radius:999px;
@@ -199,7 +215,6 @@
     .stage strong{color:var(--brown);font-size:13px;}
     .stage small{font-size:11px;color:var(--muted);}
 
-    /* التابس */
     .tabs{
       display:none;
       margin:-8px 0 10px;
@@ -245,6 +260,35 @@
     }
     .totals-box span{
       white-space:nowrap;
+    }
+
+    /* VIN picker box احترافي */
+    .vin-box{
+      display:none;
+      margin:10px 0 14px;
+      padding:10px 12px;
+      border-radius:12px;
+      background:#fffaf3;
+      border:1px solid rgba(188,143,116,.6);
+    }
+    .vin-box-header{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+      margin-bottom:6px;
+    }
+    .vin-box-title{
+      font-size:13px;
+      font-weight:600;
+      color:var(--brown);
+    }
+    .vin-chip{
+      padding:3px 10px;
+      border-radius:999px;
+      background:rgba(62,36,32,.06);
+      font-size:11px;
+      color:var(--muted);
     }
 
     @media(max-width:900px){
@@ -298,7 +342,7 @@
         </div>
         <div class="col-4">
           <label>رقم الهيكل (VIN)</label>
-          <input id="vinInput" placeholder="11409 مثلاً" />
+          <input id="vinInput" placeholder="اكتب رقم الهيكل (VIN)" />
         </div>
         <div class="col-4" style="display:flex;align-items:flex-end;gap:8px;">
           <button class="btn" id="loadBtn">فتح الطلب</button>
@@ -322,6 +366,17 @@
         تفاصيل الطلب من نظام المبيعات (ERP)
       </h3>
       <div id="erpMeta" class="muted" style="margin-bottom:6px;"></div>
+
+      <!-- اختيار رقم الهيكل لو الطلب فيه أكثر من VIN -->
+      <div id="vinPickerBox" class="vin-box">
+        <div class="vin-box-header">
+          <div class="vin-box-title">اختر رقم الهيكل للعمل عليه</div>
+          <div class="vin-chip" id="vinCountChip"></div>
+        </div>
+        <select id="vinPicker"></select>
+        <div class="hint">أي تحديث في مراحل تتبع الطلب سيكون لهذا رقم الهيكل فقط.</div>
+      </div>
+
       <div id="erpTotals" class="totals-box" style="display:none;"></div>
       <div class="erp-table-wrap">
         <table>
@@ -361,7 +416,7 @@
     <!-- Orders list tab -->
     <div class="card" id="ordersListCard" style="display:none;">
       <h3 class="title"><span class="icon">📋</span>كل الطلبات</h3>
-      <div class="hint">اضغط على رقم الطلب لنسخه وفتحه مباشرة في تبويب البحث بالأعلى.</div>
+      <div class="hint">اضغط على رقم الطلب لفتحه، واختيار رقم الهيكل من الأعلى لو كان أكثر من سيارة.</div>
       <div class="erp-table-wrap">
         <table>
           <thead>
@@ -384,7 +439,8 @@
       <h3 class="title"><span class="icon">🚦</span>مراحل تتبع الطلب</h3>
       <div class="grid-2" id="stagesList"></div>
       <div class="hint" style="margin-top:8px;">
-        اضغط على <strong>تم الانتهاء</strong> أمام أي مرحلة ليتم ختمها وتحديث صفحة تتبع العميل تلقائياً.
+        اضغط على <strong>تم الانتهاء</strong> أمام أي مرحلة ليتم ختمها وتحديث صفحة تتبع العميل تلقائياً.  
+        بعد ختم جميع المراحل لهذا الهيكل لا يمكن تعديلها مرة أخرى.
       </div>
       <div class="muted" id="stageMsg" style="margin-top:6px;"></div>
     </div>
@@ -426,7 +482,6 @@
     const ERP_VINS_COLLECTION = "erp_vins";
     const TRACK_COLLECTION    = "orders";
 
-    // ترتيب الحقول في جدول ERP (لكل صف/هيكل)
     const ERP_FIELDS = [
       "CustomerName","CustomerVAT","Branch","OrderDate","DeliveryDate","SalesPerson",
       "ItemNo","ItemType","ItemCategory","ItemModel","VIN","InteriorColor","ExteriorColor","Dealer",
@@ -467,12 +522,17 @@
     const erpBody      = document.getElementById("erpBody");
     const erpTotals    = document.getElementById("erpTotals");
 
+    const vinPickerBox = document.getElementById("vinPickerBox");
+    const vinPicker    = document.getElementById("vinPicker");
+    const vinCountChip = document.getElementById("vinCountChip");
+
     const stagesList   = document.getElementById("stagesList");
     const stageMsg     = document.getElementById("stageMsg");
 
-    let currentOrderId = null;
-    let currentVin     = null;
-    let currentItemNo  = null;
+    let currentOrderId      = null;
+    let currentVin          = null;
+    let currentItemNo       = null;
+    let currentOrderRecords = [];
 
     const STAGES = [
       "1) إنشاء الطلب",
@@ -514,7 +574,7 @@
       TaxName:         ["taxName","TaxName"],
       TaxRate:         ["taxRate","TaxRate"],
       TaxValue:        ["taxValue","TaxValue"],
-      SubtotalExclVAT: ["subtotalExclVAT","SubtotalExclVAT","subtotalExclVat","value"],
+      SubtotalExclVAT: ["subtotalExclVAT","SubtotalExclVAT","subtotalExclVat"],
       TotalInclVAT:    ["totalInclVAT","TotalInclVAT","totalInclVat"]
     };
 
@@ -556,7 +616,6 @@
       return "-";
     }
 
-    // تحويل "ر.س 95,450.00" -> 95450 (للواجهة فقط)
     function parseAmountFront(value) {
       if (value === null || value === undefined || value === "-") return null;
       if (typeof value === "number") return value;
@@ -572,9 +631,35 @@
       erpBody.innerHTML = "";
       erpTotals.style.display = "none";
       erpTotals.innerHTML = "";
+      vinPickerBox.style.display = "none";
+      vinPicker.innerHTML = "";
+      vinCountChip.textContent = "";
     }
 
-    function fillErpTable(records) {
+    function resolveItemNoForVin(vin, records){
+      if (!records || !records.length) return 1;
+      let itemNo = null;
+
+      if (vin) {
+        const matched = records.find(r => {
+          const v = (getFieldFlex("VIN", r) || "").toString().trim();
+          return v && v === vin.toString().trim();
+        });
+        if (matched) {
+          itemNo = getFieldFlex("ItemNo", matched);
+        }
+      }
+
+      if (itemNo === null || itemNo === "-" || itemNo === "") {
+        const first = records[0] || null;
+        if (first) itemNo = getFieldFlex("ItemNo", first);
+      }
+
+      const parsed = parseInt(itemNo, 10);
+      return (!isNaN(parsed) && parsed > 0) ? parsed : 1;
+    }
+
+    function fillErpTable(records, preferredVin = ""){
       if (!records || !records.length) {
         erpCard.style.display = "none";
         clearErpTable();
@@ -583,30 +668,35 @@
       erpCard.style.display = "";
       clearErpTable();
 
+      currentOrderRecords = records.slice();
+
       const first = records[0] || {};
       const orderNo = first.orderNo || first.OrderNo || currentOrderId || "";
       let vinBadgeLabel = "";
 
-      if (records.length === 1) {
-        const vinVal = getFieldFlex("VIN", first) || currentVin || "";
-        vinBadgeLabel = "VIN: " + (vinVal || "غير متوفر");
+      const vins = Array.from(new Set(
+        records.map(r => (getFieldFlex("VIN", r) || "").toString().trim()).filter(Boolean)
+      ));
+
+      if (vins.length === 1) {
+        vinBadgeLabel = "VIN: " + vins[0];
+      } else if (vins.length > 1) {
+        vinBadgeLabel = "أكثر من هيكل (" + vins.length + ")";
       } else {
-        vinBadgeLabel = "أكثر من هيكل (" + records.length + ")";
+        vinBadgeLabel = "لا يوجد VIN في البيانات";
       }
 
       erpMetaEl.innerHTML =
         '<span class="badge">رقم الطلب: ' + (orderNo || "غير متوفر") + '</span>' +
         '<span class="badge">' + vinBadgeLabel + '</span>';
 
-      
-      // تعبئة جدول ERP (سعر/إجمالي لكل سيارة)
+      // تعبئة جدول ERP
       records.forEach(rec => {
         const tr = document.createElement("tr");
         ERP_FIELDS.forEach(field => {
           const td = document.createElement("td");
           let val = getFieldFlex(field, rec);
 
-          // تنسيق قيمة الضريبة والإجمالي شامل الضريبة بنفس شكل الإجمالي قبل الضريبة
           if (field === "TotalInclVAT" || field === "TaxValue") {
             const num = parseAmountFront(val);
             if (num !== null) {
@@ -619,6 +709,36 @@
         });
         erpBody.appendChild(tr);
       });
+
+      // إدارة VIN للدروب داون
+      let selectedVin = preferredVin && vins.includes(preferredVin) ? preferredVin : null;
+      if (!selectedVin && vins.length === 1) {
+        selectedVin = vins[0];
+      }
+
+      if (vins.length > 1) {
+        vinPickerBox.style.display = "block";
+        vinPicker.innerHTML = vins.map(v => `<option value="${v}">${v}</option>`).join("");
+        vinCountChip.textContent = vins.length + " أرقام هياكل في هذا الطلب";
+        if (selectedVin && vins.includes(selectedVin)) {
+          vinPicker.value = selectedVin;
+        } else {
+          vinPicker.value = vins[0];
+          selectedVin = vins[0];
+        }
+      } else if (vins.length === 1) {
+        vinPickerBox.style.display = "block";
+        vinPicker.innerHTML = `<option value="${vins[0]}">${vins[0]}</option>`;
+        vinPicker.disabled = true;
+        vinCountChip.textContent = "هيكل واحد في هذا الطلب";
+        selectedVin = vins[0];
+      } else {
+        vinPickerBox.style.display = "none";
+      }
+
+      currentVin    = selectedVin || (vins[0] || preferredVin || "");
+      currentItemNo = resolveItemNoForVin(currentVin, records);
+
       // حساب إجمالي الطلب
       const totalCars = records.length;
 
@@ -634,40 +754,60 @@
         first.orderTotal
       );
 
-      // لو مش مخزّن على مستوى الطلب، نحسبه من كل السيارات
-      if (orderSubtotal === null || orderTotal === null) {
-        let subSum = 0;
-        let totalSum = 0;
-        records.forEach(rec => {
-          const subVal = parseAmountFront(
-            rec.subtotalExclVAT ||
-            rec.SubtotalExclVAT ||
-            getFieldFlex("SubtotalExclVAT", rec)
-          );
-          const totVal = parseAmountFront(
-            rec.totalInclVAT ||
-            rec.TotalInclVAT ||
-            getFieldFlex("TotalInclVAT", rec)
-          );
-          if (subVal !== null) subSum += subVal;
-          if (totVal !== null) totalSum += totVal;
-        });
-        if (orderSubtotal === null) orderSubtotal = subSum;
-        if (orderTotal === null) orderTotal = totalSum;
+      let subSum = 0;
+      let totalSum = 0;
+      records.forEach(rec => {
+        const subVal = parseAmountFront(
+          rec.subtotalExclVAT ||
+          rec.SubtotalExclVAT ||
+          getFieldFlex("SubtotalExclVAT", rec)
+        );
+        const totVal = parseAmountFront(
+          rec.totalInclVAT ||
+          rec.TotalInclVAT ||
+          getFieldFlex("TotalInclVAT", rec)
+        );
+        if (subVal !== null) subSum += subVal;
+        if (totVal !== null) totalSum += totVal;
+      });
+
+      if (orderSubtotal === null && subSum > 0) {
+        orderSubtotal = subSum;
+      }
+
+      if (orderTotal === null && totalSum > 0) {
+        orderTotal = totalSum;
+      }
+
+      if (orderSubtotal !== null && (orderTotal === null || orderTotal < 1000)) {
+        if (totalSum > 0) {
+          orderTotal = totalSum;
+        } else {
+          orderTotal = Math.round(orderSubtotal * 1.15 * 100) / 100;
+        }
       }
 
       if (orderSubtotal !== null || orderTotal !== null) {
         const parts = [];
         parts.push(`<span>عدد السيارات في الطلب: <strong>${totalCars}</strong></span>`);
-       
+        if (orderSubtotal !== null) {
+          parts.push(
+            `<span>إجمالي قبل الضريبة: <strong>${orderSubtotal.toLocaleString('ar-SA',{minimumFractionDigits:2})} ر.س</strong></span>`
+          );
+        }
         if (orderTotal !== null) {
           parts.push(
-            `<span>إجمالي شامل الضريبة: <strong>${orderTotal.toLocaleString('ar-SA', {minimumFractionDigits:2})} ر.س</strong></span>`
+            `<span>إجمالي شامل الضريبة: <strong>${orderTotal.toLocaleString('ar-SA',{minimumFractionDigits:2})} ر.س</strong></span>`
           );
         }
         erpTotals.innerHTML = parts.join("");
         erpTotals.style.display = "flex";
+      } else {
+        erpTotals.style.display = "none";
       }
+
+      // تحميل مراحل التتبع للحالة الحالية
+      loadTrackingForCurrentSelection();
     }
 
     // STAGES UI
@@ -675,6 +815,11 @@
       stagesList.innerHTML = "";
       const stagesObj = orderData.stages || {};
       const current   = orderData.currentStage || 0;
+
+      const allDone = STAGES.every((_, idx) => {
+        const key = "s" + (idx + 1);
+        return !!stagesObj[key];
+      });
 
       STAGES.forEach((label, idx) => {
         const num = idx + 1;
@@ -708,6 +853,7 @@
         btn.className = "btn-outline";
         btn.style.fontSize = "12px";
         btn.textContent = "تم الانتهاء";
+        btn.disabled = !!tsStr || allDone;
         btn.onclick = () => completeStage(num);
         actions.appendChild(btn);
 
@@ -723,18 +869,25 @@
 
         stagesList.appendChild(wrap);
       });
+
+      if (allDone) {
+        const info = document.createElement("div");
+        info.className = "hint";
+        info.style.marginTop = "8px";
+        info.textContent = "تم إكمال جميع المراحل لهذا رقم الهيكل، ولا يمكن تعديلها مرة أخرى.";
+        stagesList.appendChild(info);
+      }
     }
 
     async function completeStage(num) {
       stageMsg.textContent = "";
-      if (!currentOrderId) {
-        stageMsg.innerHTML = "<span class='err'>افتح طلب أولاً قبل تحديث المراحل.</span>";
+      if (!currentOrderId || !currentItemNo) {
+        stageMsg.innerHTML = "<span class='err'>اختر طلب ورقم هيكل أولاً قبل تحديث المراحل.</span>";
         return;
       }
       try {
         const baseId = currentOrderId;
-        const itemNoPart = currentItemNo ? "_" + currentItemNo : "";
-        const docId = baseId + itemNoPart;
+        const docId = baseId + "_" + currentItemNo;
 
         const orderRef = doc(db, TRACK_COLLECTION, docId);
         await updateDoc(orderRef, {
@@ -763,14 +916,52 @@
           updatedAt: serverTimestamp()
         }, { merge:true });
 
-        const snap = await getDoc(orderRef);
-        const data = snap.exists() ? snap.data() : {};
-        buildStagesUI(data);
+        await loadTrackingForCurrentSelection();
 
         stageMsg.innerHTML = "<span class='ok'>تم ختم المرحلة رقم " + num + " وتحديث صفحة التتبع.</span>";
       } catch (e) {
         console.error(e);
         stageMsg.innerHTML = "<span class='err'>حدث خطأ أثناء تحديث المرحلة.</span>";
+      }
+    }
+
+    async function loadTrackingForCurrentSelection(){
+      if (!currentOrderId || !currentItemNo) {
+        buildStagesUI({ });
+        return;
+      }
+      try{
+        const baseId = currentOrderId;
+        const docId  = baseId + "_" + currentItemNo;
+
+        const orderRef = doc(db, TRACK_COLLECTION, docId);
+        const trackSnap = await getDoc(orderRef);
+        let trackData;
+        if (trackSnap.exists()) {
+          trackData = trackSnap.data();
+        } else {
+          trackData = {
+            orderId: baseId,
+            vin: currentVin || "",
+            itemNo: currentItemNo || 1,
+            currentStage: 0,
+            stages:{}
+          };
+          await setDoc(orderRef, trackData, {merge:true});
+          const publicRef = doc(db, TRACK_COLLECTION, docId, "public", "status");
+          await setDoc(publicRef, {
+            orderId: baseId,
+            vin: currentVin || "",
+            itemNo: currentItemNo || 1,
+            currentStage: 0,
+            stages:{},
+            updatedAt: serverTimestamp()
+          }, {merge:true});
+        }
+        buildStagesUI(trackData);
+      }catch(e){
+        console.error(e);
+        buildStagesUI({});
       }
     }
 
@@ -818,13 +1009,10 @@
         whoami.textContent = "مسجّل: " + (user.email || "");
         logoutBtn.style.display = "";
         authCard.style.display  = "none";
-        orderCard.style.display = "";
-        stagesCard.style.display= "";
         tabsBar.style.display   = "flex";
-        erpCard.style.display   = "none";
-        ordersListCard.style.display = "none";
-        tabSearchBtn.classList.add("tab-active");
-        tabListBtn.classList.remove("tab-active");
+
+        // أول ما يدخل يفتح على تبويب "كل الطلبات"
+        activateTab("list");
       }else{
         whoami.textContent = "";
         logoutBtn.style.display = "none";
@@ -837,19 +1025,16 @@
       }
     });
 
-    // البحث عن طلب برقم الهيكل
     async function findByVin(vinRaw) {
       const val = vinRaw.trim();
       if (!val) return null;
 
       const colRef = collection(db, ERP_COLLECTION);
 
-      // نحاول في erp_orders.vin كنص
       let q1 = query(colRef, where("vin","==",val));
       let snap = await getDocs(q1);
       if (!snap.empty) return snap.docs[0];
 
-      // نجرب كـ رقم
       const asNum = Number(val);
       if (!Number.isNaN(asNum)) {
         q1 = query(colRef, where("vin","==",asNum));
@@ -857,7 +1042,6 @@
         if (!snap.empty) return snap.docs[0];
       }
 
-      // لو مفيش نتيجة نرجع لـ erp_vins
       try {
         const vinRef = doc(db, ERP_VINS_COLLECTION, val);
         const vinSnap = await getDoc(vinRef);
@@ -885,8 +1069,10 @@
       orderMsg.textContent = "";
       stageMsg.textContent = "";
       clearErpTable();
-      currentOrderId = null;
-      currentVin     = null;
+      currentOrderId      = null;
+      currentVin          = null;
+      currentItemNo       = null;
+      currentOrderRecords = [];
 
       const idRaw  = orderIdInput.value.trim();
       const vinRaw = vinInput.value.trim();
@@ -894,7 +1080,7 @@
       if(!idRaw && !vinRaw){
         orderMsg.innerHTML = "<span class='err'>أدخل رقم الطلب أو رقم الهيكل.</span>";
         erpCard.style.display = "none";
-        buildStagesUI({});
+        buildStagesUI({ });
         return;
       }
 
@@ -945,69 +1131,22 @@
         if(!erpRecords.length){
           orderMsg.innerHTML = "<span class='err'>لا يوجد طلب مطابق في بيانات ERP.</span>";
           erpCard.style.display = "none";
-          buildStagesUI({});
+          buildStagesUI({ });
           return;
         }
 
         const firstRec = erpRecords[0] || {};
         const detectedOrderNo = firstRec.orderNo || firstRec.OrderNo || (erpDocId || idRaw);
-        const vinVal = (erpRecords.length === 1)
-          ? (getFieldFlex("VIN", firstRec) || vinRaw || "")
-          : (vinRaw || "");
 
         currentOrderId = detectedOrderNo;
-        currentVin     = vinVal || "";
 
-// تحديد رقم البند المرتبط بهذا الـ VIN (إن وجد)
-        let itemNoForCurrent = null;
-        if (currentVin) {
-          const matched = erpRecords.find(r => {
-            const v = (getFieldFlex("VIN", r) || "").toString().trim();
-            return v && v === currentVin.toString().trim();
-          });
-          if (matched) {
-            itemNoForCurrent = getFieldFlex("ItemNo", matched);
-          }
-        }
-        if (!itemNoForCurrent) {
-          const firstItem = erpRecords[0] || null;
-          if (firstItem) {
-            itemNoForCurrent = getFieldFlex("ItemNo", firstItem);
-          }
-        }
-        const parsedItemNo = parseInt(itemNoForCurrent, 10);
-        currentItemNo = !isNaN(parsedItemNo) && parsedItemNo > 0 ? parsedItemNo : 1;
+        orderIdInput.value = detectedOrderNo || "";
+        const preferredVin =
+          vinRaw ||
+          (erpRecords.length === 1 ? (getFieldFlex("VIN", firstRec) || "") : "");
 
-        orderIdInput.value = detectedOrderNo;
-        vinInput.value     = vinVal;
+        fillErpTable(erpRecords, preferredVin);
 
-        fillErpTable(erpRecords);
-
-        const trackRef = doc(db, TRACK_COLLECTION, detectedOrderNo);
-        const trackSnap = await getDoc(trackRef);
-        let trackData = {};
-        if(trackSnap.exists()){
-          trackData = trackSnap.data();
-        }else{
-          trackData = {
-            orderId: detectedOrderNo,
-            vin: vinVal || "",
-            currentStage: 0,
-            stages:{}
-          };
-          await setDoc(trackRef, trackData, {merge:true});
-          const publicRef = doc(db, TRACK_COLLECTION, detectedOrderNo, "public", "status");
-          await setDoc(publicRef, {
-            orderId: detectedOrderNo,
-            vin: vinVal || "",
-            currentStage: 0,
-            stages:{},
-            updatedAt: serverTimestamp()
-          }, {merge:true});
-        }
-
-        buildStagesUI(trackData);
-        erpCard.style.display = "";
         stagesCard.style.display = "";
         ordersListCard.style.display = ordersListCard.style.display;
 
@@ -1016,7 +1155,7 @@
         console.error(e);
         orderMsg.innerHTML = "<span class='err'>حدث خطأ أثناء تحميل الطلب.</span>";
         erpCard.style.display = "none";
-        buildStagesUI({});
+        buildStagesUI({ });
       }
     }
 
@@ -1027,13 +1166,22 @@
       vinInput.value = "";
       orderMsg.textContent = "";
       stageMsg.textContent = "";
-      currentOrderId = null;
-      currentVin = null;
-      currentItemNo = null;
+      currentOrderId      = null;
+      currentVin          = null;
+      currentItemNo       = null;
+      currentOrderRecords = [];
       clearErpTable();
       erpCard.style.display = "none";
-      buildStagesUI({});
+      buildStagesUI({ });
     };
+
+    vinPicker.addEventListener("change", () => {
+      if (!currentOrderId || !currentOrderRecords.length) return;
+      const selected = vinPicker.value;
+      currentVin    = selected;
+      currentItemNo = resolveItemNoForVin(selected, currentOrderRecords);
+      loadTrackingForCurrentSelection();
+    });
 
     // ---- تبويب كل الطلبات ----
     async function loadOrdersList() {
@@ -1056,7 +1204,7 @@
 
           let statusLabel = "لم يبدأ";
           try {
-            const tSnap = await getDoc(doc(db, TRACK_COLLECTION, orderNo));
+            const tSnap = await getDoc(doc(db, TRACK_COLLECTION, orderNo + "_1"));
             if (tSnap.exists()) {
               const t = tSnap.data();
               const currentStage = t.currentStage || 0;
@@ -1122,8 +1270,7 @@
     });
 
     clearErpTable();
-    buildStagesUI({});
+    buildStagesUI({ });
   </script>
 </body>
 </html>
-
