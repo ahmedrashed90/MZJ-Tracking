@@ -250,12 +250,52 @@
       font-size: 12px;
       cursor: pointer;
       font-family: inherit;
-      transition: background 0.15s ease, color 0.15s.ease, border-color 0.15s ease;
+      transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
     }
     .car-tab.active {
       background: #3e2420;
       color: #fff;
       border-color: #3e2420;
+    }
+
+    /* Status summary + progress */
+    .status-summary {
+      font-size: 12px;
+      color: #7b6a63;
+      margin-top: 4px;
+      margin-bottom: 8px;
+      line-height: 1.6;
+    }
+    .status-summary strong {
+      color: #3e2420;
+    }
+    .progress-wrapper {
+      margin: 4px 0 10px;
+    }
+    .progress-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 12px;
+      color: #5b4035;
+      margin-bottom: 4px;
+    }
+    .progress-percent-strong {
+      font-weight: 700;
+    }
+    .progress-bar {
+      width: 100%;
+      height: 8px;
+      border-radius: 999px;
+      background: #f0e3d6;
+      overflow: hidden;
+    }
+    .progress-fill {
+      height: 100%;
+      border-radius: 999px;
+      background: linear-gradient(90deg, #bc8f74, #3e2420);
+      width: 0%;
+      transition: width 0.3s ease;
     }
 
     @media (max-width: 480px) {
@@ -415,17 +455,84 @@
       return n.toLocaleString("ar-SA", { minimumFractionDigits: 2 });
     }
 
-    // ====== Single-car render (fallback لو مفيش أكتر من سيارة) ======
+    // ====== تايم لاين + Progress Bar ======
+    function buildTimelineHtml(statusData) {
+      const track = statusData || {};
+      const currentStage = track.currentStage || 0;
+      const stagesMap = track.stages || {};
+      const updatedAt = track.updatedAt
+        ? new Date(track.updatedAt.toDate ? track.updatedAt.toDate() : track.updatedAt).toLocaleString("ar-SA")
+        : "";
+
+      // عدد الخطوات المنتهية
+      let doneCount = 0;
+      for (let i = 1; i <= STAGES.length; i++) {
+        const doneTs = stagesMap["s" + i];
+        if (currentStage >= i || doneTs) {
+          doneCount++;
+        }
+      }
+      const progress = Math.round((doneCount / STAGES.length) * 100);
+
+      const currentStageLabel =
+        currentStage > 0 && currentStage <= STAGES.length
+          ? STAGES[currentStage - 1].title
+          : currentStage === 0
+          ? "لم يبدأ بعد"
+          : "جارٍ التحديث";
+
+      return `
+        <div class="status-summary">
+          <div>حالة السيارة الحالية: <strong>${currentStageLabel}</strong></div>
+          <div>آخر تحديث للحالة: <span>${updatedAt || "-"}</span></div>
+        </div>
+        <div class="progress-wrapper">
+          <div class="progress-header">
+            <span>نسبة اكتمال الطلب</span>
+            <span class="progress-percent-strong">${progress}%</span>
+          </div>
+          <div class="progress-bar">
+            <div class="progress-fill" style="width:${progress}%;"></div>
+          </div>
+        </div>
+        <div class="timeline">
+          <div class="timeline-title">خطوات طلبك من أول حجز حتى استلام السيارة</div>
+          <ul class="timeline-steps">
+            ${STAGES.map((step, idx) => {
+              const stepIndex = idx + 1;
+              const doneTs = stagesMap["s" + stepIndex];
+              const isDone = currentStage >= stepIndex || !!doneTs;
+              const tsLabel = doneTs
+                ? new Date(doneTs.toDate ? doneTs.toDate() : doneTs).toLocaleString("ar-SA")
+                : "";
+              return `
+                <li class="timeline-step">
+                  <div class="step-icon ${isDone ? "done" : ""}">
+                    ${isDone ? "✓" : stepIndex}
+                  </div>
+                  <div class="step-body">
+                    <div class="step-title">${step.title}</div>
+                    <div class="step-sub">
+                      ${step.sub}
+                      ${tsLabel ? " — <span>تم في: ${tsLabel}</span>" : ""}
+                    </div>
+                  </div>
+                </li>
+              `;
+            }).join("")}
+          </ul>
+        </div>
+      `;
+    }
+
+    // ====== عرض سيارة واحدة (Fallback) ======
     function renderSingleCar(vinData, statusData) {
       const lastOrderNo = vinData.lastOrderNo || "";
       const payload     = vinData.lastData || {};
 
       const customerName = payload.customerName || "";
-      const customerVat  = payload.customerVat || "";
       const branch       = payload.branch || "";
       const orderDate    = payload.orderDate || "";
-      const deliveryDate = payload.deliveryDate || "";
-      const salesPerson  = payload.salesPerson || "";
 
       const item = payload.item || {};
       const carType     = item.type || "";
@@ -437,24 +544,17 @@
       const vin         = item.vin || "";
 
       const totals        = payload.totals || {};
-      const totalInclVAT  = totals.totalInclVAT  || totals.TotalInclVAT || "";
-      const subtotalExcl  = totals.subtotalExclVAT || totals.SubtotalExclVAT || "";
+      const subtotalExcl  =
+        totals.subtotalExclVAT || totals.SubtotalExclVAT || "";
       const taxName       = totals.taxName || totals.TaxName || "";
       const taxValue      = totals.taxValue || totals.TaxValue || "";
+      const totalInclVAT  =
+        totals.orderTotalInclVAT ||
+        totals.totalInclVAT ||
+        totals.TotalInclVAT ||
+        "";
 
-      const track    = statusData || {};
-      const curStage = track.currentStage || 0;
-      const stages   = track.stages || {};
-      const updatedAt = track.updatedAt
-        ? new Date(track.updatedAt.toDate ? track.updatedAt.toDate() : track.updatedAt).toLocaleString("ar-SA")
-        : "";
-
-      const curStageLabel =
-        curStage > 0 && curStage <= STAGES.length
-          ? STAGES[curStage - 1].title
-          : curStage === 0
-          ? "لم يبدأ بعد"
-          : "جارٍ التحديث";
+      const track = statusData || {};
 
       resultContainer.innerHTML = `
         <div>
@@ -472,28 +572,14 @@
               <div class="info-value">${customerName || "-"}</div>
             </div>
             <div class="info-item">
-              <div class="info-label">الرقم الضريبي</div>
-              <div class="info-value">${customerVat || "-"}</div>
-            </div>
-            <div class="info-item">
               <div class="info-label">الفرع</div>
               <div class="info-value">${branch || "-"}</div>
             </div>
             <div class="info-item">
-              <div class="info-label">تاريخ التسليم المتوقع</div>
-              <div class="info-value">${deliveryDate || "-"}</div>
-            </div>
-            <div class="info-item">
-              <div class="info-label">مسؤول المبيعات</div>
-              <div class="info-value">${salesPerson || "-"}</div>
-            </div>
-            <div class="info-item">
-              <div class="info-label">حالة السيارة الحالية</div>
-              <div class="info-value">${curStageLabel}</div>
-            </div>
-            <div class="info-item">
-              <div class="info-label">آخر تحديث للحالة</div>
-              <div class="info-value">${updatedAt || "-"}</div>
+              <div class="info-label">إجمالي قيمة الطلب (شامل الضريبة)</div>
+              <div class="info-value">
+                ${totalInclVAT ? formatAmount(totalInclVAT) + " ر.س" : "-"}
+              </div>
             </div>
           </div>
 
@@ -521,7 +607,9 @@
               قيمة الضريبة${taxName ? " (" + taxName + ")" : ""}: ${taxValue || "-"}
             </div>
             <div class="car-meta">
-              الإجمالي شامل الضريبة: ${totalInclVAT || "-"}
+              الإجمالي شامل الضريبة: ${
+                totalInclVAT ? formatAmount(totalInclVAT) + " ر.س" : "-"
+              }
             </div>
           </div>
 
@@ -529,182 +617,19 @@
             <span class="icon-dot"></span>
             <span>حالة الطلب</span>
           </div>
-          <div class="timeline">
-            <div class="timeline-title">خطوات طلبك من أول حجز حتى استلام السيارة</div>
-            <ul class="timeline-steps">
-              ${STAGES.map((step, idx) => {
-                const stepIndex = idx + 1;
-                const doneTs = stages["s" + stepIndex];
-                const isDone = curStage >= stepIndex || !!doneTs;
-                const tsLabel = doneTs
-                  ? new Date(doneTs.toDate ? doneTs.toDate() : doneTs).toLocaleString("ar-SA")
-                  : "";
-                return `
-                  <li class="timeline-step">
-                    <div class="step-icon ${isDone ? "done" : ""}">
-                      ${isDone ? "✓" : stepIndex}
-                    </div>
-                    <div class="step-body">
-                      <div class="step-title">${step.title}</div>
-                      <div class="step-sub">
-                        ${step.sub}
-                        ${tsLabel ? " — <span>تم في: " + tsLabel + "</span>" : ""}
-                      </div>
-                    </div>
-                  </li>
-                `;
-              }).join("")}
-            </ul>
+          <div id="timelineArea">
+            ${buildTimelineHtml(track)}
           </div>
         </div>
       `;
     }
 
     // ====== Multi–car helpers ======
-    function buildOrderAndCars(erpRecords, vinData, rawVin) {
-      const first = erpRecords[0] || {};
-      const payloadFallback = vinData.lastData || {};
-
-      const orderInfo = {
-        orderNo: first.orderNo || first.OrderNo || vinData.lastOrderNo || "",
-        customerName: first.customerName || payloadFallback.customerName || "",
-        customerVat: first.customerVat || payloadFallback.customerVat || "",
-        branch: first.branch || payloadFallback.branch || "",
-        orderDate: first.orderDate || payloadFallback.orderDate || "",
-        deliveryDate: first.deliveryDate || payloadFallback.deliveryDate || "",
-        salesPerson: first.salesPerson || payloadFallback.salesPerson || ""
-      };
-
-      const cars = erpRecords.map((rec) => {
-        const item   = rec.item || {};
-        const totals = rec.totals || {};
-
-        const vin =
-          item.vin || item.VIN ||
-          rec.vin  || rec.VIN  || "";
-
-        const carType     = item.type     || rec.ItemType     || "";
-        const carCategory = item.category || rec.ItemCategory || "";
-        const carModel    = item.model    || rec.ItemModel    || "";
-
-        const extColor = item.exteriorColor || item.extColor || rec.ExteriorColor || "";
-        const intColor = item.interiorColor || item.intColor || rec.InteriorColor || "";
-        const dealer   = item.dealer || rec.dealer || rec.Dealer || "";
-
-        const subtotal =
-          rec.subtotalExclVAT ??
-          rec.SubtotalExclVAT ??
-          totals.subtotalExclVAT ??
-          totals.SubtotalExclVAT ??
-          "";
-
-        const total =
-          rec.totalInclVAT ??
-          rec.TotalInclVAT ??
-          totals.totalInclVAT ??
-          totals.TotalInclVAT ??
-          "";
-
-        const taxName =
-          rec.taxName ??
-          rec.TaxName ??
-          totals.taxName ??
-          totals.TaxName ??
-          "";
-
-        const taxValue =
-          rec.taxValue ??
-          rec.TaxValue ??
-          totals.taxValue ??
-          totals.TaxValue ??
-          "";
-
-        return {
-          vin,
-          label: [carType, carCategory, carModel].filter(Boolean).join(" "),
-          carType,
-          carCategory,
-          carModel,
-          extColor,
-          intColor,
-          dealer,
-          subtotal,
-          total,
-          taxName,
-          taxValue,
-          statusData: null
-        };
-      });
-
-      let activeIndex = 0;
-      if (rawVin) {
-        const normalized = rawVin.replace(/\s+/g, "").toLowerCase();
-        const idx = cars.findIndex(
-          (c) => (c.vin || "").replace(/\s+/g, "").toLowerCase() === normalized
-        );
-        if (idx >= 0) activeIndex = idx;
-      }
-
-      return { orderInfo, cars, activeIndex };
-    }
-
-    function buildTimelineHtml(statusData) {
-      const track    = statusData || {};
-      const currentStage = track.currentStage || 0;
-      const stagesMap    = track.stages || {};
-      return `
-        <div class="timeline">
-          <div class="timeline-title">خطوات طلبك من أول حجز حتى استلام السيارة</div>
-          <ul class="timeline-steps">
-            ${STAGES.map((step, idx) => {
-              const stepIndex = idx + 1;
-              const doneTs = stagesMap["s" + stepIndex];
-              const isDone = currentStage >= stepIndex || !!doneTs;
-              const tsLabel = doneTs
-                ? new Date(doneTs.toDate ? doneTs.toDate() : doneTs).toLocaleString("ar-SA")
-                : "";
-              return `
-                <li class="timeline-step">
-                  <div class="step-icon ${isDone ? "done" : ""}">
-                    ${isDone ? "✓" : stepIndex}
-                  </div>
-                  <div class="step-body">
-                    <div class="step-title">${step.title}</div>
-                    <div class="step-sub">
-                      ${step.sub}
-                      ${tsLabel ? " — <span>تم في: " + tsLabel + "</span>" : ""}
-                    </div>
-                  </div>
-                </li>
-              `;
-            }).join("")}
-          </ul>
-        </div>
-      `;
-    }
-
     function updateStatusUIForCar(statusData) {
-      const track    = statusData || {};
-      const currentStage = track.currentStage || 0;
-      const stagesMap    = track.stages || {};
-      const updatedAt = track.updatedAt
-        ? new Date(track.updatedAt.toDate ? track.updatedAt.toDate() : track.updatedAt).toLocaleString("ar-SA")
-        : "";
-
-      const currentStageLabel =
-        currentStage > 0 && currentStage <= STAGES.length
-          ? STAGES[currentStage - 1].title
-          : currentStage === 0
-          ? "لم يبدأ بعد"
-          : "جارٍ التحديث";
-
-      const stageLabelEl = resultContainer.querySelector("#currentStageLabel");
-      const lastUpdateEl = resultContainer.querySelector("#lastUpdateLabel");
       const timelineArea = resultContainer.querySelector("#timelineArea");
-
-      if (stageLabelEl) stageLabelEl.textContent = currentStageLabel;
-      if (lastUpdateEl) lastUpdateEl.textContent = updatedAt || "-";
-      if (timelineArea) timelineArea.innerHTML = buildTimelineHtml({ currentStage, stages: stagesMap });
+      if (timelineArea) {
+        timelineArea.innerHTML = buildTimelineHtml(statusData || {});
+      }
     }
 
     function renderMultiResult(orderInfo, cars, activeIndex) {
@@ -742,6 +667,12 @@
         `;
       }
 
+      // إجمالي قيمة الطلب (شامل الضريبة) لكل السيارات
+      const orderTotal = cars.reduce((sum, car) => {
+        const v = parseAmountFront(car.total);
+        return sum + (v || 0);
+      }, 0);
+
       const orderHeaderHtml = `
         <div class="section-title">
           <span class="icon-dot"></span>
@@ -757,28 +688,14 @@
             <div class="info-value">${orderInfo.customerName || "-"}</div>
           </div>
           <div class="info-item">
-            <div class="info-label">الرقم الضريبي</div>
-            <div class="info-value">${orderInfo.customerVat || "-"}</div>
-          </div>
-          <div class="info-item">
             <div class="info-label">الفرع</div>
             <div class="info-value">${orderInfo.branch || "-"}</div>
           </div>
           <div class="info-item">
-            <div class="info-label">تاريخ التسليم المتوقع</div>
-            <div class="info-value">${orderInfo.deliveryDate || "-"}</div>
-          </div>
-          <div class="info-item">
-            <div class="info-label">مسؤول المبيعات</div>
-            <div class="info-value">${orderInfo.salesPerson || "-"}</div>
-          </div>
-          <div class="info-item">
-            <div class="info-label">حالة السيارة الحالية</div>
-            <div class="info-value" id="currentStageLabel">جارِ التحميل…</div>
-          </div>
-          <div class="info-item">
-            <div class="info-label">آخر تحديث للحالة</div>
-            <div class="info-value" id="lastUpdateLabel">-</div>
+            <div class="info-label">إجمالي قيمة الطلب (شامل الضريبة)</div>
+            <div class="info-value">
+              ${orderTotal ? formatAmount(orderTotal) + " ر.س" : "-"}
+            </div>
           </div>
         </div>
       `;
@@ -851,7 +768,7 @@
       setStatus("جاري البحث عن الطلب المرتبط بهذا الرقم…");
 
       try {
-        // 1) نجيب erp_vins/{vin}
+        // 1) نجيب erp_vins/{vin} لمعرفة رقم الطلب + رقم البند
         const vinDocRef = doc(db, "erp_vins", rawVin);
         const vinSnap   = await getDoc(vinDocRef);
 
@@ -861,67 +778,161 @@
           return;
         }
 
-        const vinData = vinSnap.data();
-        const orderId = vinData.lastOrderNo || vinData.orderId || "";
+        const vinData   = vinSnap.data ? vinSnap.data() : vinSnap;
+        const orderBase = vinData.lastOrderNo || vinData.orderNo || "";
+        const itemNoForVin = vinData.lastItemNo || vinData.itemNo || 1;
 
-        // 2) نجيب حالة هذا الـ VIN تحديداً من orders/{orderId}/public/{vin}
+        // 2) نجيب حالة هذا الـ VIN / السيارة الحالية من orders
         let vinStatus = null;
         let fallbackOrderStatus = null;
 
-        if (orderId) {
+        if (orderBase) {
+          // أولا: الهيكل الجديد – doc = orders/{orderBase}_{itemNo}/public/status
           try {
-            const vinStatusRef = doc(db, "orders", orderId, "public", rawVin);
-            const vinStatusSnap = await getDoc(vinStatusRef);
-            if (vinStatusSnap.exists()) {
-              vinStatus = vinStatusSnap.data();
+            const newDocId = `${orderBase}_${itemNoForVin}`;
+            const newStatusRef = doc(db, "orders", newDocId, "public", "status");
+            const newStatusSnap = await getDoc(newStatusRef);
+            if (newStatusSnap.exists()) {
+              vinStatus = newStatusSnap.data();
+              fallbackOrderStatus = vinStatus;
             }
+          } catch (eNew) {
+            console.error("Error fetching new-structure status:", eNew);
+          }
 
-            // fallback للبيانات القديمة لو لسه بتستخدم doc "status"
-            const fallbackRef = doc(db, "orders", orderId, "public", "status");
-            const fallbackSnap = await getDoc(fallbackRef);
-            if (fallbackSnap.exists()) {
-              fallbackOrderStatus = fallbackSnap.data();
+          // ثانياً: الشكل القديم – orders/{orderBase}/public/{rawVin}
+          if (!vinStatus) {
+            try {
+              const vinStatusRef = doc(db, "orders", orderBase, "public", rawVin);
+              const vinStatusSnap = await getDoc(vinStatusRef);
+              if (vinStatusSnap.exists()) {
+                vinStatus = vinStatusSnap.data();
+                fallbackOrderStatus = fallbackOrderStatus || vinStatus;
+              }
+            } catch (eOldVin) {
+              console.error("Error fetching old VIN-based status:", eOldVin);
             }
+          }
 
-            if (!vinStatus && fallbackOrderStatus) {
-              vinStatus = fallbackOrderStatus;
+          // ثالثاً: fallback قديم جداً – orders/{orderBase}/public/status
+          if (!vinStatus) {
+            try {
+              const fallbackRef = doc(db, "orders", orderBase, "public", "status");
+              const fallbackSnap = await getDoc(fallbackRef);
+              if (fallbackSnap.exists()) {
+                fallbackOrderStatus = fallbackSnap.data();
+                vinStatus = vinStatus || fallbackOrderStatus;
+              }
+            } catch (eFallback) {
+              console.error("Error fetching legacy fallback status:", eFallback);
             }
-          } catch (errStatus) {
-            console.error("Error fetching statuses:", errStatus);
           }
         }
 
-        // 3) نحاول نجيب كل السيارات في نفس الطلب من erp_orders
+        // 3) نحاول نجيب كل السيارات في نفس الطلب عن طريق erp_vins
         let handledMulti = false;
-        if (orderId) {
+        if (orderBase) {
           try {
-            const colRef = collection(db, "erp_orders");
-            const q = query(colRef, where("orderNo", "==", orderId));
+            const vinsCol = collection(db, "erp_vins");
+            const q = query(vinsCol, where("lastOrderNo", "==", orderBase));
             const qsnap = await getDocs(q);
-            if (!qsnap.empty) {
-              const erpRecords = qsnap.docs.map((d) => d.data());
-              if (erpRecords.length > 0) {
-                const { orderInfo, cars, activeIndex } = buildOrderAndCars(
-                  erpRecords,
-                  vinData,
-                  rawVin
-                );
 
-                // نجلب حالة كل سيارة من orders/{orderId}/public/{vin}
+            if (!qsnap.empty) {
+              const vinDocs = qsnap.docs.map((d) => ({ id: d.id, data: d.data() }));
+              if (vinDocs.length > 1) {
+                const firstData = vinDocs[0].data || vinDocs[0];
+                const payloadFallback = firstData.lastData || {};
+
+                const orderInfo = {
+                  orderNo: firstData.lastOrderNo || payloadFallback.orderNo || "",
+                  customerName: payloadFallback.customerName || "",
+                  branch: payloadFallback.branch || ""
+                };
+
+                const cars = vinDocs.map((row) => {
+                  const data = row.data || row;
+                  const payload = data.lastData || {};
+                  const item    = payload.item || {};
+                  const totals  = payload.totals || {};
+
+                  const vin = row.id || data.vin || item.vin || "";
+                  const itemNo = data.lastItemNo || payload.itemNo || 1;
+
+                  const carType     = item.type     || "";
+                  const carCategory = item.category || "";
+                  const carModel    = item.model    || "";
+
+                  const extColor = item.exteriorColor || item.extColor || "";
+                  const intColor = item.interiorColor || item.intColor || "";
+                  const dealer   = item.dealer || payload.dealer || "";
+
+                  const subtotal =
+                    totals.subtotalExclVAT ??
+                    totals.SubtotalExclVAT ??
+                    "";
+
+                  const total =
+                    totals.totalInclVAT ??
+                    totals.TotalInclVAT ??
+                    "";
+
+                  const taxName =
+                    totals.taxName ??
+                    totals.TaxName ??
+                    "";
+
+                  const taxValue =
+                    totals.taxValue ??
+                    totals.TaxValue ??
+                    "";
+
+                  return {
+                    vin,
+                    itemNo,
+                    label: [carType, carCategory, carModel].filter(Boolean).join(" "),
+                    carType,
+                    carCategory,
+                    carModel,
+                    extColor,
+                    intColor,
+                    dealer,
+                    subtotal,
+                    total,
+                    taxName,
+                    taxValue,
+                    statusData: null
+                  };
+                });
+
+                let activeIndex = 0;
+                if (rawVin) {
+                  const normalized = rawVin.replace(/\s+/g, "").toLowerCase();
+                  const idx = cars.findIndex(
+                    (c) => (c.vin || "").replace(/\s+/g, "").toLowerCase() === normalized
+                  );
+                  if (idx >= 0) activeIndex = idx;
+                }
+
+                // نجلب حالة كل سيارة من orders/{orderBase}_{itemNo}/public/status
                 for (const car of cars) {
-                  if (car.vin) {
+                  const carItemNo = car.itemNo || 1;
+                  if (orderBase) {
                     try {
-                      const carStatusRef = doc(db, "orders", orderId, "public", car.vin);
+                      const carDocId = `${orderBase}_${carItemNo}`;
+                      const carStatusRef = doc(db, "orders", carDocId, "public", "status");
                       const carStatusSnap = await getDoc(carStatusRef);
                       if (carStatusSnap.exists()) {
                         car.statusData = carStatusSnap.data();
-                      } else if (fallbackOrderStatus) {
-                        // fallback للحالات القديمة لو موجودة
+                      } else if (fallbackOrderStatus && car.vin === rawVin) {
                         car.statusData = fallbackOrderStatus;
+                      } else if (vinStatus && car.vin === rawVin) {
+                        car.statusData = vinStatus;
+                      } else {
+                        car.statusData = null;
                       }
                     } catch (csErr) {
                       console.error("Error fetching car status:", csErr);
-                      car.statusData = fallbackOrderStatus || null;
+                      car.statusData = fallbackOrderStatus || vinStatus || null;
                     }
                   } else {
                     car.statusData = fallbackOrderStatus || vinStatus || null;
