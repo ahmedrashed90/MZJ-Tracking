@@ -242,7 +242,7 @@
       font-size: 12px;
       cursor: pointer;
       font-family: inherit;
-      transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+      transition: background 0.15s ease, color 0.15s.ease, border-color 0.15s ease;
     }
     .car-tab.active {
       background: #3e2420;
@@ -288,15 +288,9 @@
       transition: width 0.3s ease;
     }
     @media (max-width: 480px) {
-      .card {
-        padding: 16px 14px 20px;
-      }
-      .brand-text-title {
-        font-size: 16px;
-      }
-      .search-section {
-        padding: 10px 10px;
-      }
+      .card { padding: 16px 14px 20px; }
+      .brand-text-title { font-size: 16px; }
+      .search-section { padding: 10px 10px; }
     }
   </style>
 </head>
@@ -329,6 +323,8 @@
   </div>
 
   <script type="module">
+    console.log("TRACK v3 merged-stages 2025-12-07");
+
     import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.11/firebase-app.js";
     import {
       getFirestore,
@@ -401,42 +397,58 @@
       return n.toLocaleString("ar-SA", { minimumFractionDigits: 2 });
     }
 
-    // دمج حالة الطلب من الدوكيومنت الرئيسي + public/status
+    // دمج حالة الطلب من الدوكيومنت الرئيسي + public/status + legacy
     async function fetchMergedStatus(orderBase, itemNo, rawVin) {
       if (!orderBase) return null;
-      const docId = `${orderBase}_${itemNo || 1}`;
 
-      let merged = { stages: {} };
-
-      // 1) الدوكيومنت الرئيسي orders/{OrderNo_ItemNo}
-      try {
-        const rootRef  = doc(db, "orders", docId);
-        const rootSnap = await getDoc(rootRef);
-        if (rootSnap.exists()) {
-          const d = rootSnap.data();
-          if (d.currentStage) merged.currentStage = d.currentStage;
-          if (d.updatedAt)    merged.updatedAt    = d.updatedAt;
-          if (d.stages)       merged.stages       = { ...merged.stages, ...d.stages };
-        }
-      } catch (e) {
-        console.error("Error reading root order doc:", e);
+      const docIds = [];
+      if (orderBase.includes("_")) {
+        // orderBase نفسه فيه _1
+        docIds.push(orderBase);
+      } else {
+        // بدون _ → نبني {orderBase}_{itemNo}
+        docIds.push(`${orderBase}_${itemNo || 1}`);
+      }
+      // كمان نجرب الدوكيومنت القديم بدون _1
+      if (!docIds.includes(orderBase)) {
+        docIds.push(orderBase);
       }
 
-      // 2) public/status
-      try {
-        const stRef  = doc(db, "orders", docId, "public", "status");
-        const stSnap = await getDoc(stRef);
-        if (stSnap.exists()) {
-          const s = stSnap.data();
-          if (s.currentStage) merged.currentStage = s.currentStage;
-          if (s.updatedAt)    merged.updatedAt    = s.updatedAt;
-          if (s.stages)       merged.stages       = { ...merged.stages, ...s.stages };
+      const merged = { stages: {} };
+
+      // 1) الدوكيومنت الرئيسي orders/{docId}
+      for (const dId of docIds) {
+        try {
+          const rootRef  = doc(db, "orders", dId);
+          const rootSnap = await getDoc(rootRef);
+          if (rootSnap.exists()) {
+            const d = rootSnap.data();
+            if (d.currentStage) merged.currentStage = d.currentStage;
+            if (d.updatedAt)    merged.updatedAt    = d.updatedAt;
+            if (d.stages)       merged.stages       = { ...merged.stages, ...d.stages };
+          }
+        } catch (e) {
+          console.error("Error reading root order doc", dId, e);
         }
-      } catch (e2) {
-        console.error("Error reading public/status:", e2);
       }
 
-      // 3) فallback أقدم (لو موجود) orders/{OrderNo}/public/{vin} أو status
+      // 2) public/status لكل docId
+      for (const dId of docIds) {
+        try {
+          const stRef  = doc(db, "orders", dId, "public", "status");
+          const stSnap = await getDoc(stRef);
+          if (stSnap.exists()) {
+            const s = stSnap.data();
+            if (s.currentStage) merged.currentStage = s.currentStage;
+            if (s.updatedAt)    merged.updatedAt    = s.updatedAt;
+            if (s.stages)       merged.stages       = { ...merged.stages, ...s.stages };
+          }
+        } catch (e2) {
+          console.error("Error reading public/status", dId, e2);
+        }
+      }
+
+      // 3) legacy: orders/{orderBase}/public/{vin} + /public/status
       try {
         const vinRef  = doc(db, "orders", orderBase, "public", rawVin);
         const vinSnap = await getDoc(vinRef);
@@ -455,7 +467,7 @@
           if (f.stages) merged.stages = { ...merged.stages, ...f.stages };
         }
       } catch (e3) {
-        console.error("Error reading legacy status:", e3);
+        console.error("Error reading legacy status", e3);
       }
 
       return merged;
@@ -542,14 +554,14 @@
       const customerName = payload.customerName || "";
       const branch       = payload.branch || "";
 
-      const item      = payload.item || {};
-      const carType   = item.type || "";
-      const carCat    = item.category || "";
-      const carModel  = item.model || "";
-      const extColor  = item.exteriorColor || item.extColor || "";
-      const intColor  = item.interiorColor || item.intColor || "";
-      const dealer    = item.dealer || "";
-      const vin       = item.vin || "";
+      const item     = payload.item || {};
+      const carType  = item.type || "";
+      const carCat   = item.category || "";
+      const carModel = item.model || "";
+      const extColor = item.exteriorColor || item.extColor || "";
+      const intColor = item.interiorColor || item.intColor || "";
+      const dealer   = item.dealer || "";
+      const vin      = item.vin || "";
 
       const totals        = payload.totals || {};
       const subtotalExcl  = totals.subtotalExclVAT || totals.SubtotalExclVAT || "";
@@ -678,8 +690,8 @@
           return;
         }
 
-        const vinData     = vinSnap.data();
-        const orderBase   = vinData.lastOrderNo || vinData.orderNo || "";
+        const vinData      = vinSnap.data();
+        const orderBase    = vinData.lastOrderNo || vinData.orderNo || "";
         const itemNoForVin = vinData.lastItemNo || vinData.itemNo || 1;
 
         if (!orderBase) {
@@ -688,22 +700,24 @@
           return;
         }
 
-        // نجيب حالة السيارة الحالية (دمج root + public/status)
-        const mergedStatusForVin = await fetchMergedStatus(orderBase, itemNoForVin, rawVin);
+        // حالة السيارة الحالية (مُدمجة من كل المصادر)
+        const statusForVin = await fetchMergedStatus(orderBase, itemNoForVin, rawVin);
 
-        // نشوف هل الطلب فيه أكثر من سيارة؟
+        // هل الطلب فيه أكثر من سيارة؟
         let handledMulti = false;
         try {
           const vinsCol = collection(db, "erp_vins");
           const q = query(vinsCol, where("lastOrderNo", "==", orderBase));
           const qsnap = await getDocs(q);
+
           if (!qsnap.empty && qsnap.docs.length > 1) {
             const vinDocs = qsnap.docs.map(d => ({ id: d.id, data: d.data() }));
             const first   = vinDocs[0].data;
+            const firstPayload = first.lastData || {};
             const orderInfo = {
               orderNo: first.lastOrderNo || first.orderNo || "",
-              customerName: (first.lastData && first.lastData.customerName) || "",
-              branch: (first.lastData && first.lastData.branch) || ""
+              customerName: firstPayload.customerName || "",
+              branch: firstPayload.branch || ""
             };
 
             const cars = [];
@@ -713,11 +727,11 @@
               const item    = payload.item || {};
               const totals  = payload.totals || {};
 
-              const vin  = row.id;
-              const itemNo = d.lastItemNo || payload.itemNo || 1;
-              const carType = item.type || "";
-              const carCat  = item.category || "";
-              const carMod  = item.model || "";
+              const vin      = row.id;
+              const itemNo   = d.lastItemNo || payload.itemNo || 1;
+              const carType  = item.type || "";
+              const carCat   = item.category || "";
+              const carModel = item.model || "";
               const extColor = item.exteriorColor || item.extColor || "";
               const intColor = item.interiorColor || item.intColor || "";
               const dealer   = item.dealer || payload.dealer || "";
@@ -732,10 +746,10 @@
               cars.push({
                 vin,
                 itemNo,
-                label: [carType, carCat, carMod].filter(Boolean).join(" "),
+                label: [carType, carCat, carModel].filter(Boolean).join(" "),
                 carType,
                 carCategory: carCat,
-                carModel: carMod,
+                carModel,
                 extColor,
                 intColor,
                 dealer,
@@ -761,7 +775,7 @@
         }
 
         if (!handledMulti) {
-          renderSingleCar(vinData, mergedStatusForVin || {});
+          renderSingleCar(vinData, statusForVin || {});
           setStatus("تم العثور على الطلب. يتم عرض تفاصيل السيارة.");
         }
 
