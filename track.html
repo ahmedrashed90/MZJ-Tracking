@@ -212,7 +212,7 @@
       flex-shrink: 0;
     }
     .step-icon.done {
-      background: #16a34a;
+      background: #16a34a;   /* أخضر */
       border-color: #16a34a;
       color: #fff;
     }
@@ -251,7 +251,7 @@
       font-size: 12px;
       cursor: pointer;
       font-family: inherit;
-      transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+      transition: background 0.15s ease, color 0.15s ease, border-color 0.15s.ease;
     }
     .car-tab.active {
       background: #3e2420;
@@ -296,7 +296,7 @@
       border-radius: 999px;
       background: linear-gradient(90deg, #bc8f74, #3e2420);
       width: 0%;
-      transition: width 0.3s.ease;
+      transition: width 0.3s ease;
     }
 
     @media (max-width: 480px) {
@@ -391,7 +391,7 @@
       `;
     }
 
-    // ✅ نفس مراحل صفحة إدارة المبيعات
+    // ✅ العشر مراحل
     const STAGES = [
       {
         title: "1) طلب الشراء. (خاص بالعميل)",
@@ -456,32 +456,30 @@
       return n.toLocaleString("ar-SA", { minimumFractionDigits: 2 });
     }
 
-    // ====== التايم لاين + Progress Bar (إظهار 10 مراحل، وعلامة صح فقط للمراحل المنتهية) ======
+    // ====== التايم لاين + Progress Bar ======
+    // ✅ هنا بالظبط:
+    // - دايمًا نعرض الـ 10 مراحل.
+    // - علامة الصح الخضراء بس على المرحلة اللي رقمها = currentStage.
     function buildTimelineHtml(statusData) {
       const track = statusData || {};
-      const currentStage = track.currentStage || 0;
+      const currentStage = track.currentStage || 0;  // رقم المرحلة الحالية من صفحة المبيعات
       const stagesMap = track.stages || {};
       const totalStages = STAGES.length;
+
       const updatedAt = track.updatedAt
-        ? new Date(track.updatedAt.toDate ? track.updatedAt.toDate() : track.updatedAt).toLocaleString("ar-SA")
+        ? new Date(
+            track.updatedAt.toDate ? track.updatedAt.toDate() : track.updatedAt
+          ).toLocaleString("ar-SA")
         : "";
 
-      // عدد الخطوات المنتهية (المراحل التي تم الضغط فيها على "تم الانتهاء")
-      let doneCount = 0;
-      for (let i = 1; i <= totalStages; i++) {
-        const doneTs = stagesMap["s" + i];
-        if (doneTs) {
-          doneCount++;
-        }
-      }
-      const progress = Math.round((doneCount / totalStages) * 100);
+      // نسبة الإنجاز: على حسب رقم المرحلة الحالية
+      const progress = currentStage > 0
+        ? Math.round((currentStage / totalStages) * 100)
+        : 0;
 
-      // نص حالة المرحلة الحالية
       let currentStageLabel = "لم يبدأ بعد";
       if (currentStage > 0 && currentStage <= totalStages) {
         currentStageLabel = STAGES[currentStage - 1].title;
-      } else if (doneCount > 0) {
-        currentStageLabel = "تم تنفيذ بعض المراحل على طلبك.";
       }
 
       return `
@@ -503,11 +501,16 @@
           <ul class="timeline-steps">
             ${STAGES.map((step, idx) => {
               const stepIndex = idx + 1;
+              // ✅ مرحلة تعتبر "منتهية" (صح أخضر) فقط لو هي نفس currentStage
+              const isDone = (stepIndex === currentStage && currentStage > 0);
+              // نستخدم وقت المرحلة من stages.sX لو موجود، للمرحلة الحالية فقط
               const doneTs = stagesMap["s" + stepIndex];
-              const isDone = !!doneTs;
-              const tsLabel = doneTs
-                ? new Date(doneTs.toDate ? doneTs.toDate() : doneTs).toLocaleString("ar-SA")
-                : "";
+              const tsLabel =
+                isDone && doneTs
+                  ? new Date(
+                      doneTs.toDate ? doneTs.toDate() : doneTs
+                    ).toLocaleString("ar-SA")
+                  : "";
               return `
                 <li class="timeline-step">
                   <div class="step-icon ${isDone ? "done" : ""}">
@@ -528,7 +531,7 @@
       `;
     }
 
-    // ====== عرض سيارة واحدة (Fallback) ======
+    // ====== عرض سيارة واحدة ======
     function renderSingleCar(vinData, statusData) {
       const lastOrderNo = vinData.lastOrderNo || "";
       const payload     = vinData.lastData || {};
