@@ -301,8 +301,6 @@
   </div>
 
   <script type="module">
-    console.log("TRACK v4: query orders by VIN");
-
     import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.11/firebase-app.js";
     import {
       getFirestore,
@@ -345,16 +343,46 @@
     }
 
     const STAGES = [
-      { title: "1) طلب الشراء. (خاص بالعميل)", sub: "يتم تقديم طلب شراء السيارة من خلال المعرض أو المنصة الإلكترونية." },
-      { title: "2) إيصال الدفع. (خاص بالعميل)", sub: "يتم إصدار أو استلام إيصال الدفع (تحويل / شبكة / كاش) وربطه بالطلب." },
-      { title: "3) التواصل من قِبل ممثلي خدمة العملاء بإرسال البطاقة الجركية. (خاص بالمعرض)", sub: "يتواصل معك فريق خدمة العملاء لاستكمال البيانات وإرسال البطاقة الجركية." },
-      { title: "4) سداد رسوم التسجيل. (خاص بالعميل)", sub: "تسديد رسوم التسجيل الرسمية المطلوبة لإتمام تسجيل المركبة." },
-      { title: "5) التأمين - شرط الربط على السيستم. (خاص بالعميل)", sub: "اختيار شركة التأمين وإصدار الوثيقة وربطها بنظام المرور." },
-      { title: "6) إستيفاء المبالغ المتبقية. (خاص بالعميل)", sub: "سداد أي مبالغ متبقية على قيمة السيارة بحسب الاتفاق." },
-      { title: "7) إصدار اللوحات أو نقل الملكية. (خاص بالمعرض)", sub: "إصدار لوحات جديدة للمركبة أو إتمام عملية نقل الملكية." },
-      { title: "8) إستيفاء الأوراق المتبقية. (خاص بالعميل)", sub: "استكمال وتسليم أي أوراق أو مستندات إضافية مطلوبة." },
-      { title: "9) جاهزية السيارة للإستلام. (خاص بالمعرض)", sub: "تجهيز السيارة للتسليم النهائي أو للشحن حسب اختيارك." },
-      { title: "10) إتمام عملية التسليم بنجاح.", sub: "تم تسليم السيارة لك بنجاح وإغلاق الطلب. نتمنى لك رحلة آمنة وسعيدة." }
+      {
+        title: "1) طلب الشراء. (خاص بالعميل)",
+        sub: "يتم تقديم طلب شراء السيارة من خلال المعرض أو المنصة الإلكترونية."
+      },
+      {
+        title: "2) إيصال الدفع. (خاص بالعميل)",
+        sub: "يتم إصدار أو استلام إيصال الدفع (تحويل / شبكة / كاش) وربطه بالطلب."
+      },
+      {
+        title: "3) التواصل من قِبل ممثلي خدمة العملاء بإرسال البطاقة الجركية. (خاص بالمعرض)",
+        sub: "يتواصل معك فريق خدمة العملاء لاستكمال البيانات وإرسال البطاقة الجركية."
+      },
+      {
+        title: "4) سداد رسوم التسجيل. (خاص بالعميل)",
+        sub: "تسديد رسوم التسجيل الرسمية المطلوبة لإتمام تسجيل المركبة."
+      },
+      {
+        title: "5) التأمين - شرط الربط على السيستم. (خاص بالعميل)",
+        sub: "اختيار شركة التأمين وإصدار الوثيقة وربطها بنظام المرور."
+      },
+      {
+        title: "6) إستيفاء المبالغ المتبقية. (خاص بالعميل)",
+        sub: "سداد أي مبالغ متبقية على قيمة السيارة بحسب الاتفاق."
+      },
+      {
+        title: "7) إصدار اللوحات أو نقل الملكية. (خاص بالمعرض)",
+        sub: "إصدار لوحات جديدة للمركبة أو إتمام نقل الملكية."
+      },
+      {
+        title: "8) إستيفاء الأوراق المتبقية. (خاص بالعميل)",
+        sub: "استكمال وتسليم أي أوراق أو مستندات إضافية مطلوبة."
+      },
+      {
+        title: "9) جاهزية السيارة للإستلام. (خاص بالمعرض)",
+        sub: "تجهيز السيارة للتسليم النهائي أو للشحن حسب اختيارك."
+      },
+      {
+        title: "10) إتمام عملية التسليم بنجاح.",
+        sub: "تم تسليم السيارة لك بنجاح وإغلاق الطلب. نتمنى لك رحلة آمنة وسعيدة."
+      }
     ];
 
     function parseAmountFront(value) {
@@ -375,103 +403,22 @@
       return n.toLocaleString("ar-SA", { minimumFractionDigits: 2 });
     }
 
-    // ✅ نقرأ حالة المراحل من orders اللي فيها vin = رقم الهيكل
-    async function fetchStatusByVin(rawVin, orderBase, itemNo) {
-      const merged = { stages: {} };
-      const docIds = [];
-
-      try {
-        const ordersCol = collection(db, "orders");
-        const q = query(ordersCol, where("vin", "==", rawVin));
-        const snap = await getDocs(q);
-        snap.forEach(d => docIds.push(d.id));
-      } catch (e) {
-        console.error("Error querying orders by VIN:", e);
-      }
-
-      // لو ما لقيناش حاجة بالـ VIN نرجع نبني docId بالطريقة القديمة كإحتياط
-      if (!docIds.length && orderBase) {
-        const fallbackId = orderBase.includes("_")
-          ? orderBase
-          : `${orderBase}_${itemNo || 1}`;
-        docIds.push(fallbackId);
-      }
-
-      console.log("STATUS DOC IDS FOR VIN", rawVin, docIds);
-
-      // 1) الدوكيومنت الرئيسي orders/{docId}
-      for (const id of docIds) {
-        try {
-          const ref  = doc(db, "orders", id);
-          const snap = await getDoc(ref);
-          if (snap.exists()) {
-            const d = snap.data();
-            if (d.currentStage) merged.currentStage = d.currentStage;
-            if (d.updatedAt)    merged.updatedAt    = d.updatedAt;
-            if (d.stages)       merged.stages       = { ...merged.stages, ...d.stages };
-          }
-        } catch (e) {
-          console.error("Error root order doc", id, e);
-        }
-      }
-
-      // 2) public/status لكل docId
-      for (const id of docIds) {
-        try {
-          const stRef  = doc(db, "orders", id, "public", "status");
-          const stSnap = await getDoc(stRef);
-          if (stSnap.exists()) {
-            const s = stSnap.data();
-            if (s.currentStage) merged.currentStage = s.currentStage;
-            if (s.updatedAt)    merged.updatedAt    = s.updatedAt;
-            if (s.stages)       merged.stages       = { ...merged.stages, ...s.stages };
-          }
-        } catch (e) {
-          console.error("Error public/status", id, e);
-        }
-      }
-
-      // 3) legacy: orders/{orderBase}/public/{vin} + status
-      if (orderBase) {
-        try {
-          const vinRef  = doc(db, "orders", orderBase, "public", rawVin);
-          const vinSnap = await getDoc(vinRef);
-          if (vinSnap.exists()) {
-            const v = vinSnap.data();
-            if (v.currentStage && !merged.currentStage) merged.currentStage = v.currentStage;
-            if (v.updatedAt && !merged.updatedAt)       merged.updatedAt    = v.updatedAt;
-            if (v.stages) merged.stages = { ...merged.stages, ...v.stages };
-          }
-          const fbRef  = doc(db, "orders", orderBase, "public", "status");
-          const fbSnap = await getDoc(fbRef);
-          if (fbSnap.exists()) {
-            const f = fbSnap.data();
-            if (f.currentStage && !merged.currentStage) merged.currentStage = f.currentStage;
-            if (f.updatedAt && !merged.updatedAt)       merged.updatedAt    = f.updatedAt;
-            if (f.stages) merged.stages = { ...merged.stages, ...f.stages };
-          }
-        } catch (e) {
-          console.error("Error legacy status", e);
-        }
-      }
-
-      console.log("MERGED STAGES FOR", rawVin, merged.stages);
-      return merged;
-    }
-
     function buildTimelineHtml(statusData) {
-      const track        = statusData || {};
+      const track = statusData || {};
       const currentStage = track.currentStage || 0;
-      const stagesMap    = track.stages || {};
-      const updatedAt    = track.updatedAt
+      const stagesMap = track.stages || {};
+      const updatedAt = track.updatedAt
         ? new Date(track.updatedAt.toDate ? track.updatedAt.toDate() : track.updatedAt).toLocaleString("ar-SA")
         : "";
 
       let doneCount = 0;
       for (let i = 1; i <= STAGES.length; i++) {
-        if (stagesMap["s" + i]) doneCount++;
+        if (stagesMap["s" + i]) {
+          doneCount++;
+        }
       }
-      const progress      = doneCount * (100 / STAGES.length);
+
+      const progress = doneCount * (100 / STAGES.length);
       const progressFixed = Math.round(progress);
 
       let currentStageLabel;
@@ -502,11 +449,12 @@
           <ul class="timeline-steps">
             ${STAGES.map((step, idx) => {
               const stepIndex = idx + 1;
-              const doneTs    = stagesMap["s" + stepIndex];
-              const isDone    = !!doneTs;
-              const tsLabel   = doneTs
-                ? new Date(doneTs.toDate ? doneTs.toDate() : doneTs).toLocaleString("ar-SA")
-                : "";
+              const doneTs = stagesMap["s" + stepIndex];
+              const isDone = !!doneTs;
+              const tsLabel =
+                doneTs
+                  ? new Date(doneTs.toDate ? doneTs.toDate() : doneTs).toLocaleString("ar-SA")
+                  : "";
               return `
                 <li class="timeline-step">
                   <div class="step-icon ${isDone ? "done" : ""}">
@@ -593,19 +541,95 @@
       try {
         const vinDocRef = doc(db, "erp_vins", rawVin);
         const vinSnap   = await getDoc(vinDocRef);
+
         if (!vinSnap.exists()) {
-          setStatus("لم يتم العثور على طلب مرتبط بهذا رقم الهيكل.", true);
+          setStatus("لم يتم العثور على طلب مرتبط بهذا رقم الهيكل. تأكد من الرقم وحاول مرة أخرى.", true);
           renderEmptyState();
           return;
         }
 
-        const vinData      = vinSnap.data();
-        const orderBase    = vinData.lastOrderNo || vinData.orderNo || "";
+        const vinData = vinSnap.data() || {};
+        const orderBase = vinData.lastOrderNo || vinData.orderNo || "";
         const itemNoForVin = vinData.lastItemNo || vinData.itemNo || 1;
 
-        const statusForVin = await fetchStatusByVin(rawVin, orderBase, itemNoForVin);
+        let vinStatus = null;
+        let fallbackOrderStatus = null;
 
-        renderSingleCar(vinData, statusForVin || {});
+        if (orderBase) {
+          try {
+            const newDocId = `${orderBase}_${itemNoForVin}`;
+            const newStatusRef = doc(db, "orders", newDocId, "public", "status");
+            const newStatusSnap = await getDoc(newStatusRef);
+            if (newStatusSnap.exists()) {
+              vinStatus = newStatusSnap.data();
+              fallbackOrderStatus = vinStatus;
+            }
+          } catch (eNew) {
+            console.error("Error fetching new-structure status:", eNew);
+          }
+
+          if (!vinStatus) {
+            try {
+              const vinStatusRef = doc(db, "orders", orderBase, "public", rawVin);
+              const vinStatusSnap = await getDoc(vinStatusRef);
+              if (vinStatusSnap.exists()) {
+                vinStatus = vinStatusSnap.data();
+              }
+            } catch (eVinStatus) {
+              console.error("Error fetching VIN-specific status:", eVinStatus);
+            }
+          }
+
+          if (!vinStatus) {
+            try {
+              const fallbackRef = doc(db, "orders", orderBase, "public", "status");
+              const fallbackSnap = await getDoc(fallbackRef);
+              if (fallbackSnap.exists()) {
+                fallbackOrderStatus = fallbackSnap.data();
+                vinStatus = vinStatus || fallbackOrderStatus;
+              }
+            } catch (eFallback) {
+              console.error("Error fetching legacy fallback status:", eFallback);
+            }
+          }
+        }
+
+        let handledMulti = false;
+        if (orderBase) {
+          try {
+            const vinsCol = collection(db, "erp_vins");
+            const q = query(vinsCol, where("lastOrderNo", "==", orderBase));
+            const qsnap = await getDocs(q);
+
+            if (!qsnap.empty) {
+              const vinDocs = qsnap.docs.map((d) => ({ id: d.id, data: d.data() }));
+              if (vinDocs.length > 1) {
+                const firstData = vinDocs[0].data || vinDocs[0];
+                const payloadFallback = firstData.lastData || {};
+
+                const orderInfo = {
+                  orderNo: orderBase,
+                  customerName: payloadFallback.customerName || "",
+                  branch: payloadFallback.branch || "",
+                  totalInclVAT:
+                    (payloadFallback.totals && payloadFallback.totals.orderTotalInclVAT) ||
+                    (payloadFallback.totals && payloadFallback.totals.totalInclVAT) ||
+                    ""
+                };
+
+                renderMultiCars(vinDocs, orderInfo, vinStatus || fallbackOrderStatus || {});
+                handledMulti = true;
+              }
+            }
+          } catch (eMulti) {
+            console.error("Error fetching multi-car info:", eMulti);
+          }
+        }
+
+        if (!handledMulti) {
+          renderSingleCar(vinData, vinStatus || fallbackOrderStatus || {});
+        }
+
         setStatus("تم العثور على الطلب. يتم عرض تفاصيل السيارة.");
       } catch (err) {
         console.error("Error fetching VIN:", err);
@@ -614,8 +638,67 @@
       }
     }
 
+    function renderMultiCars(vinDocs, orderInfo, statusData) {
+      const docs = vinDocs || [];
+      const track = statusData || {};
+      const stagesMap = track.stages || {};
+
+      resultContainer.innerHTML = `
+        <div>
+          <div class="section-title"><span class="icon-dot"></span><span>بيانات الطلب</span></div>
+          <div class="info-grid">
+            <div class="info-item"><div class="info-label">رقم الطلب</div><div class="info-value">${orderInfo.orderNo || "-"}</div></div>
+            <div class="info-item"><div class="info-label">اسم العميل</div><div class="info-value">${orderInfo.customerName || "-"}</div></div>
+            <div class="info-item"><div class="info-label">الفرع</div><div class="info-value">${orderInfo.branch || "-"}</div></div>
+            <div class="info-item">
+              <div class="info-label">إجمالي قيمة الطلب (شامل الضريبة)</div>
+              <div class="info-value">${orderInfo.totalInclVAT ? formatAmount(orderInfo.totalInclVAT) + " ر.س" : "-"}</div>
+            </div>
+          </div>
+
+          <div class="section-title"><span class="icon-dot"></span><span>السيارات المرتبطة بنفس الطلب</span></div>
+          <div class="timeline">
+            <ul class="timeline-steps">
+              ${docs
+                .map((vd) => {
+                  const d = vd.data || vd;
+                  const payload = d.lastData || {};
+                  const item = payload.item || {};
+                  const vin = item.vin || vd.id;
+                  const carType = item.type || "";
+                  const carCat = item.category || "";
+                  const carModel = item.model || "";
+                  const extColor = item.exteriorColor || item.extColor || "";
+                  const intColor = item.interiorColor || item.intColor || "";
+
+                  const isDone =
+                    stagesMap && Object.values(stagesMap).some((ts) => !!ts);
+
+                  return `
+                    <li class="timeline-step">
+                      <div class="step-icon ${isDone ? "done" : ""}">${isDone ? "✓" : ""}</div>
+                      <div class="step-body">
+                        <div class="step-title">${carType} ${carCat} ${carModel}</div>
+                        <div class="step-sub">
+                          رقم الهيكل: ${vin}<br/>
+                          اللون الخارجي: ${extColor || "-"} – اللون الداخلي: ${intColor || "-"}
+                        </div>
+                      </div>
+                    </li>
+                  `;
+                })
+                .join("")}
+            </ul>
+          </div>
+
+          <div class="section-title"><span class="icon-dot"></span><span>حالة الطلب</span></div>
+          ${buildTimelineHtml(statusData || {})}
+        </div>
+      `;
+    }
+
     searchBtn.addEventListener("click", handleSearch);
-    vinInput.addEventListener("keydown", e => {
+    vinInput.addEventListener("keydown", (e) => {
       if (e.key === "Enter") handleSearch();
     });
   </script>
