@@ -227,28 +227,6 @@
       font-size: 13px;
       color: #7b6a63;
     }
-    .cars-tabs {
-      margin: 6px 0 4px;
-      display: flex;
-      flex-wrap: wrap;
-      gap: 6px;
-    }
-    .car-tab {
-      border-radius: 999px;
-      border: 1px solid #e4d6c8;
-      background: #f9f2ea;
-      color: #5b4035;
-      padding: 6px 10px;
-      font-size: 12px;
-      cursor: pointer;
-      font-family: inherit;
-      transition: background 0.15s ease, color 0.15s.ease, border-color 0.15s ease;
-    }
-    .car-tab.active {
-      background: #3e2420;
-      color: #fff;
-      border-color: #3e2420;
-    }
     .status-summary {
       font-size: 12px;
       color: #7b6a63;
@@ -323,7 +301,7 @@
   </div>
 
   <script type="module">
-    console.log("TRACK v3 merged-stages 2025-12-07");
+    console.log("TRACK v4: query orders by VIN");
 
     import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.11/firebase-app.js";
     import {
@@ -397,45 +375,50 @@
       return n.toLocaleString("ar-SA", { minimumFractionDigits: 2 });
     }
 
-    // دمج حالة الطلب من الدوكيومنت الرئيسي + public/status + legacy
-    async function fetchMergedStatus(orderBase, itemNo, rawVin) {
-      if (!orderBase) return null;
-
-      const docIds = [];
-      if (orderBase.includes("_")) {
-        // orderBase نفسه فيه _1
-        docIds.push(orderBase);
-      } else {
-        // بدون _ → نبني {orderBase}_{itemNo}
-        docIds.push(`${orderBase}_${itemNo || 1}`);
-      }
-      // كمان نجرب الدوكيومنت القديم بدون _1
-      if (!docIds.includes(orderBase)) {
-        docIds.push(orderBase);
-      }
-
+    // ✅ نقرأ حالة المراحل من orders اللي فيها vin = رقم الهيكل
+    async function fetchStatusByVin(rawVin, orderBase, itemNo) {
       const merged = { stages: {} };
+      const docIds = [];
+
+      try {
+        const ordersCol = collection(db, "orders");
+        const q = query(ordersCol, where("vin", "==", rawVin));
+        const snap = await getDocs(q);
+        snap.forEach(d => docIds.push(d.id));
+      } catch (e) {
+        console.error("Error querying orders by VIN:", e);
+      }
+
+      // لو ما لقيناش حاجة بالـ VIN نرجع نبني docId بالطريقة القديمة كإحتياط
+      if (!docIds.length && orderBase) {
+        const fallbackId = orderBase.includes("_")
+          ? orderBase
+          : `${orderBase}_${itemNo || 1}`;
+        docIds.push(fallbackId);
+      }
+
+      console.log("STATUS DOC IDS FOR VIN", rawVin, docIds);
 
       // 1) الدوكيومنت الرئيسي orders/{docId}
-      for (const dId of docIds) {
+      for (const id of docIds) {
         try {
-          const rootRef  = doc(db, "orders", dId);
-          const rootSnap = await getDoc(rootRef);
-          if (rootSnap.exists()) {
-            const d = rootSnap.data();
+          const ref  = doc(db, "orders", id);
+          const snap = await getDoc(ref);
+          if (snap.exists()) {
+            const d = snap.data();
             if (d.currentStage) merged.currentStage = d.currentStage;
             if (d.updatedAt)    merged.updatedAt    = d.updatedAt;
             if (d.stages)       merged.stages       = { ...merged.stages, ...d.stages };
           }
         } catch (e) {
-          console.error("Error reading root order doc", dId, e);
+          console.error("Error root order doc", id, e);
         }
       }
 
       // 2) public/status لكل docId
-      for (const dId of docIds) {
+      for (const id of docIds) {
         try {
-          const stRef  = doc(db, "orders", dId, "public", "status");
+          const stRef  = doc(db, "orders", id, "public", "status");
           const stSnap = await getDoc(stRef);
           if (stSnap.exists()) {
             const s = stSnap.data();
@@ -443,33 +426,36 @@
             if (s.updatedAt)    merged.updatedAt    = s.updatedAt;
             if (s.stages)       merged.stages       = { ...merged.stages, ...s.stages };
           }
-        } catch (e2) {
-          console.error("Error reading public/status", dId, e2);
+        } catch (e) {
+          console.error("Error public/status", id, e);
         }
       }
 
-      // 3) legacy: orders/{orderBase}/public/{vin} + /public/status
-      try {
-        const vinRef  = doc(db, "orders", orderBase, "public", rawVin);
-        const vinSnap = await getDoc(vinRef);
-        if (vinSnap.exists()) {
-          const v = vinSnap.data();
-          if (v.currentStage && !merged.currentStage) merged.currentStage = v.currentStage;
-          if (v.updatedAt && !merged.updatedAt)       merged.updatedAt    = v.updatedAt;
-          if (v.stages) merged.stages = { ...merged.stages, ...v.stages };
+      // 3) legacy: orders/{orderBase}/public/{vin} + status
+      if (orderBase) {
+        try {
+          const vinRef  = doc(db, "orders", orderBase, "public", rawVin);
+          const vinSnap = await getDoc(vinRef);
+          if (vinSnap.exists()) {
+            const v = vinSnap.data();
+            if (v.currentStage && !merged.currentStage) merged.currentStage = v.currentStage;
+            if (v.updatedAt && !merged.updatedAt)       merged.updatedAt    = v.updatedAt;
+            if (v.stages) merged.stages = { ...merged.stages, ...v.stages };
+          }
+          const fbRef  = doc(db, "orders", orderBase, "public", "status");
+          const fbSnap = await getDoc(fbRef);
+          if (fbSnap.exists()) {
+            const f = fbSnap.data();
+            if (f.currentStage && !merged.currentStage) merged.currentStage = f.currentStage;
+            if (f.updatedAt && !merged.updatedAt)       merged.updatedAt    = f.updatedAt;
+            if (f.stages) merged.stages = { ...merged.stages, ...f.stages };
+          }
+        } catch (e) {
+          console.error("Error legacy status", e);
         }
-        const fbRef  = doc(db, "orders", orderBase, "public", "status");
-        const fbSnap = await getDoc(fbRef);
-        if (fbSnap.exists()) {
-          const f = fbSnap.data();
-          if (f.currentStage && !merged.currentStage) merged.currentStage = f.currentStage;
-          if (f.updatedAt && !merged.updatedAt)       merged.updatedAt    = f.updatedAt;
-          if (f.stages) merged.stages = { ...merged.stages, ...f.stages };
-        }
-      } catch (e3) {
-        console.error("Error reading legacy status", e3);
       }
 
+      console.log("MERGED STAGES FOR", rawVin, merged.stages);
       return merged;
     }
 
@@ -541,16 +527,9 @@
       `;
     }
 
-    function updateStatusUIForCar(statusData) {
-      const timelineArea = resultContainer.querySelector("#timelineArea");
-      if (timelineArea) {
-        timelineArea.innerHTML = buildTimelineHtml(statusData || {});
-      }
-    }
-
     function renderSingleCar(vinData, statusData) {
-      const lastOrderNo = vinData.lastOrderNo || "";
-      const payload     = vinData.lastData || {};
+      const lastOrderNo  = vinData.lastOrderNo || "";
+      const payload      = vinData.lastData || {};
       const customerName = payload.customerName || "";
       const branch       = payload.branch || "";
 
@@ -601,76 +580,6 @@
       `;
     }
 
-    function renderMultiResult(orderInfo, cars, activeIndex) {
-      if (!cars || !cars.length) { renderEmptyState(); return; }
-      if (activeIndex < 0 || activeIndex >= cars.length) activeIndex = 0;
-
-      function renderCarBox(car) {
-        return `
-          <div class="car-box">
-            <div class="car-main">${car.label || "-"}</div>
-            <div class="car-meta">رقم الهيكل: ${car.vin || "-"}</div>
-            <div class="car-meta">اللون الخارجي: ${car.extColor || "-"} – اللون الداخلي: ${car.intColor || "-"}</div>
-            <div class="car-meta">الوكيل: ${car.dealer || "-"}</div>
-            <div class="car-meta">الإجمالي قبل الضريبة: ${formatAmount(car.subtotal)} ر.س</div>
-            <div class="car-meta">قيمة الضريبة${car.taxName ? " (" + car.taxName + ")" : ""}: ${formatAmount(car.taxValue)} ر.س</div>
-            <div class="car-meta">الإجمالي شامل الضريبة: ${formatAmount(car.total)} ر.س</div>
-          </div>
-        `;
-      }
-
-      const orderTotal = cars.reduce((sum, car) => {
-        const v = parseAmountFront(car.total);
-        return sum + (v || 0);
-      }, 0);
-
-      const orderHeaderHtml = `
-        <div class="section-title"><span class="icon-dot"></span><span>بيانات الطلب</span></div>
-        <div class="info-grid">
-          <div class="info-item"><div class="info-label">رقم الطلب</div><div class="info-value">${orderInfo.orderNo || "-"}</div></div>
-          <div class="info-item"><div class="info-label">اسم العميل</div><div class="info-value">${orderInfo.customerName || "-"}</div></div>
-          <div class="info-item"><div class="info-label">الفرع</div><div class="info-value">${orderInfo.branch || "-"}</div></div>
-          <div class="info-item">
-            <div class="info-label">إجمالي قيمة الطلب (شامل الضريبة)</div>
-            <div class="info-value">${orderTotal ? formatAmount(orderTotal) + " ر.س" : "-"}</div>
-          </div>
-        </div>
-      `;
-
-      const tabsHtml = `
-        <div class="section-title"><span class="icon-dot"></span><span>السيارات في هذا الطلب</span></div>
-        <div class="cars-tabs">
-          ${cars.map((car, idx) => `
-            <button class="car-tab ${idx === activeIndex ? "active" : ""}" data-idx="${idx}">
-              سيارة ${idx + 1} – ${(car.label || car.vin || "").slice(0, 40)}
-            </button>
-          `).join("")}
-        </div>
-        <div id="carDetailsArea">${renderCarBox(cars[activeIndex])}</div>
-      `;
-
-      const timelineWrapper = `
-        <div class="section-title"><span class="icon-dot"></span><span>حالة الطلب</span></div>
-        <div id="timelineArea"></div>
-      `;
-
-      resultContainer.innerHTML = `<div>${orderHeaderHtml}${tabsHtml}${timelineWrapper}</div>`;
-
-      const tabs = resultContainer.querySelectorAll(".car-tab");
-      const carDetailsArea = resultContainer.querySelector("#carDetailsArea");
-      updateStatusUIForCar(cars[activeIndex].statusData || {});
-
-      tabs.forEach(tab => {
-        tab.addEventListener("click", () => {
-          const idx = parseInt(tab.getAttribute("data-idx"), 10);
-          tabs.forEach(t => t.classList.remove("active"));
-          tab.classList.add("active");
-          carDetailsArea.innerHTML = renderCarBox(cars[idx]);
-          updateStatusUIForCar(cars[idx].statusData || {});
-        });
-      });
-    }
-
     async function handleSearch() {
       const rawVin = (vinInput.value || "").trim();
       if (!rawVin) {
@@ -694,91 +603,10 @@
         const orderBase    = vinData.lastOrderNo || vinData.orderNo || "";
         const itemNoForVin = vinData.lastItemNo || vinData.itemNo || 1;
 
-        if (!orderBase) {
-          setStatus("تم العثور على السيارة، لكن رقم الطلب غير مسجل.", true);
-          renderEmptyState();
-          return;
-        }
+        const statusForVin = await fetchStatusByVin(rawVin, orderBase, itemNoForVin);
 
-        // حالة السيارة الحالية (مُدمجة من كل المصادر)
-        const statusForVin = await fetchMergedStatus(orderBase, itemNoForVin, rawVin);
-
-        // هل الطلب فيه أكثر من سيارة؟
-        let handledMulti = false;
-        try {
-          const vinsCol = collection(db, "erp_vins");
-          const q = query(vinsCol, where("lastOrderNo", "==", orderBase));
-          const qsnap = await getDocs(q);
-
-          if (!qsnap.empty && qsnap.docs.length > 1) {
-            const vinDocs = qsnap.docs.map(d => ({ id: d.id, data: d.data() }));
-            const first   = vinDocs[0].data;
-            const firstPayload = first.lastData || {};
-            const orderInfo = {
-              orderNo: first.lastOrderNo || first.orderNo || "",
-              customerName: firstPayload.customerName || "",
-              branch: firstPayload.branch || ""
-            };
-
-            const cars = [];
-            for (const row of vinDocs) {
-              const d       = row.data;
-              const payload = d.lastData || {};
-              const item    = payload.item || {};
-              const totals  = payload.totals || {};
-
-              const vin      = row.id;
-              const itemNo   = d.lastItemNo || payload.itemNo || 1;
-              const carType  = item.type || "";
-              const carCat   = item.category || "";
-              const carModel = item.model || "";
-              const extColor = item.exteriorColor || item.extColor || "";
-              const intColor = item.interiorColor || item.intColor || "";
-              const dealer   = item.dealer || payload.dealer || "";
-
-              const subtotal = totals.subtotalExclVAT ?? totals.SubtotalExclVAT ?? "";
-              const total    = totals.totalInclVAT ?? totals.TotalInclVAT ?? "";
-              const taxName  = totals.taxName ?? totals.TaxName ?? "";
-              const taxValue = totals.taxValue ?? totals.TaxValue ?? "";
-
-              const statusData = await fetchMergedStatus(orderBase, itemNo, vin);
-
-              cars.push({
-                vin,
-                itemNo,
-                label: [carType, carCat, carModel].filter(Boolean).join(" "),
-                carType,
-                carCategory: carCat,
-                carModel,
-                extColor,
-                intColor,
-                dealer,
-                subtotal,
-                total,
-                taxName,
-                taxValue,
-                statusData
-              });
-            }
-
-            let activeIndex = 0;
-            const norm = rawVin.replace(/\s+/g, "").toLowerCase();
-            const idx  = cars.findIndex(c => (c.vin || "").replace(/\s+/g, "").toLowerCase() === norm);
-            if (idx >= 0) activeIndex = idx;
-
-            renderMultiResult(orderInfo, cars, activeIndex);
-            setStatus(`تم العثور على الطلب. هذا الطلب يحتوي على ${cars.length} سيارة.`);
-            handledMulti = true;
-          }
-        } catch (eMulti) {
-          console.error("Error checking multi-car order:", eMulti);
-        }
-
-        if (!handledMulti) {
-          renderSingleCar(vinData, statusForVin || {});
-          setStatus("تم العثور على الطلب. يتم عرض تفاصيل السيارة.");
-        }
-
+        renderSingleCar(vinData, statusForVin || {});
+        setStatus("تم العثور على الطلب. يتم عرض تفاصيل السيارة.");
       } catch (err) {
         console.error("Error fetching VIN:", err);
         setStatus("حدث خطأ أثناء جلب البيانات. حاول مرة أخرى لاحقاً.", true);
