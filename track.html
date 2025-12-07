@@ -222,7 +222,7 @@
   </div>
 
   <div class="wrap">
-    <!-- بحث برقم الهيكل -->
+    <!-- بحث -->
     <div class="card" id="searchCard">
       <h3 class="title">
         <span class="icon">🔍</span>
@@ -233,7 +233,7 @@
           <label>رقم الهيكل (VIN)</label>
           <input id="vinInput" placeholder="اكتب رقم الهيكل بالكامل هنا" />
         </div>
-        <div style="display:flex;align-items:flex-end;justify-content:flex-start;">
+        <div style="display:flex;align-items:flex-end;">
           <button class="btn" id="searchBtn">بحث</button>
         </div>
       </div>
@@ -324,7 +324,6 @@
       </div>
 
       <div class="muted" id="currentStageLabel" style="margin-top:8px;">—</div>
-
       <div class="stage-list" id="stagesList"></div>
     </div>
   </div>
@@ -345,7 +344,7 @@
     apiKey: "AIzaSyCorGtT5_Z68jCtLODvqnv0Fb7QW5eR6MQ",
     authDomain: "mzj-tracking.firebaseapp.com",
     projectId: "mzj-tracking",
-    storageBucket: "mzj-tracking.firebaseapp.com",
+    storageBucket: "mzj-tracking.firebasestorage.app",
     messagingSenderId: "655452217491",
     appId: "1:655452217491:web:9348d172c47bdd411fad66"
   };
@@ -601,60 +600,24 @@
       let vinData = null;
       let statusData = {};
       let erpOrderData = null;
-      let orderId = null;
-      let itemNo  = null;
 
-      // 1) نحاول أولاً erp_vins/{VIN}
+      // 1) بيانات من erp_vins
       try{
         const vinRef = doc(db, ERP_VINS_COLLECTION, vin);
         const vinSnap = await getDoc(vinRef);
         if (vinSnap.exists()) {
           vinData = vinSnap.data() || {};
-          const lastData = vinData.lastData || {};
-          orderId = vinData.lastOrderNo || lastData.orderNo || vinData.orderNo || null;
-          itemNo  = vinData.lastItemNo || lastData.itemNo || (lastData.item && lastData.item.no) || null;
         }
       }catch(e){
         console.warn("Error reading erp_vins:", e);
       }
 
-      // 2) لو فيه رقم طلب نحاول نجيب دوك التتبع الأساسي orders/{OrderNo}_VIN_{VIN}
-      let trackDocId = null;
-      if (orderId) {
-        const baseId = orderId;
-        const candidateIds = [
-          baseId + "_VIN_" + vin,
-          itemNo ? (baseId + "_" + itemNo) : null
-        ].filter(Boolean);
-
-        for (const id of candidateIds) {
-          try{
-            const ref = doc(db, TRACK_COLLECTION, id);
-            const snap = await getDoc(ref);
-            if (snap.exists()) {
-              trackDocId = id;
-              statusData = snap.data() || {};
-              break;
-            }
-          }catch(e){
-            console.warn("Error reading tracking doc", id, e);
-          }
-        }
-
-        if (trackDocId) {
-          try{
-            const statusRef = doc(db, TRACK_COLLECTION, trackDocId, "public", "status");
-            const statusSnap = await getDoc(statusRef);
-            if (statusSnap.exists()) {
-              statusData = { ...statusData, ...statusSnap.data() };
-            }
-          }catch(e){
-            console.warn("Error reading public/status:", e);
-          }
-        }
-
-        // 3) نحاول كمان نجيب erp_orders/{OrderNo}_{ItemNo} لو متاح
-        if (itemNo) {
+      // 2) نحاول جلب erp_orders لو عندنا lastOrderNo + lastItemNo
+      if (vinData) {
+        const lastData = vinData.lastData || {};
+        const orderId = vinData.lastOrderNo || lastData.orderNo || null;
+        const itemNo  = vinData.lastItemNo || lastData.itemNo || (lastData.item && lastData.item.no) || null;
+        if (orderId && itemNo) {
           try{
             const erpOrderRef = doc(db, ERP_ORDERS_COLLECTION, `${orderId}_${itemNo}`);
             const erpOrderSnap = await getDoc(erpOrderRef);
@@ -667,45 +630,61 @@
         }
       }
 
-      // 4) لو ما عرفناش رقم الطلب من erp_vins نحاول البحث في orders بالـ VIN
-      if (!orderId || (!trackDocId && Object.keys(statusData).length === 0)) {
-        try{
-          const colRef = collection(db, TRACK_COLLECTION);
-          const q = query(colRef, where("vin","==",vin));
-          const snap = await getDocs(q);
-          if (!snap.empty) {
-            const mainDoc = snap.docs[0];
-            trackDocId = mainDoc.id;
-            const data = mainDoc.data() || {};
-            statusData = { ...data, ...statusData };
-            orderId = orderId ||
-              data.orderId ||
-              data.orderNo ||
-              (typeof trackDocId === "string" ? trackDocId.split("_")[0] : null);
+      // 3) الأهم: نختار أفضل دوكومنت تتبع بالـ VIN فقط (أعلى currentStage)
+      let bestTrackDocId = null;
+      let bestTrackData  = null;
+      try{
+        const colRef = collection(db, TRACK_COLLECTION);
+        const qByVin = query(colRef, where("vin","==",vin));
+        const snap = await getDocs(qByVin);
 
+        if (!snap.empty) {
+          snap.forEach(d => {
+            const data = d.data() || {};
+            const cur  = data.currentStage || 0;
+            const stagesCount = Object.keys(data.stages || {}).length;
+            const score = Math.max(cur, stagesCount);
+            if (!bestTrackData) {
+              bestTrackData  = data;
+              bestTrackDocId = d.id;
+            } else {
+              const curBest  = bestTrackData.currentStage || 0;
+              const curBestCount = Object.keys(bestTrackData.stages || {}).length;
+              const bestScore = Math.max(curBest, curBestCount);
+              if (score > bestScore) {
+                bestTrackData  = data;
+                bestTrackDocId = d.id;
+              }
+            }
+          });
+
+          if (bestTrackDocId) {
+            // ندمج مع public/status
             try{
-              const statusRef = doc(db, TRACK_COLLECTION, trackDocId, "public", "status");
+              const statusRef = doc(db, TRACK_COLLECTION, bestTrackDocId, "public", "status");
               const statusSnap = await getDoc(statusRef);
               if (statusSnap.exists()) {
-                statusData = { ...statusData, ...statusSnap.data() };
+                bestTrackData = { ...bestTrackData, ...statusSnap.data() };
               }
             }catch(e){
-              console.warn("Error reading fallback public/status:", e);
+              console.warn("Error reading public/status:", e);
             }
           }
-        }catch(e){
-          console.warn("Error querying orders by VIN:", e);
         }
+      }catch(e){
+        console.warn("query by vin error:", e);
       }
 
-      if (!vinData && (!orderId && Object.keys(statusData).length === 0)) {
+      statusData = bestTrackData || {};
+
+      if (!vinData && !statusData && !erpOrderData) {
         searchMsg.classList.add("err");
         searchMsg.textContent = "لا يوجد طلب مرتبط بهذا رقم الهيكل في النظام. تأكد من الرقم أو تواصل مع خدمة العملاء.";
         return;
       }
 
-      fillOrderAndCarInfo(vinData, erpOrderData, statusData, vin);
-      buildStagesUI(statusData);
+      fillOrderAndCarInfo(vinData, erpOrderData, statusData || {}, vin);
+      buildStagesUI(statusData || {});
 
       searchMsg.classList.add("ok");
       searchMsg.textContent = "تم العثور على الطلب وعرض تفاصيله.";
