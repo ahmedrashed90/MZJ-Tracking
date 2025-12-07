@@ -238,7 +238,6 @@
     }
     .stage-title{color:var(--brown);margin-bottom:2px;}
     .stage-time{font-size:11px;color:var(--muted);}
-
   </style>
 </head>
 <body>
@@ -365,7 +364,7 @@
 
   </div>
 
-  <!-- Firebase compat (بدون module) -->
+  <!-- Firebase compat (بدون type="module") -->
   <script src="https://www.gstatic.com/firebasejs/9.6.11/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.6.11/firebase-firestore-compat.js"></script>
 
@@ -467,8 +466,8 @@
     }
 
     function renderStages(track){
-      const stages = track.stages || {};
-      let current = track.currentStage || 0;
+      const stages = (track && track.stages) || {};
+      let current = track && track.currentStage ? track.currentStage : 0;
 
       Object.keys(stages).forEach(key=>{
         const m = key.match(/^s(\d+)$/);
@@ -489,7 +488,7 @@
       else if(current===0) currentLabel = "لم يبدأ تنفيذ أي مرحلة حتى الآن.";
       else currentLabel = "جارٍ التحديث";
 
-      const updatedAt = track.updatedAt
+      const updatedAt = track && track.updatedAt
         ? new Date(track.updatedAt.toDate ? track.updatedAt.toDate() : track.updatedAt).toLocaleString("ar-SA")
         : "";
 
@@ -533,141 +532,159 @@
 
       setStatus("جاري البحث عن الطلب المرتبط بهذا الرقم…");
 
+      let vinData = null;
+      let lastData = {};
+      let orderNo = null;
+      let itemNo  = 1;
+      let erpData = null;
+      let track   = {};
+
+      // 1) erp_vins/{vin}
       try{
-        // 1) erp_vins/{vin}
-        const vinDoc = await db.collection("erp_vins").doc(vin).get();
-        if(!vinDoc.exists){
-          setStatus("لا يوجد طلب مرتبط بهذا رقم الهيكل. تأكد من الرقم وحاول مرة أخرى.", "err");
-          return;
+        const vinSnap = await db.collection("erp_vins").doc(vin).get();
+        if(vinSnap.exists){
+          vinData   = vinSnap.data() || {};
+          lastData  = vinData.lastData || {};
+          orderNo   = vinData.lastOrderNo || lastData.orderNo || lastData.orderId || null;
+          itemNo    = vinData.lastItemNo  || lastData.itemNo  || 1;
         }
-        const vinData = vinDoc.data() || {};
-        const lastData = vinData.lastData || {};
-
-        const orderNo =
-          vinData.lastOrderNo ||
-          lastData.orderNo ||
-          (lastData.orderId) ||
-          null;
-        const itemNo =
-          vinData.lastItemNo ||
-          lastData.itemNo ||
-          1;
-
-        // 2) erp_orders/{OrderNo}_{ItemNo}
-        let erpData = null;
-        if(orderNo){
-          const erpId = orderNo + "_" + itemNo;
-          const erpDoc = await db.collection("erp_orders").doc(erpId).get();
-          if(erpDoc.exists){
-            erpData = erpDoc.data() || null;
-          }
-        }
-
-        // 3) tracking من orders
-        let track = {};
-        if(orderNo){
-          // أولاً: OrderNo_VIN
-          const docId1 = orderNo + "_VIN_" + vin;
-          const snap1 = await db.collection("orders").doc(docId1).collection("public").doc("status").get();
-          if(snap1.exists){
-            track = snap1.data() || {};
-          }else{
-            // ثانياً: OrderNo_{ItemNo}
-            const docId2 = orderNo + "_" + itemNo;
-            const snap2 = await db.collection("orders").doc(docId2).collection("public").doc("status").get();
-            if(snap2.exists){
-              track = snap2.data() || {};
-            }else{
-              // ثالثاً: OrderNo / public / status (عام)
-              const snap3 = await db.collection("orders").doc(orderNo).collection("public").doc("status").get();
-              if(snap3.exists) track = snap3.data() || {};
-            }
-          }
-        }
-
-        // تعبئة بيانات الطلب والسيارة
-        const erpItem   = (erpData && erpData.item)   || lastData.item   || {};
-        const erpTotals = (erpData && erpData.totals) || lastData.totals || {};
-
-        const customerName =
-          track.customerName ||
-          lastData.customerName ||
-          (erpData && (erpData.customerName || erpData.CustomerName)) ||
-          "";
-
-        const branch =
-          track.branch ||
-          lastData.branch ||
-          (erpData && (erpData.branch || erpData.Branch)) ||
-          "";
-
-        const totalRaw =
-          track.orderTotalInclVAT ??
-          track.orderTotalInclVat ??
-          erpTotals.totalInclVAT ??
-          erpTotals.totalInclVat ??
-          erpTotals.TotalInclVAT ??
-          null;
-
-        const subtotalRaw =
-          erpTotals.subtotalExclVAT ??
-          erpTotals.SubtotalExclVAT ??
-          null;
-
-        const vatRaw =
-          erpTotals.taxValue ??
-          erpTotals.TaxValue ??
-          null;
-
-        const totalVal    = parseAmount(totalRaw);
-        const subtotalVal = parseAmount(subtotalRaw);
-        const vatVal      = parseAmount(vatRaw);
-
-        orderCard.style.display = "block";
-        orderNoEl.textContent      = orderNo || "—";
-        customerNameEl.textContent = customerName || "—";
-        branchEl.textContent       = branch || "—";
-
-        let totalDisplay = totalVal;
-        if(totalDisplay===null && subtotalVal!==null && vatVal!==null){
-          totalDisplay = subtotalVal + vatVal;
-        }
-        orderTotalEl.textContent = totalDisplay!==null ? formatCurrency(totalDisplay) : "—";
-
-        // السيارة
-        const carModel    = erpItem.model    || erpItem.ItemModel || "";
-        const carCategory = erpItem.category || erpItem.ItemCategory || "";
-        const carLabel    = [carCategory,carModel].filter(Boolean).join(" – ");
-
-        const exteriorColor =
-          erpItem.exteriorColor ||
-          erpItem.ExteriorColor ||
-          lastData.exteriorColor ||
-          "";
-
-        const interiorColor =
-          erpItem.interiorColor ||
-          erpItem.InteriorColor ||
-          lastData.interiorColor ||
-          "";
-
-        carCard.style.display = "block";
-        carNameEl.textContent   = carLabel || "—";
-        vinEl.textContent       = vin;
-        extColorEl.textContent  = exteriorColor || "—";
-        intColorEl.textContent  = interiorColor || "—";
-        subtotalEl.textContent  = subtotalVal!==null ? formatCurrency(subtotalVal) : "—";
-        vatEl.textContent       = vatVal!==null ? formatCurrency(vatVal) : "—";
-        totalInclEl.textContent = totalDisplay!==null ? formatCurrency(totalDisplay) : "—";
-
-        // مراحل التتبع
-        renderStages(track || {});
-
-        setStatus("تم العثور على الطلب وعرض جميع البيانات.", "ok");
-      }catch(err){
-        console.error(err);
-        setStatus("حدث خطأ أثناء جلب البيانات. حاول مرة أخرى لاحقاً.", "err");
+      }catch(e){
+        console.error("erp_vins error:", e);
       }
+
+      if(!orderNo){
+        setStatus("لا يوجد طلب مرتبط بهذا رقم الهيكل. تأكد من الرقم وحاول مرة أخرى.", "err");
+        return;
+      }
+
+      // 2) erp_orders/{OrderNo}_{ItemNo}
+      try{
+        const erpId  = orderNo + "_" + itemNo;
+        const erpSnap= await db.collection("erp_orders").doc(erpId).get();
+        if(erpSnap.exists){
+          erpData = erpSnap.data() || null;
+        }
+      }catch(e){
+        console.error("erp_orders error:", e);
+      }
+
+      // 3) tracking – orders
+      //   أ) orders/{OrderNo}_VIN_{VIN}/public/status
+      try{
+        const docId1 = orderNo + "_VIN_" + vin;
+        const snap1  = await db.collection("orders").doc(docId1).collection("public").doc("status").get();
+        if(snap1.exists){
+          track = snap1.data() || {};
+        }
+      }catch(e){
+        console.error("orders VIN status error:", e);
+      }
+
+      //   ب) orders/{OrderNo}_{ItemNo}/public/status
+      if(Object.keys(track).length === 0){
+        try{
+          const docId2 = orderNo + "_" + itemNo;
+          const snap2  = await db.collection("orders").doc(docId2).collection("public").doc("status").get();
+          if(snap2.exists){
+            track = snap2.data() || {};
+          }
+        }catch(e){
+          console.error("orders item status error:", e);
+        }
+      }
+
+      //   ج) orders/{OrderNo}/public/status
+      if(Object.keys(track).length === 0){
+        try{
+          const snap3 = await db.collection("orders").doc(orderNo).collection("public").doc("status").get();
+          if(snap3.exists){
+            track = snap3.data() || {};
+          }
+        }catch(e){
+          console.error("orders main status error:", e);
+        }
+      }
+
+      if(!vinData && !erpData && Object.keys(track).length===0){
+        setStatus("لم يتم العثور على بيانات كافية لهذا الهيكل في النظام.", "err");
+        return;
+      }
+
+      const erpItem   = (erpData && erpData.item)   || lastData.item   || {};
+      const erpTotals = (erpData && erpData.totals) || lastData.totals || {};
+
+      const customerName =
+        track.customerName ||
+        lastData.customerName ||
+        (erpData && (erpData.customerName || erpData.CustomerName)) ||
+        "";
+
+      const branch =
+        track.branch ||
+        lastData.branch ||
+        (erpData && (erpData.branch || erpData.Branch)) ||
+        "";
+
+      const totalRaw =
+        track.orderTotalInclVAT ??
+        track.orderTotalInclVat ??
+        erpTotals.totalInclVAT ??
+        erpTotals.totalInclVat ??
+        erpTotals.TotalInclVAT ??
+        null;
+
+      const subtotalRaw =
+        erpTotals.subtotalExclVAT ??
+        erpTotals.SubtotalExclVAT ??
+        null;
+
+      const vatRaw =
+        erpTotals.taxValue ??
+        erpTotals.TaxValue ??
+        null;
+
+      const totalVal    = parseAmount(totalRaw);
+      const subtotalVal = parseAmount(subtotalRaw);
+      const vatVal      = parseAmount(vatRaw);
+
+      orderCard.style.display = "block";
+      orderNoEl.textContent      = orderNo || "—";
+      customerNameEl.textContent = customerName || "—";
+      branchEl.textContent       = branch || "—";
+
+      let totalDisplay = totalVal;
+      if(totalDisplay===null && subtotalVal!==null && vatVal!==null){
+        totalDisplay = subtotalVal + vatVal;
+      }
+      orderTotalEl.textContent = totalDisplay!==null ? formatCurrency(totalDisplay) : "—";
+
+      const carModel    = erpItem.model    || erpItem.ItemModel || "";
+      const carCategory = erpItem.category || erpItem.ItemCategory || "";
+      const carLabel    = [carCategory,carModel].filter(Boolean).join(" – ");
+
+      const exteriorColor =
+        erpItem.exteriorColor ||
+        erpItem.ExteriorColor ||
+        lastData.exteriorColor ||
+        "";
+
+      const interiorColor =
+        erpItem.interiorColor ||
+        erpItem.InteriorColor ||
+        lastData.interiorColor ||
+        "";
+
+      carCard.style.display = "block";
+      carNameEl.textContent   = carLabel || "—";
+      vinEl.textContent       = vin;
+      extColorEl.textContent  = exteriorColor || "—";
+      intColorEl.textContent  = interiorColor || "—";
+      subtotalEl.textContent  = subtotalVal!==null ? formatCurrency(subtotalVal) : "—";
+      vatEl.textContent       = vatVal!==null ? formatCurrency(vatVal) : "—";
+      totalInclEl.textContent = totalDisplay!==null ? formatCurrency(totalDisplay) : "—";
+
+      renderStages(track || {});
+      setStatus("تم العثور على الطلب وعرض جميع البيانات.", "ok");
     }
 
     searchBtn.addEventListener("click", handleSearch);
