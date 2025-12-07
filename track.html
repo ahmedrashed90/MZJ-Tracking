@@ -250,7 +250,7 @@
       font-size: 12px;
       cursor: pointer;
       font-family: inherit;
-      transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+      transition: background 0.15s ease, color 0.15s ease, border-color 0.15s.ease;
     }
     .car-tab.active {
       background: #3e2420;
@@ -456,26 +456,27 @@
         ? new Date(track.updatedAt.toDate ? track.updatedAt.toDate() : track.updatedAt).toLocaleString("ar-SA")
         : "";
 
-      // عدد الخطوات المنتهية فعليًا بناءً على الأختام
+      // عدد المراحل المنتهية فعليًا بناءً على وجود ختم في stages.sX
       let doneCount = 0;
       for (let i = 1; i <= STAGES.length; i++) {
-        const doneTs = stagesMap["s" + i];
-        if (doneTs) {
+        if (stagesMap["s" + i]) {
           doneCount++;
         }
       }
-      // في حالة ما فيش أختام لكن في مرحلة حالية، نخليها 10% على الأقل
+      // لو ما فيش أختام بس currentStage > 0 (طلبات قديمة) نخليها 10% على الأقل
       if (doneCount === 0 && currentStage > 0) {
         doneCount = 1;
       }
       const progress = Math.round((doneCount / STAGES.length) * 100);
 
-      const currentStageLabel =
-        currentStage > 0 && currentStage <= STAGES.length
-          ? STAGES[currentStage - 1].title
-          : currentStage === 0
-          ? "لم يبدأ بعد"
-          : "جارٍ التحديث";
+      let currentStageLabel;
+      if (currentStage > 0 && currentStage <= STAGES.length) {
+        currentStageLabel = STAGES[currentStage - 1].title;
+      } else if (currentStage === 0) {
+        currentStageLabel = "لم يبدأ بعد";
+      } else {
+        currentStageLabel = "جارٍ التحديث";
+      }
 
       return `
         <div class="status-summary">
@@ -497,10 +498,9 @@
             ${STAGES.map((step, idx) => {
               const stepIndex = idx + 1;
               const doneTs = stagesMap["s" + stepIndex];
-              // ✅ علامة الصح الخضراء فقط على المرحلة الحالية
-              const isDone = currentStage === stepIndex && currentStage > 0;
+              const isDone = !!doneTs; // ✅ المرحلة منتهية فقط لو لها ختم
               const tsLabel =
-                isDone && doneTs
+                doneTs
                   ? new Date(doneTs.toDate ? doneTs.toDate() : doneTs).toLocaleString("ar-SA")
                   : "";
               return `
@@ -523,7 +523,7 @@
       `;
     }
 
-    // ====== عرض سيارة واحدة (Fallback) ======
+    // ====== عرض سيارة واحدة (fallback) ======
     function renderSingleCar(vinData, statusData) {
       const lastOrderNo = vinData.lastOrderNo || "";
       const payload     = vinData.lastData || {};
