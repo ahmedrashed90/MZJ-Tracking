@@ -2,15 +2,492 @@
 <html lang="ar" dir="rtl">
 <head>
   <meta charset="UTF-8" />
-  <title>تتبع طلبك برقم الهيكل — مجموعة محمد بن ذعار العجمي</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet" />
+  <title>تتبع طلبك - محمد بن ذعار العجمي للسيارات</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
-    /* ... بقية الستايل كما في track (2).html ... */
+    body {
+      margin: 0;
+      font-family: "Tajawal", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #f6f4f0;
+      color: #3e2420;
+    }
+    .page {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+    }
+    .shell {
+      max-width: 960px;
+      width: 100%;
+      background: #fff;
+      border-radius: 18px;
+      box-shadow: 0 18px 45px rgba(62, 36, 32, 0.22);
+      padding: 16px;
+      display: grid;
+      grid-template-columns: minmax(0, 1.1fr) minmax(0, 1.4fr);
+      gap: 12px;
+    }
+    @media (max-width: 900px) {
+      .shell {
+        grid-template-columns: 1fr;
+      }
+    }
+    .brand-side {
+      border-radius: 14px;
+      background: linear-gradient(135deg, #3e2420 0%, #5b4035 45%, #bc8f74 100%);
+      padding: 14px 14px 16px;
+      color: #fff;
+      position: relative;
+      overflow: hidden;
+    }
+    .brand-head {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      margin-bottom: 10px;
+      position: relative;
+      z-index: 2;
+    }
+    .brand-logo {
+      width: 34px;
+      height: 34px;
+      border-radius: 12px;
+      background: radial-gradient(circle at 30% 20%, #ffe7c2 0%, #fbbf77 35%, #a8693b 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 19px;
+      font-weight: 800;
+      box-shadow: 0 6px 16px rgba(0, 0, 0, 0.35);
+    }
+    .brand-text {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+    .brand-text-main {
+      font-size: 14px;
+      font-weight: 700;
+    }
+    .brand-text-sub {
+      font-size: 11px;
+      opacity: 0.9;
+    }
+    .brand-body {
+      font-size: 12px;
+      opacity: 0.95;
+      margin-bottom: 10px;
+      position: relative;
+      z-index: 2;
+    }
+    .brand-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 11px;
+      border-radius: 999px;
+      padding: 4px 9px;
+      background: rgba(15, 118, 110, 0.16);
+      border: 1px solid rgba(45, 212, 191, 0.6);
+      margin-bottom: 6px;
+    }
+    .brand-pill span.dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 999px;
+      background: #22c55e;
+      box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.45);
+    }
+    .brand-footer {
+      font-size: 11px;
+      opacity: 0.9;
+      margin-top: 6px;
+    }
+    .brand-bg-glow {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+    }
+    .brand-bg-glow::before,
+    .brand-bg-glow::after {
+      content: "";
+      position: absolute;
+      border-radius: 999px;
+      filter: blur(22px);
+      opacity: 0.55;
+    }
+    .brand-bg-glow::before {
+      width: 140px;
+      height: 140px;
+      background: rgba(251, 191, 77, 0.8);
+      top: -30px;
+      left: -20px;
+    }
+    .brand-bg-glow::after {
+      width: 160px;
+      height: 160px;
+      background: rgba(34, 211, 238, 0.5);
+      bottom: -40px;
+      right: -20px;
+    }
+
+    .right-side {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .search-card {
+      border-radius: 14px;
+      border: 1px solid #e5e7eb;
+      background: #f9fafb;
+      padding: 10px 12px;
+    }
+    .search-title {
+      font-size: 14px;
+      font-weight: 700;
+      margin-bottom: 4px;
+      color: #3e2420;
+    }
+    .search-sub {
+      font-size: 11px;
+      color: #6b7280;
+      margin-bottom: 8px;
+    }
+    .search-row {
+      display: grid;
+      grid-template-columns: minmax(0, 1.6fr) auto;
+      gap: 8px;
+      align-items: flex-end;
+    }
+    @media (max-width: 640px) {
+      .search-row {
+        grid-template-columns: 1fr;
+      }
+    }
+    label {
+      display: block;
+      font-size: 11px;
+      color: #6b7280;
+      margin-bottom: 2px;
+    }
+    input[type="text"] {
+      width: 100%;
+      padding: 7px 9px;
+      border-radius: 10px;
+      border: 1px solid #e5e7eb;
+      background: #fff;
+      font-family: inherit;
+      font-size: 13px;
+      outline: none;
+      direction: rtl;
+    }
+    input[type="text"]:focus {
+      border-color: #bc8f74;
+      box-shadow: 0 0 0 1px rgba(188, 143, 116, 0.35);
+    }
+    .btn {
+      border-radius: 999px;
+      border: 0;
+      padding: 8px 13px;
+      font-size: 13px;
+      font-family: inherit;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      background: #3e2420;
+      color: #fff;
+      white-space: nowrap;
+    }
+    .btn:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+    .status-msg {
+      font-size: 11px;
+      margin-top: 4px;
+      color: #6b7280;
+    }
+    .status-msg.ok {
+      color: #16a34a;
+      font-weight: 600;
+    }
+    .status-msg.err {
+      color: #b91c1c;
+      font-weight: 600;
+    }
+
+    .info-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 8px;
+      margin-top: 6px;
+    }
+    @media (max-width: 640px) {
+      .info-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+    .info-card {
+      border-radius: 12px;
+      background: #fff;
+      border: 1px solid #e5e7eb;
+      padding: 8px 9px;
+      font-size: 12px;
+    }
+    .info-label {
+      font-size: 11px;
+      color: #6b7280;
+    }
+    .info-value {
+      font-size: 13px;
+      font-weight: 700;
+      color: #3e2420;
+    }
+
+    .status-block {
+      border-radius: 14px;
+      background: #fff;
+      border: 1px solid #e5e7eb;
+      padding: 10px 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .status-summary {
+      font-size: 12px;
+      color: #374151;
+    }
+    .status-summary strong {
+      color: #3e2420;
+    }
+    .progress-wrapper {
+      margin-top: 4px;
+    }
+    .progress-header {
+      display: flex;
+      justify-content: space-between;
+      font-size: 11px;
+      color: #6b7280;
+      margin-bottom: 3px;
+    }
+    .progress-percent-strong {
+      font-weight: 700;
+      color: #3e2420;
+      font-size: 12px;
+    }
+    .progress-bar {
+      width: 100%;
+      height: 8px;
+      border-radius: 999px;
+      background: #f3f4f6;
+      overflow: hidden;
+    }
+    .progress-fill {
+      height: 100%;
+      border-radius: inherit;
+      background: linear-gradient(90deg, #bc8f74, #3e2420);
+      width: 0;
+      transition: width 0.35s ease-out;
+    }
+
+    .timeline {
+      margin-top: 8px;
+    }
+    .timeline-title {
+      font-size: 12px;
+      font-weight: 600;
+      margin-bottom: 4px;
+      color: #3e2420;
+    }
+    .timeline-steps {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .timeline-step {
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+      padding: 6px 7px;
+      border-radius: 10px;
+      background: #f9fafb;
+      border: 1px solid #e5e7eb;
+      font-size: 12px;
+    }
+    .step-icon {
+      width: 20px;
+      height: 20px;
+      border-radius: 999px;
+      border: 1px solid #d1d5db;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      color: #4b5563;
+      flex-shrink: 0;
+      background: #fff;
+    }
+    .step-icon.done {
+      background: #22c55e;
+      border-color: #16a34a;
+      color: #fff;
+    }
+    .step-body {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+    .step-title {
+      font-size: 12px;
+      font-weight: 600;
+      color: #3e2420;
+    }
+    .step-sub {
+      font-size: 11px;
+      color: #6b7280;
+    }
+    .step-sub span {
+      color: #374151;
+    }
+
+    .car-summary {
+      margin-top: 6px;
+      border-radius: 12px;
+      background: linear-gradient(135deg, #3e2420 0%, #5b4035 45%, #bc8f74 100%);
+      padding: 12px 14px;
+      color: #fff;
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+    }
+    .car-main {
+      font-size: 14px;
+      font-weight: 700;
+    }
+    .car-meta {
+      font-size: 12px;
+      opacity: 0.95;
+    }
+    .car-meta span {
+      opacity: 0.85;
+    }
+    .car-more {
+      font-size: 11px;
+      opacity: 0.9;
+    }
   </style>
 </head>
 <body>
-  <!-- ... نفس الـ HTML الخاص بواجهة التتبع كما في ملفك الحالي ... -->
+  <div class="page">
+    <div class="shell">
+      <div class="brand-side">
+        <div class="brand-bg-glow"></div>
+        <div class="brand-head">
+          <div class="brand-logo">★</div>
+          <div class="brand-text">
+            <div class="brand-text-main">مجموعة محمد بن ذعار العجمي للسيارات</div>
+            <div class="brand-text-sub">نظام تتبع حالة الطلب برقم الهيكل</div>
+          </div>
+        </div>
+        <div class="brand-body">
+          <div class="brand-pill">
+            <span class="dot"></span>
+            <span>نظام متصل مباشرةً ببيانات الطلب في المعرض</span>
+          </div>
+          <div>
+            أدخل رقم الهيكل (الشاصي) كما هو في عقد الشراء أو الاستمارة،
+            ليظهر لك ملخص الطلب وحالة المراحل من لحظة الإنشاء حتى تسليم السيارة.
+          </div>
+        </div>
+        <div class="brand-footer">
+          مع محمد بن ذعار العجمي:
+          <strong>المصداقية تأسّس العلاقة… الإتقان يكملها… والسرعة تختصرها.</strong>
+        </div>
+      </div>
+
+      <div class="right-side">
+        <div class="search-card">
+          <div class="search-title">تتبع طلبك برقم الهيكل</div>
+          <div class="search-sub">
+            اكتب رقم الهيكل الكامل، واضغط "تتبع الطلب" ليتم جلب بيانات الطلب والسيارة وحالة المراحل.
+          </div>
+          <div class="search-row">
+            <div>
+              <label for="vinInput">رقم الهيكل (VIN)</label>
+              <input id="vinInput" type="text" placeholder="مثال: KMHXXXXXXXXXXXXXX" />
+            </div>
+            <button class="btn" id="trackBtn">🔍 تتبع الطلب</button>
+          </div>
+          <div id="statusMsg" class="status-msg">
+            اكتب رقم الهيكل بالكامل كما هو في عقد الشراء.
+          </div>
+        </div>
+
+        <div id="orderBlock" style="display:none;">
+          <div class="info-grid">
+            <div class="info-card">
+              <div class="info-label">رقم الطلب</div>
+              <div class="info-value" id="orderIdEl">—</div>
+            </div>
+            <div class="info-card">
+              <div class="info-label">اسم العميل</div>
+              <div class="info-value" id="customerNameEl">—</div>
+            </div>
+            <div class="info-card">
+              <div class="info-label">الفرع</div>
+              <div class="info-value" id="branchEl">—</div>
+            </div>
+            <div class="info-card">
+              <div class="info-label">إجمالي قيمة الطلب (شامل الضريبة)</div>
+              <div class="info-value" id="orderTotalEl">—</div>
+            </div>
+          </div>
+
+          <div class="car-summary" id="carSummary">
+            <div class="car-main" id="carNameEl">—</div>
+            <div class="car-meta">
+              رقم الهيكل: <span id="vinEl">—</span>
+            </div>
+            <div class="car-more">
+              اللون الخارجي: <span id="extColorEl">—</span> •
+              اللون الداخلي: <span id="intColorEl">—</span>
+            </div>
+          </div>
+
+          <div class="info-grid">
+            <div class="info-card">
+              <div class="info-label">الإجمالي قبل الضريبة</div>
+              <div class="info-value" id="subtotalEl">—</div>
+            </div>
+            <div class="info-card">
+              <div class="info-label">قيمة الضريبة (ضريبة القيمة المضافة)</div>
+              <div class="info-value" id="vatEl">—</div>
+            </div>
+            <div class="info-card">
+              <div class="info-label">الإجمالي شامل الضريبة</div>
+              <div class="info-value" id="totalInclEl">—</div>
+            </div>
+            <div class="info-card">
+              <div class="info-label">حالة الطلب في النظام</div>
+              <div class="info-value" id="erpStatusEl">—</div>
+            </div>
+          </div>
+
+          <div class="status-block" id="statusBlock">
+            <!-- timeline injected here -->
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
@@ -33,23 +510,65 @@
       appId: "1:655452217491:web:9348d172c47bdd411fad66"
     };
 
-    const app = initializeApp(firebaseConfig);
-    const db  = getFirestore(app);
+    const app  = initializeApp(firebaseConfig);
+    const db   = getFirestore(app);
 
     const STAGES = [
-      { title:"1) إنشاء الطلب", sub:"تم تسجيل طلبك في النظام بنجاح." },
-      { title:"2) أمر الدفع (تحويل/شبكة/كاش)", sub:"يتم استلام مبلغ الدفعة أو ترتيب خيار الدفع المناسب." },
-      { title:"3) تواصل خدمة العملاء + إرسال البطاقة الجمركية", sub:"خدمة العملاء تتواصل معك لاستكمال البيانات وإرسال البطاقة الجمركية." },
-      { title:"4) سداد رسوم التسجيل", sub:"يتم سداد رسوم التسجيل عبر القنوات الرسمية." },
-      { title:"5) التأمين + ربط السيستم", sub:"اختيار شركة التأمين وربط الوثيقة على النظام." },
-      { title:"6) استيفاء المبالغ المتبقية", sub:"يتم سداد باقي المبلغ إن وجد." },
-      { title:"7) إصدار اللوحات / نقل الملكية", sub:"استكمال إجراءات المرور وإصدار اللوحات أو نقل الملكية." },
-      { title:"8) استيفاء الأوراق المتبقية", sub:"تجهيز وتسليم كافة الأوراق الرسمية." },
-      { title:"9) جاهزية السيارة للاستلام", sub:"السيارة جاهزة في المعرض للاستلام." },
-      { title:"10) إتمام عملية التسليم", sub:"تم تسليم السيارة للعميل بنجاح." }
+      { title:"1) طلب الشراء – (خاص بالعميل)", sub:"تم تسجيل طلبك في النظام بنجاح." },
+      { title:"2) إيصال الدفع – (خاص بالعميل)", sub:"يتم استلام مبلغ الدفعة أو ترتيب خيار الدفع المناسب." },
+      { title:"3) التواصل من قِبل ممثلي خدمة العملاء بإرسال البطاقة الجركية – (خاص بالمعرض)", sub:"خدمة العملاء تتواصل معك لاستكمال البيانات وإرسال البطاقة الجركية." },
+      { title:"4) سداد رسوم التسجيل – (خاص بالعميل)", sub:"يتم سداد رسوم التسجيل عبر القنوات الرسمية." },
+      { title:"5) التأمين – شرط الربط على السيستم – (خاص بالعميل)", sub:"اختيار شركة التأمين وربط الوثيقة على النظام." },
+      { title:"6) استيفاء المبالغ المتبقية – (خاص بالعميل)", sub:"يتم سداد باقي المبلغ إن وجد." },
+      { title:"7) إصدار اللوحات أو نقل الملكية – (خاص بالمعرض)", sub:"استكمال إجراءات المرور وإصدار اللوحات أو نقل الملكية." },
+      { title:"8) استيفاء الأوراق المتبقية – (خاص بالعميل)", sub:"تجهيز وتسليم كافة الأوراق الرسمية." },
+      { title:"9) جاهزية السيارة للاستلام – (خاص بالمعرض)", sub:"السيارة جاهزة في المعرض للاستلام." },
+      { title:"10) إتمام عملية التسليم بنجاح", sub:"تم تسليم السيارة للعميل بنجاح." }
     ];
 
-    //  🔁 دالة التايملاين بعد التعديل — كل مرحلة مستقلة
+    const vinInput     = document.getElementById("vinInput");
+    const trackBtn     = document.getElementById("trackBtn");
+    const statusMsg    = document.getElementById("statusMsg");
+    const orderBlock   = document.getElementById("orderBlock");
+    const statusBlock  = document.getElementById("statusBlock");
+
+    const orderIdEl      = document.getElementById("orderIdEl");
+    const customerNameEl = document.getElementById("customerNameEl");
+    const branchEl       = document.getElementById("branchEl");
+    const orderTotalEl   = document.getElementById("orderTotalEl");
+
+    const carNameEl   = document.getElementById("carNameEl");
+    const vinEl       = document.getElementById("vinEl");
+    const extColorEl  = document.getElementById("extColorEl");
+    const intColorEl  = document.getElementById("intColorEl");
+    const subtotalEl  = document.getElementById("subtotalEl");
+    const vatEl       = document.getElementById("vatEl");
+    const totalInclEl = document.getElementById("totalInclEl");
+    const erpStatusEl = document.getElementById("erpStatusEl");
+
+    function setStatus(msg, type = "") {
+      statusMsg.textContent = msg;
+      statusMsg.classList.remove("ok", "err");
+      if (type === "ok") statusMsg.classList.add("ok");
+      if (type === "err") statusMsg.classList.add("err");
+    }
+
+    function parseAmount(v) {
+      if (v === null || v === undefined) return null;
+      if (typeof v === "number") return v;
+      const s = String(v).replace(/[^\d.,-]/g, "").replace(/,/g, "");
+      const n = parseFloat(s);
+      return isNaN(n) ? null : n;
+    }
+
+    function fmtCurrency(n) {
+      if (n === null || n === undefined || isNaN(n)) return "—";
+      return n.toLocaleString("ar-SA", {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+      }) + " ر.س";
+    }
+
     function buildTimelineHtml(statusData) {
       const track = statusData || {};
       const stagesMap = track.stages || {};
@@ -57,8 +576,8 @@
         ? new Date(track.updatedAt.toDate ? track.updatedAt.toDate() : track.updatedAt).toLocaleString("ar-SA")
         : "";
 
-      // عدد المراحل المكتملة فعلياً (التي لها timestamp)
-      const doneKeys = Object.keys(stagesMap).filter((k) => /^s\d+$/.test(k) && stagesMap[k]);
+      const doneKeys = Object.keys(stagesMap).filter((k) => /^s\\d+$/.test(k) && stagesMap[k]);
+
       let maxIndex = 0;
       for (const key of doneKeys) {
         const n = parseInt(key.slice(1), 10);
@@ -96,7 +615,7 @@
             ${STAGES.map((step, idx) => {
               const stepIndex = idx + 1;
               const doneTs = stagesMap["s" + stepIndex];
-              const isDone = !!doneTs; // ✅ المرحلة تعتبر مكتملة فقط لو لها timestamp
+              const isDone = !!doneTs;
               const tsLabel = doneTs
                 ? new Date(doneTs.toDate ? doneTs.toDate() : doneTs).toLocaleString("ar-SA")
                 : "";
@@ -120,7 +639,203 @@
       `;
     }
 
-    // ... بقية كود القراءة من Firebase (erp_vins / erp_orders / orders) كما في ملفك الحالي ...
+    async function fetchVinDoc(rawVin) {
+      const col = collection(db, "erp_vins");
+      let q1 = query(col, where("vin", "==", rawVin));
+      let snap = await getDocs(q1);
+      if (!snap.empty) return snap.docs[0];
+
+      const asNum = Number(rawVin);
+      if (!Number.isNaN(asNum)) {
+        q1 = query(col, where("vin", "==", asNum));
+        snap = await getDocs(q1);
+        if (!snap.empty) return snap.docs[0];
+      }
+
+      try {
+        const directRef = doc(db, "erp_vins", rawVin);
+        const directSnap = await getDoc(directRef);
+        if (directSnap.exists()) return directSnap;
+      } catch (e) {
+        console.error("direct vin doc error", e);
+      }
+      return null;
+    }
+
+    async function fetchErpOrder(orderBase) {
+      if (!orderBase) return null;
+      try {
+        const ref = doc(db, "erp_orders", orderBase);
+        const snap = await getDoc(ref);
+        if (!snap.exists()) return null;
+        return snap.data() || null;
+      } catch (e) {
+        console.error("fetchErpOrder error", e);
+        return null;
+      }
+    }
+
+    async function fetchStatusForVin(orderBase, rawVin, itemNoForVin) {
+      let vinStatus = null;
+      let fallbackOrderStatus = null;
+
+      if (orderBase) {
+        try {
+          const vinDocId = `${orderBase}_VIN_${rawVin}`;
+          const vinStatusRef = doc(db, "orders", vinDocId, "public", "status");
+          const vinStatusSnap = await getDoc(vinStatusRef);
+          if (vinStatusSnap.exists()) {
+            vinStatus = vinStatusSnap.data();
+            fallbackOrderStatus = vinStatus;
+          }
+        } catch (eVin) {
+          console.error("Error fetching VIN-structure status:", eVin);
+        }
+
+        if (!vinStatus) {
+          try {
+            const newDocId = `${orderBase}_${itemNoForVin}`;
+            const newStatusRef = doc(db, "orders", newDocId, "public", "status");
+            const newStatusSnap = await getDoc(newStatusRef);
+            if (newStatusSnap.exists()) {
+              vinStatus = newStatusSnap.data();
+              fallbackOrderStatus = vinStatus;
+            }
+          } catch (eNew) {
+            console.error("Error fetching new-structure status:", eNew);
+          }
+        }
+
+        if (!vinStatus) {
+          try {
+            const vinStatusRefOld = doc(db, "orders", orderBase, "public", rawVin);
+            const vinStatusSnapOld = await getDoc(vinStatusRefOld);
+            if (vinStatusSnapOld.exists()) {
+              vinStatus = vinStatusSnapOld.data();
+              fallbackOrderStatus = fallbackOrderStatus || vinStatus;
+            }
+          } catch (eOldVin) {
+            console.error("Error fetching old VIN-based status:", eOldVin);
+          }
+        }
+
+        if (!vinStatus) {
+          try {
+            const fallbackRef = doc(db, "orders", orderBase, "public", "status");
+            const fallbackSnap = await getDoc(fallbackRef);
+            if (fallbackSnap.exists()) {
+              fallbackOrderStatus = fallbackSnap.data();
+              vinStatus = vinStatus || fallbackOrderStatus;
+            }
+          } catch (eFallback) {
+            console.error("Error fetching legacy fallback status:", eFallback);
+          }
+        }
+      }
+
+      return { vinStatus, fallbackOrderStatus };
+    }
+
+    function renderSingleCar(vinData, statusData) {
+      const lastOrderNo = vinData.lastOrderNo || "";
+      const payload     = vinData.lastData || {};
+
+      const customerName = payload.customerName || payload.CustomerName || "";
+      const branch       = payload.branch || payload.Branch || "";
+      const totalIncl    = parseAmount(
+        payload.totalInclVAT ??
+        payload.TotalInclVAT ??
+        payload.orderTotalInclVAT ??
+        payload.orderTotalInclVat
+      );
+
+      orderIdEl.textContent      = lastOrderNo || "—";
+      customerNameEl.textContent = customerName || "—";
+      branchEl.textContent       = branch || "—";
+      orderTotalEl.textContent   = totalIncl !== null ? fmtCurrency(totalIncl) : "—";
+
+      const carLabel = [payload.itemCategory, payload.itemModel]
+        .filter(Boolean)
+        .join(" — ");
+      const exteriorColor = payload.exteriorColor || "—";
+      const interiorColor = payload.interiorColor || "—";
+
+      carNameEl.textContent  = carLabel || "—";
+      vinEl.textContent      = vinData.vin || vinData.VIN || "—";
+      extColorEl.textContent = exteriorColor;
+      intColorEl.textContent = interiorColor;
+
+      const subtotalVal = parseAmount(payload.subtotalExclVAT ?? payload.SubtotalExclVAT);
+      const vatVal      = parseAmount(payload.taxValue ?? payload.TaxValue);
+
+      subtotalEl.textContent  = subtotalVal !== null ? fmtCurrency(subtotalVal) : "—";
+      vatEl.textContent       = vatVal !== null ? fmtCurrency(vatVal) : "—";
+      totalInclEl.textContent = totalIncl !== null ? fmtCurrency(totalIncl) : "—";
+
+      const statusHtml = buildTimelineHtml(statusData);
+      statusBlock.innerHTML = statusHtml;
+      orderBlock.style.display = "block";
+    }
+
+    async function handleTrack() {
+      setStatus("جارِ البحث عن الطلب المرتبط بهذا الهيكل...");
+      orderBlock.style.display = "none";
+      statusBlock.innerHTML    = "";
+
+      const rawVin = (vinInput.value || "").trim();
+      if (!rawVin) {
+        setStatus("من فضلك أدخل رقم الهيكل أولاً.", "err");
+        return;
+      }
+
+      try {
+        const vinSnap = await fetchVinDoc(rawVin);
+        if (!vinSnap) {
+          setStatus("لم يتم العثور على هذا الهيكل في النظام. تأكد من الرقم وحاول مرة أخرى.", "err");
+          return;
+        }
+
+        const vinData = vinSnap.data() || {};
+        const orderBase = vinData.lastOrderNo || "";
+        const itemNoForVin = vinData.lastItemNo || (vinData.lastData && vinData.lastData.itemNo) || 1;
+
+        if (!orderBase) {
+          setStatus("هذا الهيكل غير مرتبط بأي طلب مبيعات حتى الآن.", "err");
+          return;
+        }
+
+        const erpOrder = await fetchErpOrder(orderBase);
+        if (erpOrder && !vinData.lastData) {
+          vinData.lastData = vinData.lastData || {};
+          vinData.lastData.customerName = erpOrder.CustomerName || erpOrder.customer_name || "";
+          vinData.lastData.Branch       = erpOrder.Branch || "";
+          vinData.lastData.TotalInclVAT = erpOrder.TotalInclVAT ?? erpOrder.grand_total;
+          vinData.lastOrderNo           = orderBase;
+        }
+
+        const { vinStatus, fallbackOrderStatus } =
+          await fetchStatusForVin(orderBase, rawVin, itemNoForVin);
+
+        const statusData = vinStatus || fallbackOrderStatus || {};
+
+        renderSingleCar(
+          { ...vinData, vin: rawVin },
+          statusData
+        );
+
+        setStatus("تم جلب بيانات الطلب والمراحل بنجاح.", "ok");
+      } catch (e) {
+        console.error(e);
+        setStatus("حدث خطأ أثناء جلب البيانات. حاول مرة أخرى لاحقاً.", "err");
+      }
+    }
+
+    trackBtn.addEventListener("click", handleTrack);
+    vinInput.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") {
+        handleTrack();
+      }
+    });
   </script>
 </body>
 </html>
