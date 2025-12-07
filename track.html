@@ -212,7 +212,8 @@
       flex-shrink: 0;
     }
     .step-icon.done {
-      background: #bc8f74;
+      background: #16a34a;
+      border-color: #16a34a;
       color: #fff;
     }
     .step-body {
@@ -295,7 +296,7 @@
       border-radius: 999px;
       background: linear-gradient(90deg, #bc8f74, #3e2420);
       width: 0%;
-      transition: width 0.3s ease;
+      transition: width 0.3s.ease;
     }
 
     @media (max-width: 480px) {
@@ -363,7 +364,7 @@
       apiKey: "AIzaSyCorGtT5_Z68jCtLODvqnv0Fb7QW5eR6MQ",
       authDomain: "mzj-tracking.firebaseapp.com",
       projectId: "mzj-tracking",
-      storageBucket: "mzj-tracking.firebaseapp.com",
+      storageBucket: "mzj-tracking.appspot.com",
       messagingSenderId: "655452217491",
       appId: "1:655452217491:web:9348d172c47bdd411fad66"
     };
@@ -393,43 +394,43 @@
     // ✅ نفس مراحل صفحة إدارة المبيعات
     const STAGES = [
       {
-        title: "1) طلب الشراء – (خاص بالعميل)",
+        title: "1) طلب الشراء. (خاص بالعميل)",
         sub: "يتم تقديم طلب شراء السيارة من خلال المعرض أو المنصة الإلكترونية."
       },
       {
-        title: "2) إيصال الدفع – (خاص بالعميل)",
+        title: "2) إيصال الدفع. (خاص بالعميل)",
         sub: "يتم إصدار أو استلام إيصال الدفع (تحويل / شبكة / كاش) وربطه بالطلب."
       },
       {
-        title: "3) التواصل من قِبل ممثلي خدمة العملاء بإرسال البطاقة الجركية – (خاص بالمعرض)",
+        title: "3) التواصل من قِبل ممثلي خدمة العملاء بإرسال البطاقة الجركية. (خاص بالمعرض)",
         sub: "يتواصل معك فريق خدمة العملاء لاستكمال البيانات وإرسال البطاقة الجركية."
       },
       {
-        title: "4) سداد رسوم التسجيل – (خاص بالعميل)",
+        title: "4) سداد رسوم التسجيل. (خاص بالعميل)",
         sub: "تسديد رسوم التسجيل الرسمية المطلوبة لإتمام تسجيل المركبة."
       },
       {
-        title: "5) التأمين – شرط الربط على السيستم – (خاص بالعميل)",
+        title: "5) التأمين - شرط الربط على السيستم. (خاص بالعميل)",
         sub: "اختيار شركة التأمين وإصدار الوثيقة وربطها بنظام المرور."
       },
       {
-        title: "6) إستيفاء المبالغ المتبقية – (خاص بالعميل)",
+        title: "6) إستيفاء المبالغ المتبقية. (خاص بالعميل)",
         sub: "سداد أي مبالغ متبقية على قيمة السيارة بحسب الاتفاق."
       },
       {
-        title: "7) إصدار اللوحات أو نقل الملكية – (خاص بالمعرض)",
+        title: "7) إصدار اللوحات أو نقل الملكية. (خاص بالمعرض)",
         sub: "إصدار لوحات جديدة للمركبة أو إتمام عملية نقل الملكية."
       },
       {
-        title: "8) إستيفاء الأوراق المتبقية – (خاص بالعميل)",
+        title: "8) إستيفاء الأوراق المتبقية. (خاص بالعميل)",
         sub: "استكمال وتسليم أي أوراق أو مستندات إضافية مطلوبة."
       },
       {
-        title: "9) جاهزية السيارة للإستلام – (خاص بالمعرض)",
+        title: "9) جاهزية السيارة للإستلام. (خاص بالمعرض)",
         sub: "تجهيز السيارة للتسليم النهائي أو للشحن حسب اختيارك."
       },
       {
-        title: "10) إتمام عملية التسليم بنجاح",
+        title: "10) إتمام عملية التسليم بنجاح.",
         sub: "تم تسليم السيارة لك بنجاح وإغلاق الطلب. نتمنى لك رحلة آمنة وسعيدة."
       }
     ];
@@ -455,40 +456,37 @@
       return n.toLocaleString("ar-SA", { minimumFractionDigits: 2 });
     }
 
-    // ====== تايم لاين + Progress Bar (مرحلة واحدة فقط للعميل) ======
+    // ====== التايم لاين + Progress Bar (إظهار 10 مراحل، وعلامة صح فقط للمراحل المنتهية) ======
     function buildTimelineHtml(statusData) {
       const track = statusData || {};
-      const totalStages = STAGES.length;
       const currentStage = track.currentStage || 0;
       const stagesMap = track.stages || {};
+      const totalStages = STAGES.length;
       const updatedAt = track.updatedAt
         ? new Date(track.updatedAt.toDate ? track.updatedAt.toDate() : track.updatedAt).toLocaleString("ar-SA")
         : "";
 
-      // عدد الخطوات المكتملة = رقم المرحلة الحالية
-      const doneCount = currentStage > 0 ? currentStage : 0;
-      const progress = Math.round((doneCount / totalStages) * 100);
-
-      let currentStageObj = null;
-      let tsLabel = "";
-      if (currentStage > 0 && currentStage <= totalStages) {
-        currentStageObj = STAGES[currentStage - 1];
-        const ts = stagesMap["s" + currentStage];
-        if (ts) {
-          tsLabel = new Date(ts.toDate ? ts.toDate() : ts).toLocaleString("ar-SA");
+      // عدد الخطوات المنتهية (المراحل التي تم الضغط فيها على "تم الانتهاء")
+      let doneCount = 0;
+      for (let i = 1; i <= totalStages; i++) {
+        const doneTs = stagesMap["s" + i];
+        if (doneTs) {
+          doneCount++;
         }
       }
+      const progress = Math.round((doneCount / totalStages) * 100);
 
-      let currentStageTitle = "لم يبدأ بعد";
-      let currentStageSub   = "تم استلام طلبك، وجاري بدء إجراءات المعالجة.";
-      if (currentStageObj) {
-        currentStageTitle = currentStageObj.title;
-        currentStageSub   = currentStageObj.sub;
+      // نص حالة المرحلة الحالية
+      let currentStageLabel = "لم يبدأ بعد";
+      if (currentStage > 0 && currentStage <= totalStages) {
+        currentStageLabel = STAGES[currentStage - 1].title;
+      } else if (doneCount > 0) {
+        currentStageLabel = "تم تنفيذ بعض المراحل على طلبك.";
       }
 
       return `
         <div class="status-summary">
-          <div>حالة السيارة الحالية: <strong>${currentStageTitle}</strong></div>
+          <div>حالة السيارة الحالية: <strong>${currentStageLabel}</strong></div>
           <div>آخر تحديث للحالة: <span>${updatedAt || "-"}</span></div>
         </div>
         <div class="progress-wrapper">
@@ -501,20 +499,30 @@
           </div>
         </div>
         <div class="timeline">
-          <div class="timeline-title">آخر خطوة تم تنفيذها على طلبك</div>
+          <div class="timeline-title">مراحل طلبك من أول حجز حتى استلام السيارة</div>
           <ul class="timeline-steps">
-            <li class="timeline-step">
-              <div class="step-icon ${currentStage > 0 ? "done" : ""}">
-                ${currentStage > 0 ? "✓" : "•"}
-              </div>
-              <div class="step-body">
-                <div class="step-title">${currentStageTitle}</div>
-                <div class="step-sub">
-                  ${currentStageSub}
-                  ${tsLabel ? " — <span>تم في: " + tsLabel + "</span>" : ""}
-                </div>
-              </div>
-            </li>
+            ${STAGES.map((step, idx) => {
+              const stepIndex = idx + 1;
+              const doneTs = stagesMap["s" + stepIndex];
+              const isDone = !!doneTs;
+              const tsLabel = doneTs
+                ? new Date(doneTs.toDate ? doneTs.toDate() : doneTs).toLocaleString("ar-SA")
+                : "";
+              return `
+                <li class="timeline-step">
+                  <div class="step-icon ${isDone ? "done" : ""}">
+                    ${isDone ? "✓" : stepIndex}
+                  </div>
+                  <div class="step-body">
+                    <div class="step-title">${step.title}</div>
+                    <div class="step-sub">
+                      ${step.sub}
+                      ${tsLabel ? " — <span>تم في: ${tsLabel}</span>" : ""}
+                    </div>
+                  </div>
+                </li>
+              `;
+            }).join("")}
           </ul>
         </div>
       `;
@@ -527,7 +535,6 @@
 
       const customerName = payload.customerName || "";
       const branch       = payload.branch || "";
-      const orderDate    = payload.orderDate || "";
 
       const item = payload.item || {};
       const carType     = item.type || "";
