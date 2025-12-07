@@ -1,5 +1,3 @@
-
-
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
@@ -441,7 +439,7 @@
       <div class="grid-2" id="stagesList"></div>
       <div class="hint" style="margin-top:8px;">
         اضغط على <strong>تم الانتهاء</strong> أمام أي مرحلة ليتم ختمها وتحديث صفحة تتبع العميل تلقائياً.  
-        بعد ختم جميع المراحل لهذا الهيكل لا يمكن تعديلها مرة أخرى.
+        يمكنك استخدام زر <strong>تراجع</strong> لإلغاء أي مرحلة ثم إعادة تنفيذها متى احتجت.
       </div>
       <div class="muted" id="stageMsg" style="margin-top:6px;"></div>
     </div>
@@ -535,17 +533,18 @@
     let currentItemNo       = null;
     let currentOrderRecords = [];
 
+    // ✅ المراحل الجديدة كما طلبت
     const STAGES = [
-      "1) إنشاء الطلب",
-      "2) أمر الدفع (تحويل/شبكة/كاش)",
-      "3) تواصل خدمة العملاء + إرسال البطاقة الجمركية",
-      "4) سداد رسوم التسجيل",
-      "5) التأمين (شرط الربط على السيستم)",
-      "6) استيفاء الأوراق والمبالغ",
-      "7) تجيير البطاقة الجمركية",
-      "8) إصدار اللوحات أو نقل الملكية",
-      "9) جاهزية السيارة للاستلام/طلب الشحن",
-      "10) إتمام التسليم بنجاح"
+      "1) طلب الشراء – (خاص بالعميل)",
+      "2) إيصال الدفع – (خاص بالعميل)",
+      "3) التواصل من قِبل ممثلي خدمة العملاء بإرسال البطاقة الجركية – (خاص بالمعرض)",
+      "4) سداد رسوم التسجيل – (خاص بالعميل)",
+      "5) التأمين – شرط الربط على السيستم – (خاص بالعميل)",
+      "6) إستيفاء المبالغ المتبقية – (خاص بالعميل)",
+      "7) إصدار اللوحات أو نقل الملكية – (خاص بالمعرض)",
+      "8) إستيفاء الأوراق المتبقية – (خاص بالعميل)",
+      "9) جاهزية السيارة للإستلام – (خاص بالمعرض)",
+      "10) إتمام عملية التسليم بنجاح"
     ];
 
     const FIELD_SYNONYMS = {
@@ -822,11 +821,6 @@
       const stagesObj = orderData.stages || {};
       const current   = orderData.currentStage || 0;
 
-      const allDone = STAGES.every((_, idx) => {
-        const key = "s" + (idx + 1);
-        return !!stagesObj[key];
-      });
-
       STAGES.forEach((label, idx) => {
         const num = idx + 1;
         const key = "s" + num;
@@ -855,12 +849,26 @@
         header.appendChild(meta);
 
         const actions = document.createElement("div");
+        actions.style.display = "flex";
+        actions.style.gap = "6px";
+
+        // زر تراجع
+        const undoBtn = document.createElement("button");
+        undoBtn.className = "btn-outline";
+        undoBtn.style.fontSize = "12px";
+        undoBtn.textContent = "تراجع";
+        undoBtn.disabled = !tsStr;
+        undoBtn.onclick = () => revertStage(num);
+
+        // زر تم الانتهاء
         const btn = document.createElement("button");
         btn.className = "btn-outline";
         btn.style.fontSize = "12px";
         btn.textContent = "تم الانتهاء";
-        btn.disabled = !!tsStr || allDone;
+        btn.disabled = !!tsStr;
         btn.onclick = () => completeStage(num);
+
+        actions.appendChild(undoBtn);
         actions.appendChild(btn);
 
         wrap.appendChild(header);
@@ -875,14 +883,6 @@
 
         stagesList.appendChild(wrap);
       });
-
-      if (allDone) {
-        const info = document.createElement("div");
-        info.className = "hint";
-        info.style.marginTop = "8px";
-        info.textContent = "تم إكمال جميع المراحل لهذا رقم الهيكل، ولا يمكن تعديلها مرة أخرى.";
-        stagesList.appendChild(info);
-      }
     }
 
     async function completeStage(num) {
@@ -928,6 +928,71 @@
       } catch (e) {
         console.error(e);
         stageMsg.innerHTML = "<span class='err'>حدث خطأ أثناء تحديث المرحلة.</span>";
+      }
+    }
+
+    // ✅ زر "تراجع" لإلغاء مرحلة وإعادة حساب currentStage
+    async function revertStage(num) {
+      stageMsg.textContent = "";
+      if (!currentOrderId || !currentItemNo) {
+        stageMsg.innerHTML = "<span class='err'>اختر طلب ورقم هيكل أولاً قبل التراجع عن مرحلة.</span>";
+        return;
+      }
+      try {
+        const baseId = currentOrderId;
+        const docId  = baseId + "_" + currentItemNo;
+
+        const orderRef = doc(db, TRACK_COLLECTION, docId);
+        const snap = await getDoc(orderRef);
+        if (!snap.exists()) {
+          stageMsg.innerHTML = "<span class='err'>لا توجد مراحل محفوظة لهذا الطلب بعد.</span>";
+          return;
+        }
+
+        const data   = snap.data() || {};
+        const stages = data.stages || {};
+        const key    = "s" + num;
+
+        if (!stages[key]) {
+          stageMsg.innerHTML = "<span class='err'>لا يمكن التراجع عن مرحلة غير مكتملة.</span>";
+          return;
+        }
+
+        // حذف المرحلة من المراحل
+        const newStages = { ...stages };
+        delete newStages[key];
+
+        // إعادة حساب المرحلة الحالية كأعلى مرحلة متبقية
+        let newCurrent = 0;
+        Object.keys(newStages).forEach(k => {
+          const m = k.match(/^s(\d+)$/);
+          if (m) {
+            const n = parseInt(m[1], 10);
+            if (!isNaN(n) && n > newCurrent) newCurrent = n;
+          }
+        });
+
+        await updateDoc(orderRef, {
+          stages: newStages,
+          currentStage: newCurrent
+        });
+
+        const publicRef = doc(db, TRACK_COLLECTION, docId, "public", "status");
+        await setDoc(publicRef, {
+          orderId: baseId,
+          vin: currentVin || "",
+          itemNo: currentItemNo || 1,
+          stages: newStages,
+          currentStage: newCurrent,
+          updatedAt: serverTimestamp()
+        }, { merge: true });
+
+        await loadTrackingForCurrentSelection();
+
+        stageMsg.innerHTML = "<span class='ok'>تم التراجع عن المرحلة رقم " + num + " وتحديث صفحة التتبع.</span>";
+      } catch (e) {
+        console.error(e);
+        stageMsg.innerHTML = "<span class='err'>حدث خطأ أثناء التراجع عن المرحلة.</span>";
       }
     }
 
