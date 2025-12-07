@@ -212,7 +212,7 @@
       flex-shrink: 0;
     }
     .step-icon.done {
-      background: #16a34a;   /* أخضر */
+      background: #16a34a;
       border-color: #16a34a;
       color: #fff;
     }
@@ -398,7 +398,7 @@
         sub: "يتواصل معك فريق خدمة العملاء لاستكمال البيانات وإرسال البطاقة الجركية."
       },
       {
-        title: "٤) سداد رسوم التسجيل. (خاص بالعميل)",
+        title: "4) سداد رسوم التسجيل. (خاص بالعميل)",
         sub: "تسديد رسوم التسجيل الرسمية المطلوبة لإتمام تسجيل المركبة."
       },
       {
@@ -447,35 +447,35 @@
       return n.toLocaleString("ar-SA", { minimumFractionDigits: 2 });
     }
 
-    // التايم لاين + البروجريس: 10 مراحل ثابتين، الصح الأخضر فقط على currentStage،
-    // والنسبة = عدد المراحل اللي متخزّن لها ختم في stages.sX
+    // ====== تايم لاين + Progress Bar ======
     function buildTimelineHtml(statusData) {
       const track = statusData || {};
       const currentStage = track.currentStage || 0;
       const stagesMap = track.stages || {};
-      const totalStages = STAGES.length;
-
       const updatedAt = track.updatedAt
-        ? new Date(
-            track.updatedAt.toDate ? track.updatedAt.toDate() : track.updatedAt
-          ).toLocaleString("ar-SA")
+        ? new Date(track.updatedAt.toDate ? track.updatedAt.toDate() : track.updatedAt).toLocaleString("ar-SA")
         : "";
 
-      // عدد المراحل المنتهية فعليًا (أي s1..s10 فيها قيمة)
+      // عدد الخطوات المنتهية فعليًا بناءً على الأختام
       let doneCount = 0;
-      for (let i = 1; i <= totalStages; i++) {
-        if (stagesMap["s" + i]) {
+      for (let i = 1; i <= STAGES.length; i++) {
+        const doneTs = stagesMap["s" + i];
+        if (doneTs) {
           doneCount++;
         }
       }
-      const progress = doneCount > 0
-        ? Math.round((doneCount / totalStages) * 100)
-        : 0;
-
-      let currentStageLabel = "لم يبدأ بعد";
-      if (currentStage > 0 && currentStage <= totalStages) {
-        currentStageLabel = STAGES[currentStage - 1].title;
+      // في حالة ما فيش أختام لكن في مرحلة حالية، نخليها 10% على الأقل
+      if (doneCount === 0 && currentStage > 0) {
+        doneCount = 1;
       }
+      const progress = Math.round((doneCount / STAGES.length) * 100);
+
+      const currentStageLabel =
+        currentStage > 0 && currentStage <= STAGES.length
+          ? STAGES[currentStage - 1].title
+          : currentStage === 0
+          ? "لم يبدأ بعد"
+          : "جارٍ التحديث";
 
       return `
         <div class="status-summary">
@@ -496,13 +496,12 @@
           <ul class="timeline-steps">
             ${STAGES.map((step, idx) => {
               const stepIndex = idx + 1;
-              const isDone = (stepIndex === currentStage && currentStage > 0);
               const doneTs = stagesMap["s" + stepIndex];
+              // ✅ علامة الصح الخضراء فقط على المرحلة الحالية
+              const isDone = currentStage === stepIndex && currentStage > 0;
               const tsLabel =
                 isDone && doneTs
-                  ? new Date(
-                      doneTs.toDate ? doneTs.toDate() : doneTs
-                    ).toLocaleString("ar-SA")
+                  ? new Date(doneTs.toDate ? doneTs.toDate() : doneTs).toLocaleString("ar-SA")
                   : "";
               return `
                 <li class="timeline-step">
@@ -524,6 +523,7 @@
       `;
     }
 
+    // ====== عرض سيارة واحدة (Fallback) ======
     function renderSingleCar(vinData, statusData) {
       const lastOrderNo = vinData.lastOrderNo || "";
       const payload     = vinData.lastData || {};
