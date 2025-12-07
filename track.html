@@ -235,7 +235,6 @@
       color: #7b6a63;
     }
 
-    /* Tabs for multiple cars */
     .cars-tabs {
       margin: 6px 0 4px;
       display: flex;
@@ -251,7 +250,7 @@
       font-size: 12px;
       cursor: pointer;
       font-family: inherit;
-      transition: background 0.15s ease, color 0.15s ease, border-color 0.15s.ease;
+      transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
     }
     .car-tab.active {
       background: #3e2420;
@@ -259,7 +258,6 @@
       border-color: #3e2420;
     }
 
-    /* Status summary + progress */
     .status-summary {
       font-size: 12px;
       color: #7b6a63;
@@ -315,7 +313,6 @@
 <body>
   <div class="page">
     <div class="card">
-      <!-- Brand header -->
       <div class="brand">
         <div class="brand-mark">★</div>
         <div>
@@ -324,7 +321,6 @@
         </div>
       </div>
 
-      <!-- Search -->
       <div class="search-section">
         <div>
           <label for="vinInput">اكتب رقم الهيكل (الشاصي):</label>
@@ -338,7 +334,6 @@
         <div class="status-bar" id="statusBar"></div>
       </div>
 
-      <!-- Result -->
       <div id="resultContainer">
         <div class="empty-state">
           اكتب رقم الهيكل واضغط "تتبع" لعرض تفاصيل طلبك وحالة السيارة.
@@ -359,7 +354,6 @@
       getDocs
     } from "https://www.gstatic.com/firebasejs/9.6.11/firebase-firestore.js";
 
-    // ========= 1) إعداد Firebase =========
     const firebaseConfig = {
       apiKey: "AIzaSyCorGtT5_Z68jCtLODvqnv0Fb7QW5eR6MQ",
       authDomain: "mzj-tracking.firebaseapp.com",
@@ -372,7 +366,6 @@
     const app = initializeApp(firebaseConfig);
     const db  = getFirestore(app);
 
-    // ========= 2) عناصر الصفحة =========
     const vinInput        = document.getElementById("vinInput");
     const searchBtn       = document.getElementById("searchBtn");
     const statusBar       = document.getElementById("statusBar");
@@ -391,7 +384,6 @@
       `;
     }
 
-    // ✅ العشر مراحل
     const STAGES = [
       {
         title: "1) طلب الشراء. (خاص بالعميل)",
@@ -406,7 +398,7 @@
         sub: "يتواصل معك فريق خدمة العملاء لاستكمال البيانات وإرسال البطاقة الجركية."
       },
       {
-        title: "4) سداد رسوم التسجيل. (خاص بالعميل)",
+        title: "٤) سداد رسوم التسجيل. (خاص بالعميل)",
         sub: "تسديد رسوم التسجيل الرسمية المطلوبة لإتمام تسجيل المركبة."
       },
       {
@@ -435,7 +427,6 @@
       }
     ];
 
-    // تحويل "ر.س 95,450.00" -> 95450
     function parseAmountFront(value) {
       if (value === null || value === undefined || value === "-") return null;
       if (typeof value === "number") return value;
@@ -456,13 +447,11 @@
       return n.toLocaleString("ar-SA", { minimumFractionDigits: 2 });
     }
 
-    // ====== التايم لاين + Progress Bar ======
-    // ✅ هنا بالظبط:
-    // - دايمًا نعرض الـ 10 مراحل.
-    // - علامة الصح الخضراء بس على المرحلة اللي رقمها = currentStage.
+    // التايم لاين + البروجريس: 10 مراحل ثابتين، الصح الأخضر فقط على currentStage،
+    // والنسبة = عدد المراحل اللي متخزّن لها ختم في stages.sX
     function buildTimelineHtml(statusData) {
       const track = statusData || {};
-      const currentStage = track.currentStage || 0;  // رقم المرحلة الحالية من صفحة المبيعات
+      const currentStage = track.currentStage || 0;
       const stagesMap = track.stages || {};
       const totalStages = STAGES.length;
 
@@ -472,9 +461,15 @@
           ).toLocaleString("ar-SA")
         : "";
 
-      // نسبة الإنجاز: على حسب رقم المرحلة الحالية
-      const progress = currentStage > 0
-        ? Math.round((currentStage / totalStages) * 100)
+      // عدد المراحل المنتهية فعليًا (أي s1..s10 فيها قيمة)
+      let doneCount = 0;
+      for (let i = 1; i <= totalStages; i++) {
+        if (stagesMap["s" + i]) {
+          doneCount++;
+        }
+      }
+      const progress = doneCount > 0
+        ? Math.round((doneCount / totalStages) * 100)
         : 0;
 
       let currentStageLabel = "لم يبدأ بعد";
@@ -501,9 +496,7 @@
           <ul class="timeline-steps">
             ${STAGES.map((step, idx) => {
               const stepIndex = idx + 1;
-              // ✅ مرحلة تعتبر "منتهية" (صح أخضر) فقط لو هي نفس currentStage
               const isDone = (stepIndex === currentStage && currentStage > 0);
-              // نستخدم وقت المرحلة من stages.sX لو موجود، للمرحلة الحالية فقط
               const doneTs = stagesMap["s" + stepIndex];
               const tsLabel =
                 isDone && doneTs
@@ -531,7 +524,6 @@
       `;
     }
 
-    // ====== عرض سيارة واحدة ======
     function renderSingleCar(vinData, statusData) {
       const lastOrderNo = vinData.lastOrderNo || "";
       const payload     = vinData.lastData || {};
@@ -629,7 +621,6 @@
       `;
     }
 
-    // ====== Multi–car helpers ======
     function updateStatusUIForCar(statusData) {
       const timelineArea = resultContainer.querySelector("#timelineArea");
       if (timelineArea) {
@@ -759,7 +750,6 @@
       });
     }
 
-    // ========= 3) حدث البحث =========
     async function handleSearch() {
       const rawVin = (vinInput.value || "").trim();
       if (!rawVin) {
@@ -827,7 +817,6 @@
           }
         }
 
-        // محاولة معرفة إذا كان الطلب يحتوي على أكثر من سيارة
         let handledMulti = false;
         if (orderBase) {
           try {
@@ -948,7 +937,6 @@
           }
         }
 
-        // لو مفيش تعدد سيارات → عرض السيارة الواحدة
         if (!handledMulti) {
           setStatus("تم العثور على الطلب. يتم عرض تفاصيل السيارة.");
           renderSingleCar(vinData, vinStatus);
