@@ -1,3 +1,5 @@
+
+
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
@@ -14,111 +16,54 @@
       --muted:#6b7280;
       --radius:16px;
     }
-    *{box-sizing:border-box}
-    html,body{height:100%}
+    *{box-sizing:border-box;}
     body{
       margin:0;
       font-family:"Tajawal",system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
       background:radial-gradient(circle at top,#fffdf8 0,#fff3e6 40%,#fbe9da 70%,#f5e3d3 100%);
       color:var(--text);
-      line-height:1.7;
     }
-    .page{
-      max-width:1200px;
-      margin:0 auto;
-      padding:18px 14px 32px;
-    }
-    .header{
+    .topbar{
+      background:var(--brown);
+      color:#fff;
+      padding:10px 20px;
       display:flex;
-      flex-wrap:wrap;
       justify-content:space-between;
-      align-items:flex-start;
-      gap:12px;
-      margin-bottom:14px;
-    }
-    .brand{
-      display:flex;
       align-items:center;
-      gap:10px;
+      box-shadow:0 6px 14px rgba(0,0,0,.2);
     }
-    .brand-logo{
-      width:40px;
-      height:40px;
-      border-radius:14px;
-      background:linear-gradient(135deg,#fbbf77,#bc8f74);
-      display:flex;
-      align-items:center;
-      justify-content:center;
+    .topbar-title{
       font-weight:800;
-      font-size:20px;
-      color:#3e2420;
-      box-shadow:0 4px 14px rgba(0,0,0,.35);
+      letter-spacing:.6px;
+      font-size:17px;
     }
-    .brand-text{
+    .topbar-right{
       display:flex;
-      flex-direction:column;
-      gap:2px;
-    }
-    .brand-text strong{
-      font-size:15px;
-      color:var(--brown);
-    }
-    .brand-text span{
-      font-size:12px;
-      color:var(--muted);
-    }
-    .header-right{
-      text-align:left;
-      min-width:180px;
-    }
-    .status-pill{
-      display:inline-flex;
       align-items:center;
-      gap:6px;
-      padding:4px 10px;
+      gap:8px;
+      font-size:13px;
+    }
+    .logout{
+      border:0;
+      padding:6px 12px;
       border-radius:999px;
       background:#fff;
-      border:1px solid rgba(188,143,116,.5);
-      font-size:11px;
       color:var(--brown);
+      cursor:pointer;
+      font-family:inherit;
+      font-size:12px;
     }
-    .status-dot{
-      width:8px;
-      height:8px;
-      border-radius:999px;
-      background:#22c55e;
+    .wrap{
+      max-width:1150px;
+      margin:22px auto 36px;
+      padding:0 14px;
     }
-    .header-right small{
-      display:block;
-      margin-top:4px;
-      font-size:11px;
-      color:var(--muted);
-    }
-
-    .cards-row{
-      display:grid;
-      grid-template-columns:2.2fr 1.4fr;
-      gap:12px;
-    }
-    @media(max-width:960px){
-      .cards-row{
-        grid-template-columns:1fr;
-      }
-    }
-
     .card{
       background:#fff;
       border-radius:var(--radius);
-      box-shadow:0 14px 40px rgba(62,36,32,.12);
-      padding:14px 14px 16px;
-      margin-bottom:14px;
-    }
-    .card-header{
-      margin-bottom:10px;
-      display:flex;
-      justify-content:space-between;
-      align-items:flex-start;
-      gap:8px;
+      box-shadow:0 16px 40px rgba(62,36,32,.13);
+      padding:18px 18px 20px;
+      margin-bottom:18px;
     }
     .title{
       margin:0 0 12px 0;
@@ -138,79 +83,74 @@
       justify-content:center;
       font-size:16px;
     }
-    .card-subtitle{
-      font-size:12px;
-      color:var(--muted);
-    }
-    .section-label{
-      font-size:13px;
-      color:var(--muted);
-      margin-bottom:4px;
-      display:flex;
-      align-items:center;
-      gap:4px;
-    }
-    .section-label span.dot{
-      width:6px;
-      height:6px;
-      border-radius:999px;
-      background:#bc8f74;
-    }
     .row{
-      display:flex;
-      flex-wrap:wrap;
+      display:grid;
+      grid-template-columns:repeat(12,1fr);
       gap:10px;
-      margin-bottom:10px;
     }
-    .col-4{
-      flex:1 1 220px;
-    }
+    .col-3{grid-column:span 3;}
+    .col-4{grid-column:span 4;}
+    .col-6{grid-column:span 6;}
+    .col-12{grid-column:span 12;}
     label{
       display:block;
-      font-size:12px;
+      font-size:13px;
+      margin-bottom:4px;
       color:var(--muted);
-      margin-bottom:3px;
     }
-    input,select{
+    input{
       width:100%;
-      padding:7px 9px;
+      padding:8px 10px;
       border-radius:10px;
       border:1px solid #e5e7eb;
       background:#f9fafb;
       font-family:inherit;
-      font-size:13px;
+      font-size:14px;
       outline:none;
-      direction:rtl;
     }
-    input:focus,select:focus{
-      border-color:var(--beige);
+    input:focus{
       background:#fff;
-      box-shadow:0 0 0 1px rgba(188,143,116,.35);
+      border-color:var(--beige);
+      box-shadow:0 0 0 1px rgba(188,143,116,.45);
     }
-    .btn,.btn-outline{
-      border-radius:999px;
+    select{
+      width:100%;
+      padding:8px 10px;
+      border-radius:10px;
+      border:1px solid #e5e7eb;
+      background:#f9fafb;
+      font-family:inherit;
+      font-size:14px;
+      outline:none;
+      appearance:none;
+    }
+    select:focus{
+      background:#fff;
+      border-color:var(--beige);
+      box-shadow:0 0 0 1px rgba(188,143,116,.45);
+    }
+    .btn{
       border:0;
-      padding:8px 13px;
-      font-size:13px;
+      border-radius:999px;
+      padding:8px 16px;
       font-family:inherit;
       cursor:pointer;
       display:inline-flex;
       align-items:center;
       gap:6px;
-      white-space:nowrap;
-    }
-    .btn{
+      font-size:14px;
       background:var(--brown);
       color:#fff;
     }
     .btn-outline{
+      border-radius:999px;
       border:1px solid var(--brown);
+      padding:8px 14px;
+      font-family:inherit;
+      cursor:pointer;
       background:transparent;
       color:var(--brown);
-    }
-    .btn-sm{
-      padding:6px 10px;
-      font-size:12px;
+      font-size:13px;
     }
     .btn:disabled,.btn-outline:disabled{
       opacity:.5;
@@ -242,42 +182,16 @@
       background:#f3f4f6;
     }
     th,td{
-      padding:7px 6px;
-      border-bottom:1px solid #f1f2f4;
-      text-align:right;
+      padding:6px 8px;
+      border-bottom:1px solid #e5e7eb;
       white-space:nowrap;
     }
-    th{
-      color:var(--brown);
-      font-weight:600;
-      font-size:12px;
-    }
-    tbody tr:nth-child(even){
-      background:#f9fafb;
-    }
-    tbody tr:hover{
-      background:#fff7ed;
-    }
-    .tag{
-      display:inline-flex;
-      align-items:center;
-      padding:3px 8px;
-      border-radius:999px;
-      font-size:11px;
-      background:#e5e7eb;
-      color:#374151;
-    }
-    .tag-success{
-      background:#dcfce7;
-      color:#166534;
-    }
-    .tag-warning{
-      background:#fef3c7;
-      color:#854d0e;
-    }
-    .tag-info{
-      background:#e0f2fe;
-      color:#075985;
+    th{font-weight:600;color:#374151;text-align:right;}
+    td{color:#111827;}
+    .grid-2{
+      display:grid;
+      grid-template-columns:1fr 1fr;
+      gap:10px;
     }
     .stage{
       background:#fffaf3;
@@ -293,66 +207,114 @@
       border-style:solid;
       border-color:#22c55e;
     }
-    .stage .stage-btn{
-      transition:background-color .2s ease, color .2s ease, border-color .2s ease;
-    }
-    .stage.done .stage-btn{
-      background:#22c55e;
-      border-color:#16a34a;
-      color:#fff;
-      opacity:1;
-    }
     .stage-header{
       display:flex;
       justify-content:space-between;
       align-items:center;
       gap:8px;
     }
-    .stage-header strong{
+    .stage strong{color:var(--brown);font-size:13px;}
+    .stage small{font-size:11px;color:var(--muted);}
+
+    .tabs{
+      display:none;
+      margin:-8px 0 10px;
+      gap:8px;
+    }
+    .tab-btn{
+      padding:6px 14px;
+      border-radius:999px;
+      border:1px solid transparent;
+      background:#f3f4f6;
+      color:#374151;
+      font-size:13px;
+      cursor:pointer;
+      font-family:inherit;
+    }
+    .tab-btn.tab-active{
+      background:var(--brown);
+      color:#fff;
+      border-color:var(--brown);
+    }
+    .link-btn{
+      border:0;
+      background:none;
+      color:#1d4ed8;
+      text-decoration:underline;
+      cursor:pointer;
+      font-size:13px;
+      font-family:inherit;
+      padding:0;
+    }
+
+    .totals-box{
+      margin:6px 0 10px;
+      padding:8px 10px;
+      border-radius:10px;
+      background:#fffaf3;
+      border:1px solid rgba(188,143,116,.4);
       font-size:13px;
       color:var(--brown);
+      display:flex;
+      flex-wrap:wrap;
+      gap:10px;
     }
-    .stage-header small{
+    .totals-box span{
+      white-space:nowrap;
+    }
+
+    /* VIN picker box احترافي */
+    .vin-box{
+      display:none;
+      margin:10px 0 14px;
+      padding:10px 12px;
+      border-radius:12px;
+      background:#fffaf3;
+      border:1px solid rgba(188,143,116,.6);
+    }
+    .vin-box-header{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+      margin-bottom:6px;
+    }
+    .vin-box-title{
+      font-size:13px;
+      font-weight:600;
+      color:var(--brown);
+    }
+    .vin-chip{
+      padding:3px 10px;
+      border-radius:999px;
+      background:rgba(62,36,32,.06);
       font-size:11px;
       color:var(--muted);
     }
-    .stages-grid{
-      display:grid;
-      grid-template-columns:repeat(2,minmax(0,1fr));
-      gap:8px;
-    }
+
     @media(max-width:900px){
-      .stages-grid{
-        grid-template-columns:1fr;
-      }
+      .row{grid-template-columns:1fr;}
+      .col-3,.col-4,.col-6,.col-12{grid-column:span 1;}
+      .grid-2{grid-template-columns:1fr;}
+      .topbar{flex-direction:column;align-items:flex-start;gap:6px;}
+      .tabs{flex-wrap:wrap;}
     }
   </style>
 </head>
 <body>
-  <div class="page">
-    <header class="header">
-      <div class="brand">
-        <div class="brand-logo">★</div>
-        <div class="brand-text">
-          <strong>مجموعة محمد بن ذعار العجمي للسيارات</strong>
-          <span>إدارة طلبات المبيعات ومراحل تتبع الطلب</span>
-        </div>
-      </div>
-      <div class="header-right">
-        <div class="status-pill">
-          <span class="status-dot"></span>
-          <span>متصل بـ نظام التتبع الداخلي</span>
-        </div>
-        <small>أي تحديث في مراحل التتبع سيكون لهذا رقم الهيكل فقط.</small>
-      </div>
-    </header>
+  <div class="topbar">
+    <div class="topbar-title">MZJ – إدارة المبيعات وتتبع الطلبات</div>
+    <div class="topbar-right">
+      <span id="whoami"></span>
+      <button id="logoutBtn" class="logout" style="display:none;">تسجيل الخروج</button>
+    </div>
+  </div>
+
+  <div class="wrap">
 
     <!-- Auth -->
     <div class="card" id="authCard">
-      <div class="card-header">
-        <h3 class="title"><span class="icon">🔐</span>تسجيل الدخول</h3>
-        <div class="card-subtitle">الدخول مطلوب للوصول لبيانات الطلبات وتحديث مراحل التتبع.</div>
-      </div>
+      <h3 class="title"><span class="icon">🔐</span>تسجيل الدخول</h3>
       <div class="row">
         <div class="col-4">
           <label>البريد الإلكتروني</label>
@@ -384,109 +346,102 @@
           <input id="vinInput" placeholder="اكتب رقم الهيكل (VIN)" />
         </div>
         <div class="col-4" style="display:flex;align-items:flex-end;gap:8px;">
-          <button class="btn" id="loadOrderBtn">عرض بيانات الطلب</button>
-          <button class="btn-outline btn-sm" id="loadLastOrdersBtn">عرض آخر 20 طلب</button>
+          <button class="btn" id="loadBtn">فتح الطلب</button>
+          <button class="btn-outline" id="clearBtn">تفريغ</button>
         </div>
       </div>
-      <div id="orderMsg" class="muted"></div>
+      <div id="orderMsg" class="muted" style="margin-top:6px;"></div>
+      <div class="hint">اكتب رقم الطلب ثم اضغط فتح الطلب.</div>
     </div>
 
-    <!-- ERP Summary & VINS -->
-    <div class="cards-row">
-      <div>
-        <div class="card" id="erpCard" style="display:none;">
-          <div class="card-header">
-            <div>
-              <h3 class="title"><span class="icon">🧾</span>ملخص الطلب من ERP</h3>
-              <div class="card-subtitle">عرض بيانات الطلب كما هي في نظام ERP (العميل، الفرع، الإجمالي شامل الضريبة، إلخ).</div>
-            </div>
-          </div>
-          <div class="row">
-            <div class="col-4">
-              <label>رقم الطلب</label>
-              <div id="erpOrderId" class="badge">—</div>
-            </div>
-            <div class="col-4">
-              <label>اسم العميل</label>
-              <div id="erpCustomerName" class="badge">—</div>
-            </div>
-            <div class="col-4">
-              <label>الفرع</label>
-              <div id="erpBranch" class="badge">—</div>
-            </div>
-          </div>
-          <div class="row">
-            <div class="col-4">
-              <label>تاريخ الطلب</label>
-              <div id="erpPostingDate" class="badge">—</div>
-            </div>
-            <div class="col-4">
-              <label>إجمالي الطلب (شامل الضريبة)</label>
-              <div id="erpTotalInclVAT" class="badge">—</div>
-            </div>
-            <div class="col-4">
-              <label>حالة الطلب في ERP</label>
-              <div id="erpStatus" class="badge">—</div>
-            </div>
-          </div>
-          <div class="hint">هذه البيانات للمرجع فقط، لا يتم تعديلها من هنا.</div>
-        </div>
+    <!-- Tabs -->
+    <div class="tabs" id="tabsBar">
+      <button class="tab-btn tab-active" id="tabSearchBtn">بحث عن طلب</button>
+      <button class="tab-btn" id="tabListBtn">كل الطلبات</button>
+    </div>
 
-        <div class="card" id="vinsCard" style="display:none;">
-          <div class="card-header">
-            <div>
-              <h3 class="title"><span class="icon">🚗</span>السيارات المرتبطة بالطلب</h3>
-              <div class="card-subtitle">اختر رقم الهيكل الذي تريد تحديث مراحله. أي تعديل سيتم ربطه بهذا الهيكل فقط.</div>
-            </div>
-          </div>
-          <div class="row">
-            <div class="col-4">
-              <label>اختر رقم الهيكل للعمل عليه</label>
-              <select id="vinSelect"></select>
-            </div>
-            <div class="col-4">
-              <label>اسم السيارة</label>
-              <div id="vinCarName" class="badge">—</div>
-            </div>
-            <div class="col-4">
-              <label>ألوان السيارة</label>
-              <div id="vinColors" class="badge">—</div>
-            </div>
-          </div>
-          <div id="vinMsg" class="muted"></div>
+    <!-- ERP details -->
+    <div class="card" id="erpCard" style="display:none;">
+      <h3 class="title">
+        <span class="icon">📊</span>
+        تفاصيل الطلب من نظام المبيعات (ERP)
+      </h3>
+      <div id="erpMeta" class="muted" style="margin-bottom:6px;"></div>
+
+      <!-- اختيار رقم الهيكل لو الطلب فيه أكثر من VIN -->
+      <div id="vinPickerBox" class="vin-box">
+        <div class="vin-box-header">
+          <div class="vin-box-title">اختر رقم الهيكل للعمل عليه</div>
+          <div class="vin-chip" id="vinCountChip"></div>
         </div>
+        <select id="vinPicker"></select>
+        <div class="hint">أي تحديث في مراحل تتبع الطلب سيكون لهذا رقم الهيكل فقط.</div>
       </div>
 
-      <div>
-        <div class="card" id="ordersListCard" style="display:none;">
-          <h3 class="title"><span class="icon">📋</span>آخر الطلبات</h3>
-          <div class="card-subtitle">قائمة مختصرة لأحدث طلبات المبيعات مع إمكانية اختيار أي طلب لعرض تفاصيله.</div>
-          <div class="erp-table-wrap">
-            <table>
-              <thead>
-              <tr>
-                <th>رقم الطلب</th>
-                <th>العميل</th>
-                <th>الفرع</th>
-                <th>تاريخ الطلب</th>
-                <th>إجمالي الطلب</th>
-                <th>حالة الطلب (آخر مرحلة)</th>
-              </tr>
-              </thead>
-              <tbody id="ordersListBody"></tbody>
-            </table>
-          </div>
-        </div>
+      <div id="erpTotals" class="totals-box" style="display:none;"></div>
+      <div class="erp-table-wrap">
+        <table>
+          <thead>
+          <tr>
+            <th>اسم العميل</th>
+            <th>الرقم الضريبي للعميل</th>
+            <th>الفرع</th>
+            <th>تاريخ الطلب</th>
+            <th>تاريخ التسليم</th>
+            <th>مسؤول المبيعات</th>
+            <th>رقم الصنف</th>
+            <th>نوع الصنف</th>
+            <th>فئة الصنف</th>
+            <th>الموديل</th>
+            <th>رقم الهيكل VIN</th>
+            <th>اللون الداخلي</th>
+            <th>اللون الخارجي</th>
+            <th>الوكيل</th>
+            <th>الكمية</th>
+            <th>سعر الوحدة</th>
+            <th>قيمة الصنف</th>
+            <th>كود الضريبة</th>
+            <th>نوع الضريبة</th>
+            <th>نسبة الضريبة</th>
+            <th>قيمة الضريبة</th>
+            <th>الإجمالي قبل الضريبة</th>
+            <th>الإجمالي شامل الضريبة</th>
+          </tr>
+          </thead>
+          <tbody id="erpBody">
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Orders list tab -->
+    <div class="card" id="ordersListCard" style="display:none;">
+      <h3 class="title"><span class="icon">📋</span>كل الطلبات</h3>
+      <div class="hint">اضغط على رقم الطلب لفتحه، واختيار رقم الهيكل من الأعلى لو كان أكثر من سيارة.</div>
+      <div class="erp-table-wrap">
+        <table>
+          <thead>
+          <tr>
+            <th>رقم الطلب</th>
+            <th>اسم العميل</th>
+            <th>الفرع</th>
+            <th>رقم الهيكل VIN</th>
+            <th>تاريخ التسليم</th>
+            <th>حالة الطلب (آخر مرحلة)</th>
+          </tr>
+          </thead>
+          <tbody id="ordersListBody"></tbody>
+        </table>
       </div>
     </div>
 
     <!-- Stages -->
     <div class="card" id="stagesCard" style="display:none;">
       <h3 class="title"><span class="icon">🚦</span>مراحل تتبع الطلب</h3>
-      <div class="stages-grid" id="stagesList"></div>
-      <div class="hint">
-        اضغط على <strong>تم الانتهاء</strong> أمام أي مرحلة ليتم ختمها وتحديث صفحة تتبع العميل لهذا الهيكل فقط.  
-        يمكنك استخدام زر <strong>تراجع</strong> لإلغاء أي مرحلة ثم إعادة تنفيذها متى احتجت.
+      <div class="grid-2" id="stagesList"></div>
+      <div class="hint" style="margin-top:8px;">
+        اضغط على <strong>تم الانتهاء</strong> أمام أي مرحلة ليتم ختمها وتحديث صفحة تتبع العميل تلقائياً.  
+        بعد ختم جميع المراحل لهذا الهيكل لا يمكن تعديلها مرة أخرى.
       </div>
       <div class="muted" id="stageMsg" style="margin-top:6px;"></div>
     </div>
@@ -503,16 +458,16 @@
     } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-auth.js";
     import {
       getFirestore,
-      collection,
       doc,
       getDoc,
-      getDocs,
+      setDoc,
+      updateDoc,
+      serverTimestamp,
+      collection,
       query,
       where,
-      orderBy,
-      limit,
-      setDoc,
-      serverTimestamp
+      getDocs,
+      limit
     } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
 
     const firebaseConfig = {
@@ -524,353 +479,74 @@
       appId: "1:655452217491:web:9348d172c47bdd411fad66"
     };
 
-    const app  = initializeApp(firebaseConfig);
-    const db   = getFirestore(app);
-    const auth = getAuth(app);
-
-    const AUTH_EMAIL_HINT = "استخدم حساب موظف MZJ المعتمد فقط.";
-
-    const STAGES = [
-      "1) طلب الشراء – (خاص بالعميل)",
-      "2) إيصال الدفع – (خاص بالعميل)",
-      "3) التواصل من قِبل ممثلي خدمة العملاء بإرسال البطاقة الجركية – (خاص بالمعرض)",
-      "4) سداد رسوم التسجيل – (خاص بالعميل)",
-      "5) التأمين – شرط الربط على السيستم – (خاص بالعميل)",
-      "6) إستيفاء المبالغ المتبقية – (خاص بالعميل)",
-      "7) إصدار اللوحات أو نقل الملكية – (خاص بالمعرض)",
-      "8) إستيفاء الأوراق المتبقية – (خاص بالعميل)",
-      "9) جاهزية السيارة للإستلام – (خاص بالمعرض)",
-      "10) إتمام عملية التسليم بنجاح"
-    ];
-
     const ERP_COLLECTION      = "erp_orders";
     const ERP_VINS_COLLECTION = "erp_vins";
     const TRACK_COLLECTION    = "orders";
 
-    const emailInput     = document.getElementById("email");
-    const passwordInput  = document.getElementById("password");
-    const loginBtn       = document.getElementById("loginBtn");
-    const signupBtn      = document.getElementById("signupBtn");
-    const authMsg        = document.getElementById("authMsg");
-    const authCard       = document.getElementById("authCard");
-    const orderCard      = document.getElementById("orderCard");
-    const erpCard        = document.getElementById("erpCard");
-    const vinsCard       = document.getElementById("vinsCard");
-    const ordersListCard = document.getElementById("ordersListCard");
-    const stagesCard     = document.getElementById("stagesCard");
+    const ERP_FIELDS = [
+      "CustomerName","CustomerVAT","Branch","OrderDate","DeliveryDate","SalesPerson",
+      "ItemNo","ItemType","ItemCategory","ItemModel","VIN","InteriorColor","ExteriorColor","Dealer",
+      "Qty","UnitPrice","ItemValue","TaxCode","TaxName","TaxRate","TaxValue","SubtotalExclVAT","TotalInclVAT"
+    ];
 
-    const orderIdInput      = document.getElementById("orderId");
-    const vinInput          = document.getElementById("vinInput");
-    const loadOrderBtn      = document.getElementById("loadOrderBtn");
-    const loadLastOrdersBtn = document.getElementById("loadLastOrdersBtn");
-    const orderMsg          = document.getElementById("orderMsg");
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
 
-    const erpOrderIdEl     = document.getElementById("erpOrderId");
-    const erpCustomerNameEl= document.getElementById("erpCustomerName");
-    const erpBranchEl      = document.getElementById("erpBranch");
-    const erpPostingDateEl = document.getElementById("erpPostingDate");
-    const erpTotalInclVATEl= document.getElementById("erpTotalInclVAT");
-    const erpStatusEl      = document.getElementById("erpStatus");
+    // UI refs
+    const authCard   = document.getElementById("authCard");
+    const orderCard  = document.getElementById("orderCard");
+    const erpCard    = document.getElementById("erpCard");
+    const stagesCard = document.getElementById("stagesCard");
+    const whoami     = document.getElementById("whoami");
+    const logoutBtn  = document.getElementById("logoutBtn");
 
-    const vinSelect   = document.getElementById("vinSelect");
-    const vinCarName  = document.getElementById("vinCarName");
-    const vinColors   = document.getElementById("vinColors");
-    const vinMsg      = document.getElementById("vinMsg");
+    const tabsBar      = document.getElementById("tabsBar");
+    const tabSearchBtn = document.getElementById("tabSearchBtn");
+    const tabListBtn   = document.getElementById("tabListBtn");
+    const ordersListCard  = document.getElementById("ordersListCard");
+    const ordersListBody  = document.getElementById("ordersListBody");
 
-    const ordersListBody = document.getElementById("ordersListBody");
-    const stagesList     = document.getElementById("stagesList");
-    const stageMsg       = document.getElementById("stageMsg");
+    const email      = document.getElementById("email");
+    const password   = document.getElementById("password");
+    const loginBtn   = document.getElementById("loginBtn");
+    const signupBtn  = document.getElementById("signupBtn");
+    const authMsg    = document.getElementById("authMsg");
 
-    let currentUser   = null;
-    let currentOrderId= null;
-    let currentVin    = null;
-    let currentItemNo = null;
+    const orderIdInput = document.getElementById("orderId");
+    const vinInput     = document.getElementById("vinInput");
+    const loadBtn      = document.getElementById("loadBtn");
+    const clearBtn     = document.getElementById("clearBtn");
+    const orderMsg     = document.getElementById("orderMsg");
 
-    authMsg.textContent = AUTH_EMAIL_HINT;
+    const erpMetaEl    = document.getElementById("erpMeta");
+    const erpBody      = document.getElementById("erpBody");
+    const erpTotals    = document.getElementById("erpTotals");
 
-    onAuthStateChanged(auth, (user) => {
-      currentUser = user;
-      if (user) {
-        authCard.style.display  = "none";
-        orderCard.style.display = "block";
-        loadLastOrdersBtn.disabled = false;
-      } else {
-        authCard.style.display  = "block";
-        orderCard.style.display = "none";
-        erpCard.style.display   = "none";
-        vinsCard.style.display  = "none";
-        stagesCard.style.display= "none";
-        ordersListCard.style.display = "none";
-      }
-    });
+    const vinPickerBox = document.getElementById("vinPickerBox");
+    const vinPicker    = document.getElementById("vinPicker");
+    const vinCountChip = document.getElementById("vinCountChip");
 
-    async function doLogin(isSignup = false) {
-      authMsg.textContent = "";
-      const email = (emailInput.value || "").trim();
-      const pass  = passwordInput.value;
+    const stagesList   = document.getElementById("stagesList");
+    const stageMsg     = document.getElementById("stageMsg");
 
-      if (!email || !pass) {
-        authMsg.innerHTML = "<span class='err'>من فضلك أدخل البريد وكلمة السر.</span>";
-        return;
-      }
-      try {
-        let cred;
-        if (isSignup) {
-          cred = await createUserWithEmailAndPassword(auth, email, pass);
-          authMsg.innerHTML = "<span class='ok'>تم إنشاء الحساب وتسجيل الدخول بنجاح.</span>";
-        } else {
-          cred = await signInWithEmailAndPassword(auth, email, pass);
-          authMsg.innerHTML = "<span class='ok'>تم تسجيل الدخول بنجاح.</span>";
-        }
-      } catch (e) {
-        console.error(e);
-        authMsg.innerHTML = "<span class='err'>فشل تسجيل الدخول: " + (e.message || "") + "</span>";
-      }
-    }
+    let currentOrderId      = null;
+    let currentVin          = null;
+    let currentItemNo       = null;
+    let currentOrderRecords = [];
 
-    loginBtn.addEventListener("click", () => doLogin(false));
-    signupBtn.addEventListener("click", () => doLogin(true));
-
-    function fmtCurrency(v){
-      if(v==null) return "—";
-      const n = typeof v==="number"
-        ? v
-        : parseFloat(String(v).replace(/[^\d.,-]/g,"").replace(/,/g,""));
-      if(!Number.isFinite(n)) return "—";
-      return n.toLocaleString("ar-SA",{minimumFractionDigits:2,maximumFractionDigits:2})+" ر.س";
-    }
-
-    function fmtDate(v){
-      if(!v) return "—";
-      try{
-        if(v.toDate) return v.toDate().toLocaleString("ar-SA");
-        const d = new Date(v);
-        return isNaN(d.getTime()) ? "—" : d.toLocaleString("ar-SA");
-      }catch{
-        return "—";
-      }
-    }
-
-    function setOrderSummaryFromERP(data){
-      erpOrderIdEl.textContent      = data.OrderNo || data.name || "—";
-      erpCustomerNameEl.textContent = data.CustomerName || data.customerName || "—";
-      erpBranchEl.textContent       = data.Branch || data.branch || "—";
-      erpPostingDateEl.textContent  = (data.PostingDate || data.posting_date || "—").toString().slice(0,10);
-      erpTotalInclVATEl.textContent = fmtCurrency(data.TotalInclVAT ?? data.grand_total);
-      erpStatusEl.textContent       = data.Status || data.status || "—";
-      erpCard.style.display = "block";
-    }
-
-    async function loadOrderFromERP(orderIdRaw){
-      const cleanId = (orderIdRaw || "").trim();
-      if(!cleanId) return null;
-      const baseId = cleanId.split("_")[0];
-      const docRef = doc(db, ERP_COLLECTION, baseId);
-      const snap   = await getDoc(docRef);
-      if(!snap.exists()){
-        return null;
-      }
-      const data = snap.data() || {};
-      setOrderSummaryFromERP(data);
-      return data;
-    }
-
-    async function loadLastOrders(){
-      orderMsg.textContent = "جارِ تحميل أحدث الطلبات...";
-      ordersListBody.innerHTML = "";
-      ordersListCard.style.display = "block";
-
-      try{
-        const colRef = collection(db, ERP_COLLECTION);
-        const qRef   = query(colRef, orderBy("PostingDate","desc"), limit(20));
-        const qsnap  = await getDocs(qRef);
-
-        if(qsnap.empty){
-          ordersListBody.innerHTML = "";
-          orderMsg.innerHTML = "<span class='err'>لا توجد طلبات متاحة.</span>";
-          return;
-        }
-
-        qsnap.forEach((docSnap) => {
-          const data = docSnap.data() || {};
-          const tr   = document.createElement("tr");
-
-          const orderNo  = data.OrderNo || docSnap.id;
-          const customer = data.CustomerName || "—";
-          const branch   = data.Branch || "—";
-          const date     = (data.PostingDate || "").toString().slice(0,10);
-          const total    = fmtCurrency(data.TotalInclVAT ?? data.grand_total);
-
-          const tdOrder  = document.createElement("td");
-          const tdCust   = document.createElement("td");
-          const tdBranch = document.createElement("td");
-          const tdDate   = document.createElement("td");
-          const tdTotal  = document.createElement("td");
-          const tdStatus = document.createElement("td");
-
-          tdOrder.textContent  = orderNo;
-          tdCust.textContent   = customer;
-          tdBranch.textContent = branch;
-          tdDate.textContent   = date;
-          tdTotal.textContent  = total;
-
-          const statusSpan = document.createElement("span");
-          statusSpan.className = "tag tag-info";
-          statusSpan.textContent = "—";
-          tdStatus.appendChild(statusSpan);
-
-          tr.appendChild(tdOrder);
-          tr.appendChild(tdCust);
-          tr.appendChild(tdBranch);
-          tr.appendChild(tdDate);
-          tr.appendChild(tdTotal);
-          tr.appendChild(tdStatus);
-
-          tr.style.cursor = "pointer";
-          tr.addEventListener("click", () => {
-            orderIdInput.value = orderNo;
-            loadOrderById();
-          });
-
-          ordersListBody.appendChild(tr);
-        });
-
-        orderMsg.textContent = "";
-      }catch(e){
-        console.error(e);
-        orderMsg.innerHTML = "<span class='err'>فشل تحميل قائمة الطلبات.</span>";
-      }
-    }
-
-    async function loadOrderById(){
-      orderMsg.textContent = "";
-      erpCard.style.display   = "none";
-      vinsCard.style.display  = "none";
-      stagesCard.style.display= "none";
-      vinSelect.innerHTML     = "";
-      stagesList.innerHTML    = "";
-      stageMsg.textContent    = "";
-
-      const rawId = (orderIdInput.value || "").trim();
-      if(!rawId){
-        orderMsg.innerHTML = "<span class='err'>من فضلك أدخل رقم الطلب.</span>";
-        return;
-      }
-
-      const baseId = rawId.split("_")[0];
-      currentOrderId = baseId;
-      currentVin     = null;
-      currentItemNo  = null;
-
-      try{
-        const erpData = await loadOrderFromERP(baseId);
-        if(!erpData){
-          orderMsg.innerHTML = "<span class='err'>لم يتم العثور على الطلب في ERP.</span>";
-          return;
-        }
-
-        await loadVinsForOrder(baseId);
-        orderMsg.innerHTML = "<span class='ok'>تم تحميل بيانات الطلب. اختر رقم الهيكل لتحديث مراحله.</span>";
-      }catch(e){
-        console.error(e);
-        orderMsg.innerHTML = "<span class='err'>حدث خطأ أثناء تحميل بيانات الطلب.</span>";
-      }
-    }
-
-    async function loadVinsForOrder(orderBase){
-      vinSelect.innerHTML = "";
-      vinsCard.style.display = "none";
-      stagesCard.style.display = "none";
-      vinMsg.textContent = "";
-
-      try{
-        const colRef = collection(db, ERP_VINS_COLLECTION);
-        const qRef   = query(colRef, where("lastOrderNo","==",orderBase));
-        const qsnap  = await getDocs(qRef);
-
-        if(qsnap.empty){
-          vinMsg.innerHTML = "<span class='err'>لا توجد هياكل مرتبطة بهذا الطلب في erp_vins.</span>";
-          vinsCard.style.display = "block";
-          return;
-        }
-
-        const vinDocs = [];
-        qsnap.forEach((docSnap)=>{
-          const data = docSnap.data() || {};
-          vinDocs.push({ id: docSnap.id, data });
-        });
-
-        vinSelect.innerHTML = "";
-        vinDocs.forEach((row)=>{
-          const vin   = row.id;
-          const ld    = row.data.lastData || {};
-          const itemNo= row.data.lastItemNo || ld.itemNo || 1;
-          const label = vin;
-          const opt   = document.createElement("option");
-          opt.value   = vin+"::"+itemNo;
-          opt.textContent = label;
-          opt.dataset.carName = ld.itemModel || ld.itemName || "غير محدد";
-          opt.dataset.colors  = (ld.exteriorColor || "—") + " / " + (ld.interiorColor || "—");
-          vinSelect.appendChild(opt);
-        });
-
-        vinsCard.style.display = "block";
-        vinMsg.textContent = "اختر رقم الهيكل لتحديث مراحله في صفحة التتبع.";
-
-        if(vinSelect.options.length>0){
-          vinSelect.selectedIndex = 0;
-          onVinChange();
-        }
-      }catch(e){
-        console.error(e);
-        vinMsg.innerHTML = "<span class='err'>حدث خطأ أثناء جلب أرقام الهياكل.</span>";
-        vinsCard.style.display = "block";
-      }
-    }
-
-    async function readBestTrackingDoc(){
-      const ids = getTrackingDocIds();
-      for(const id of ids){
-        const ref = doc(db, TRACK_COLLECTION, id, "public", "status");
-        const snap = await getDoc(ref);
-        if(snap.exists()){
-          return { docId:id, data:snap.data() || {} };
-        }
-      }
-      return { docId:null, data:null };
-    }
-
-    function getTrackingDocIds() {
-      if (!currentOrderId) return [];
-      const base = currentOrderId;
-      const vinClean = (currentVin || "").toString().trim();
-
-      const ids = [];
-      if (vinClean) {
-        ids.push(`${base}_VIN_${vinClean}`);
-      } else {
-        ids.push(base);
-      }
-      return ids;
-    }
-
-    async function writeTrackingToAllIds(payload, merge = true) {
-      const ids = getTrackingDocIds();
-      if (!ids.length) return;
-      for (const id of ids) {
-        const ref = doc(db, TRACK_COLLECTION, id);
-        try {
-          if (merge)
-            await setDoc(ref, payload, { merge: true });
-          else
-            await setDoc(ref, payload);
-          const publicRef = doc(db, TRACK_COLLECTION, id, "public", "status");
-          await setDoc(publicRef, payload, { merge: true });
-        } catch (e) {
-          console.warn("write fail", id, e);
-        }
-      }
-    }
+    const STAGES = [
+      "1) إنشاء الطلب",
+      "2) أمر الدفع (تحويل/شبكة/كاش)",
+      "3) تواصل خدمة العملاء + إرسال البطاقة الجمركية",
+      "4) سداد رسوم التسجيل",
+      "5) التأمين (شرط الربط على السيستم)",
+      "6) استيفاء الأوراق والمبالغ",
+      "7) تجيير البطاقة الجمركية",
+      "8) إصدار اللوحات أو نقل الملكية",
+      "9) جاهزية السيارة للاستلام/طلب الشحن",
+      "10) إتمام التسليم بنجاح"
+    ];
 
     const FIELD_SYNONYMS = {
       CustomerName: ["CustomerName","customerName"],
@@ -889,24 +565,267 @@
 
       InteriorColor:["InteriorColor","interiorColor"],
       ExteriorColor:["ExteriorColor","exteriorColor"],
+      Dealer:       ["Dealer","dealer"],
 
-      TotalInclVAT: ["TotalInclVAT","totalInclVAT","grand_total"]
+      Qty:          ["Qty","qty"],
+      UnitPrice:    ["UnitPrice","unitPrice"],
+      ItemValue:    ["ItemValue","itemValue","value"],
+
+      TaxCode:         ["taxCode","TaxCode"],
+      TaxName:         ["taxName","TaxName"],
+      TaxRate:         ["taxRate","TaxRate"],
+      TaxValue:        ["taxValue","TaxValue"],
+      SubtotalExclVAT: ["subtotalExclVAT","SubtotalExclVAT","subtotalExclVat"],
+      TotalInclVAT:    ["totalInclVAT","TotalInclVAT","totalInclVat"]
     };
 
-    function getField(obj, key){
-      const syns = FIELD_SYNONYMS[key] || [key];
-      for(const k of syns){
-        if(obj && Object.prototype.hasOwnProperty.call(obj,k) && obj[k]!=null){
-          return obj[k];
-        }
-      }
-      return null;
+    function buildCandidates(name) {
+      const syns = FIELD_SYNONYMS[name] || [name];
+      const arr = [];
+      syns.forEach(s => {
+        if (!s) return;
+        arr.push(s);
+        arr.push(s.toLowerCase());
+        arr.push(s.toUpperCase());
+      });
+      return Array.from(new Set(arr));
     }
 
+    function lookupIn(obj, candidates) {
+      if (!obj) return undefined;
+      for (const key of candidates) {
+        if (Object.prototype.hasOwnProperty.call(obj, key) && obj[key] !== undefined) {
+          return obj[key];
+        }
+      }
+      return undefined;
+    }
+
+    function getFieldFlex(fieldName, data) {
+      if (!data) return "-";
+      const candidates = buildCandidates(fieldName);
+
+      let v = lookupIn(data, candidates);
+      if (v !== undefined) return v;
+
+      v = lookupIn(data.item, candidates);
+      if (v !== undefined) return v;
+
+      v = lookupIn(data.totals, candidates);
+      if (v !== undefined) return v;
+
+      return "-";
+    }
+
+    function parseAmountFront(value) {
+      if (value === null || value === undefined || value === "-") return null;
+      if (typeof value === "number") return value;
+      const s = String(value)
+        .replace(/[^\d.,\-]/g, "")
+        .replace(/,/g, "");
+      const n = parseFloat(s);
+      return isNaN(n) ? null : n;
+    }
+
+    function clearErpTable() {
+      erpMetaEl.textContent = "";
+      erpBody.innerHTML = "";
+      erpTotals.style.display = "none";
+      erpTotals.innerHTML = "";
+      vinPickerBox.style.display = "none";
+      vinPicker.innerHTML = "";
+      vinCountChip.textContent = "";
+    }
+
+    function resolveItemNoForVin(vin, records){
+      if (!records || !records.length) return 1;
+      let itemNo = null;
+
+      if (vin) {
+        const matched = records.find(r => {
+          const v = (getFieldFlex("VIN", r) || "").toString().trim();
+          return v && v === vin.toString().trim();
+        });
+        if (matched) {
+          itemNo = getFieldFlex("ItemNo", matched);
+        }
+      }
+
+      if (itemNo === null || itemNo === "-" || itemNo === "") {
+        const first = records[0] || null;
+        if (first) itemNo = getFieldFlex("ItemNo", first);
+      }
+
+      const parsed = parseInt(itemNo, 10);
+      return (!isNaN(parsed) && parsed > 0) ? parsed : 1;
+    }
+
+    function fillErpTable(records, preferredVin = ""){
+      if (!records || !records.length) {
+        erpCard.style.display = "none";
+        clearErpTable();
+        return;
+      }
+      erpCard.style.display = "";
+      clearErpTable();
+
+      currentOrderRecords = records.slice();
+
+      const first = records[0] || {};
+      const orderNo = first.orderNo || first.OrderNo || currentOrderId || "";
+      let vinBadgeLabel = "";
+
+      const vins = Array.from(new Set(
+        records.map(r => (getFieldFlex("VIN", r) || "").toString().trim()).filter(Boolean)
+      ));
+
+      if (vins.length === 1) {
+        vinBadgeLabel = "VIN: " + vins[0];
+      } else if (vins.length > 1) {
+        vinBadgeLabel = "أكثر من هيكل (" + vins.length + ")";
+      } else {
+        vinBadgeLabel = "لا يوجد VIN في البيانات";
+      }
+
+      erpMetaEl.innerHTML =
+        '<span class="badge">رقم الطلب: ' + (orderNo || "غير متوفر") + '</span>' +
+        '<span class="badge">' + vinBadgeLabel + '</span>';
+
+      // تعبئة جدول ERP
+      records.forEach(rec => {
+        const tr = document.createElement("tr");
+        ERP_FIELDS.forEach(field => {
+          const td = document.createElement("td");
+          let val = getFieldFlex(field, rec);
+
+          if (field === "TaxRate") {
+            const num = parseAmountFront(val);
+            let pc = num !== null ? (num <= 1 ? num * 100 : num) : 15;
+            const pcStr = pc.toString().replace(/\.0+$/, "");
+            val = pcStr + " %";
+          } else if (field === "TotalInclVAT" || field === "TaxValue" || field === "SubtotalExclVAT") {
+            const num = parseAmountFront(val);
+            if (num !== null) {
+              val = num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " ر.س";
+            }
+          }
+
+          td.textContent = val;
+          tr.appendChild(td);
+        });
+        erpBody.appendChild(tr);
+      });
+
+      // إدارة VIN للدروب داون
+      let selectedVin = preferredVin && vins.includes(preferredVin) ? preferredVin : null;
+      if (!selectedVin && vins.length === 1) {
+        selectedVin = vins[0];
+      }
+
+      if (vins.length > 1) {
+        vinPickerBox.style.display = "block";
+        vinPicker.innerHTML = vins.map(v => `<option value="${v}">${v}</option>`).join("");
+        vinCountChip.textContent = vins.length + " أرقام هياكل في هذا الطلب";
+        if (selectedVin && vins.includes(selectedVin)) {
+          vinPicker.value = selectedVin;
+        } else {
+          vinPicker.value = vins[0];
+          selectedVin = vins[0];
+        }
+      } else if (vins.length === 1) {
+        vinPickerBox.style.display = "block";
+        vinPicker.innerHTML = `<option value="${vins[0]}">${vins[0]}</option>`;
+        vinPicker.disabled = false;
+        vinCountChip.textContent = "هيكل واحد في هذا الطلب";
+        selectedVin = vins[0];
+      } else {
+        vinPickerBox.style.display = "none";
+      }
+
+      currentVin    = selectedVin || (vins[0] || preferredVin || "");
+      currentItemNo = resolveItemNoForVin(currentVin, records);
+
+      // حساب إجمالي الطلب
+      const totalCars = records.length;
+
+      let orderSubtotal = parseAmountFront(
+        first.orderSubtotalExclVAT ||
+        first.orderSubtotalExclVat ||
+        first.orderSubtotal
+      );
+
+      let orderTotal = parseAmountFront(
+        first.orderTotalInclVAT ||
+        first.orderTotalInclVat ||
+        first.orderTotal
+      );
+
+      let subSum = 0;
+      let totalSum = 0;
+      records.forEach(rec => {
+        const subVal = parseAmountFront(
+          rec.subtotalExclVAT ||
+          rec.SubtotalExclVAT ||
+          getFieldFlex("SubtotalExclVAT", rec)
+        );
+        const totVal = parseAmountFront(
+          rec.totalInclVAT ||
+          rec.TotalInclVAT ||
+          getFieldFlex("TotalInclVAT", rec)
+        );
+        if (subVal !== null) subSum += subVal;
+        if (totVal !== null) totalSum += totVal;
+      });
+
+      if (orderSubtotal === null && subSum > 0) {
+        orderSubtotal = subSum;
+      }
+
+      if (orderTotal === null && totalSum > 0) {
+        orderTotal = totalSum;
+      }
+
+      if (orderSubtotal !== null && (orderTotal === null || orderTotal < 1000)) {
+        if (totalSum > 0) {
+          orderTotal = totalSum;
+        } else {
+          orderTotal = Math.round(orderSubtotal * 1.15 * 100) / 100;
+        }
+      }
+
+      if (orderSubtotal !== null || orderTotal !== null) {
+        const parts = [];
+        parts.push(`<span>عدد السيارات في الطلب: <strong>${totalCars}</strong></span>`);
+        if (orderSubtotal !== null) {
+          parts.push(
+            `<span>إجمالي قبل الضريبة: <strong>${orderSubtotal.toLocaleString('ar-SA',{minimumFractionDigits:2})} ر.س</strong></span>`
+          );
+        }
+        if (orderTotal !== null) {
+          parts.push(
+            `<span>إجمالي شامل الضريبة: <strong>${orderTotal.toLocaleString('ar-SA',{minimumFractionDigits:2})} ر.س</strong></span>`
+          );
+        }
+        erpTotals.innerHTML = parts.join("");
+        erpTotals.style.display = "flex";
+      } else {
+        erpTotals.style.display = "none";
+      }
+
+      // تحميل مراحل التتبع للحالة الحالية
+      loadTrackingForCurrentSelection();
+    }
+
+    // STAGES UI
     function buildStagesUI(orderData = {}) {
       stagesList.innerHTML = "";
       const stagesObj = orderData.stages || {};
       const current   = orderData.currentStage || 0;
+
+      const allDone = STAGES.every((_, idx) => {
+        const key = "s" + (idx + 1);
+        return !!stagesObj[key];
+      });
 
       STAGES.forEach((label, idx) => {
         const num = idx + 1;
@@ -936,24 +855,12 @@
         header.appendChild(meta);
 
         const actions = document.createElement("div");
-        actions.style.display = "flex";
-        actions.style.gap = "6px";
-
-        const undoBtn = document.createElement("button");
-        undoBtn.className = "btn-outline stage-btn";
-        undoBtn.style.fontSize = "12px";
-        undoBtn.textContent = "تراجع";
-        undoBtn.disabled = !tsStr;
-        undoBtn.onclick = () => revertStage(num);
-
         const btn = document.createElement("button");
-        btn.className = "btn-outline stage-btn";
+        btn.className = "btn-outline";
         btn.style.fontSize = "12px";
         btn.textContent = "تم الانتهاء";
-        btn.disabled = !!tsStr;
+        btn.disabled = !!tsStr || allDone;
         btn.onclick = () => completeStage(num);
-
-        actions.appendChild(undoBtn);
         actions.appendChild(btn);
 
         wrap.appendChild(header);
@@ -968,25 +875,53 @@
 
         stagesList.appendChild(wrap);
       });
+
+      if (allDone) {
+        const info = document.createElement("div");
+        info.className = "hint";
+        info.style.marginTop = "8px";
+        info.textContent = "تم إكمال جميع المراحل لهذا رقم الهيكل، ولا يمكن تعديلها مرة أخرى.";
+        stagesList.appendChild(info);
+      }
     }
 
     async function completeStage(num) {
       stageMsg.textContent = "";
-      if (!currentOrderId) {
+      if (!currentOrderId || !currentItemNo) {
         stageMsg.innerHTML = "<span class='err'>اختر طلب ورقم هيكل أولاً قبل تحديث المراحل.</span>";
         return;
       }
       try {
-        const payload = {
-          orderId: currentOrderId,
+        const baseId = currentOrderId;
+        const docId = baseId + "_" + currentItemNo;
+
+        const orderRef = doc(db, TRACK_COLLECTION, docId);
+        await updateDoc(orderRef, {
+          orderId: baseId,
+          vin: currentVin || "",
+          itemNo: currentItemNo || 1,
+          currentStage: num,
+          ["stages.s" + num]: serverTimestamp()
+        }).catch(async () => {
+          await setDoc(orderRef, {
+            orderId: baseId,
+            vin: currentVin || "",
+            itemNo: currentItemNo || 1,
+            currentStage: num,
+            ["stages.s" + num]: serverTimestamp()
+          }, { merge:true });
+        });
+
+        const publicRef = doc(db, TRACK_COLLECTION, docId, "public", "status");
+        await setDoc(publicRef, {
+          orderId: baseId,
           vin: currentVin || "",
           itemNo: currentItemNo || 1,
           currentStage: num,
           ["stages.s" + num]: serverTimestamp(),
           updatedAt: serverTimestamp()
-        };
+        }, { merge:true });
 
-        await writeTrackingToAllIds(payload, true);
         await loadTrackingForCurrentSelection();
 
         stageMsg.innerHTML = "<span class='ok'>تم ختم المرحلة رقم " + num + " وتحديث صفحة التتبع.</span>";
@@ -996,96 +931,112 @@
       }
     }
 
-    async function revertStage(num) {
-      stageMsg.textContent = "";
-      if (!currentOrderId) {
-        stageMsg.innerHTML = "<span class='err'>اختر طلب ورقم هيكل أولاً قبل التراجع عن مرحلة.</span>";
-        return;
-      }
-      try {
-        const { docId, data } = await readBestTrackingDoc();
-        if (!docId || !data) {
-          stageMsg.innerHTML = "<span class='err'>لا توجد مراحل محفوظة لهذا الطلب بعد.</span>";
-          return;
-        }
-
-        const stages = data.stages || {};
-        const key    = "s" + num;
-        if (!stages[key]) {
-          stageMsg.innerHTML =
-            "<span class='err'>هذه المرحلة غير مُسجلة كمكتملة، لا يمكن التراجع عنها.</span>";
-          return;
-        }
-
-        const newStages = { ...stages };
-        delete newStages[key];
-
-        let newCurrent = 0;
-        Object.keys(newStages).forEach(k => {
-          const m = k.match(/^s(\d+)$/);
-          if (m) {
-            const n = parseInt(m[1], 10);
-            if (!isNaN(n) && n > newCurrent) newCurrent = n;
-          }
-        });
-
-        const payload = {
-          orderId: currentOrderId,
-          vin: currentVin || "",
-          itemNo: currentItemNo || 1,
-          stages: newStages,
-          currentStage: newCurrent,
-          updatedAt: serverTimestamp()
-        };
-
-        await writeTrackingToAllIds(payload, true);
-        await loadTrackingForCurrentSelection();
-
-        stageMsg.innerHTML = "<span class='ok'>تم التراجع عن المرحلة رقم " + num + " وتحديث صفحة التتبع.</span>";
-      } catch (e) {
-        console.error(e);
-        stageMsg.innerHTML = "<span class='err'>حدث خطأ أثناء التراجع عن المرحلة.</span>";
-      }
-    }
-
     async function loadTrackingForCurrentSelection(){
-      stagesList.innerHTML = "";
-      stagesCard.style.display = "none";
-      stageMsg.textContent = "";
-      if(!currentOrderId || !currentVin){
+      if (!currentOrderId || !currentItemNo) {
+        buildStagesUI({ });
         return;
       }
       try{
-        const { data } = await readBestTrackingDoc();
-        buildStagesUI(data || {});
-        stagesCard.style.display = "block";
+        const baseId = currentOrderId;
+        const docId  = baseId + "_" + currentItemNo;
+
+        const orderRef = doc(db, TRACK_COLLECTION, docId);
+        const trackSnap = await getDoc(orderRef);
+        let trackData;
+        if (trackSnap.exists()) {
+          trackData = trackSnap.data();
+        } else {
+          trackData = {
+            orderId: baseId,
+            vin: currentVin || "",
+            itemNo: currentItemNo || 1,
+            currentStage: 0,
+            stages:{}
+          };
+          await setDoc(orderRef, trackData, {merge:true});
+          const publicRef = doc(db, TRACK_COLLECTION, docId, "public", "status");
+          await setDoc(publicRef, {
+            orderId: baseId,
+            vin: currentVin || "",
+            itemNo: currentItemNo || 1,
+            currentStage: 0,
+            stages:{},
+            updatedAt: serverTimestamp()
+          }, {merge:true});
+        }
+        buildStagesUI(trackData);
       }catch(e){
         console.error(e);
-        stageMsg.innerHTML = "<span class='err'>حدث خطأ أثناء تحميل مراحل التتبع.</span>";
+        buildStagesUI({});
       }
     }
 
-    function onVinChange(){
-      const val = vinSelect.value || "";
-      if(!val){
-        currentVin    = null;
-        currentItemNo = null;
-        stagesCard.style.display = "none";
-        return;
+    // AUTH
+    loginBtn.onclick = async () => {
+      authMsg.textContent = "";
+      try{
+        const em = email.value.trim();
+        const pw = password.value;
+        if(!em || !pw){
+          authMsg.innerHTML = "<span class='err'>أدخل البريد وكلمة السر.</span>";
+          return;
+        }
+        await signInWithEmailAndPassword(auth, em, pw);
+        authMsg.innerHTML = "<span class='ok'>تم تسجيل الدخول.</span>";
+      }catch(e){
+        console.error(e);
+        authMsg.innerHTML = "<span class='err'>تعذر تسجيل الدخول. تأكد من البيانات أو الصلاحيات.</span>";
       }
-      const [vin,itemNoStr] = val.split("::");
-      currentVin    = vin;
-      currentItemNo = parseInt(itemNoStr || "1",10) || 1;
+    };
 
-      const opt = vinSelect.options[vinSelect.selectedIndex];
-      vinCarName.textContent = opt.dataset.carName || "—";
-      vinColors.textContent  = opt.dataset.colors  || "—";
+    signupBtn.onclick = async () => {
+      authMsg.textContent = "";
+      try{
+        const em = email.value.trim();
+        const pw = password.value;
+        if(!em || !pw){
+          authMsg.innerHTML = "<span class='err'>أدخل البريد وكلمة السر لإنشاء الحساب.</span>";
+          return;
+        }
+        await createUserWithEmailAndPassword(auth, em, pw);
+        authMsg.innerHTML = "<span class='ok'>تم إنشاء المستخدم وتسجيل الدخول.</span>";
+      }catch(e){
+        console.error(e);
+        authMsg.innerHTML = "<span class='err'>تعذر إنشاء المستخدم. ربما ليس لديك صلاحية.</span>";
+      }
+    };
 
-      loadTrackingForCurrentSelection();
-    }
+    logoutBtn.onclick = async () => {
+      try{ await signOut(auth); }catch(e){ console.error(e); }
+    };
 
-    async function findERPOrderByVin(val){
-      const colRef = collection(db, ERP_VINS_COLLECTION);
+    onAuthStateChanged(auth, (user)=>{
+      if(user){
+        whoami.textContent = "مسجّل: " + (user.email || "");
+        logoutBtn.style.display = "";
+        authCard.style.display  = "none";
+        tabsBar.style.display   = "flex";
+
+        // أول ما يدخل يفتح على تبويب "كل الطلبات"
+        activateTab("list");
+      }else{
+        whoami.textContent = "";
+        logoutBtn.style.display = "none";
+        authCard.style.display  = "";
+        orderCard.style.display = "none";
+        erpCard.style.display   = "none";
+        stagesCard.style.display= "none";
+        tabsBar.style.display   = "none";
+        ordersListCard.style.display = "none";
+      }
+    });
+
+    async function findByVin(vinRaw) {
+      const val = vinRaw.trim();
+      if (!val) return null;
+
+      const colRef = collection(db, ERP_COLLECTION);
+
       let q1 = query(colRef, where("vin","==",val));
       let snap = await getDocs(q1);
       if (!snap.empty) return snap.docs[0];
@@ -1101,52 +1052,231 @@
         const vinRef = doc(db, ERP_VINS_COLLECTION, val);
         const vinSnap = await getDoc(vinRef);
         if (vinSnap.exists()) {
-          return vinSnap;
+          const vData = vinSnap.data();
+          const ordNo = vData.lastOrderNo || vData.orderNo || vData.OrderNo || null;
+          if (ordNo) {
+            const ordRef = doc(db, ERP_COLLECTION, ordNo);
+            const ordSnap = await getDoc(ordRef);
+            if (ordSnap.exists()) return ordSnap;
+
+            const q2 = query(colRef, where("orderNo","==",ordNo));
+            const s2 = await getDocs(q2);
+            if (!s2.empty) return s2.docs[0];
+          }
         }
-      } catch(e){
-        console.error(e);
+      } catch (e) {
+        console.error("VIN lookup via erp_vins failed", e);
       }
+
       return null;
     }
 
-    async function loadOrderByVin(){
+    async function loadOrder(){
       orderMsg.textContent = "";
-      const vinVal = (vinInput.value || "").trim();
-      if(!vinVal){
-        orderMsg.innerHTML = "<span class='err'>من فضلك أدخل رقم الهيكل.</span>";
+      stageMsg.textContent = "";
+      clearErpTable();
+      currentOrderId      = null;
+      currentVin          = null;
+      currentItemNo       = null;
+      currentOrderRecords = [];
+
+      const idRaw  = orderIdInput.value.trim();
+      const vinRaw = vinInput.value.trim();
+
+      if(!idRaw && !vinRaw){
+        orderMsg.innerHTML = "<span class='err'>أدخل رقم الطلب أو رقم الهيكل.</span>";
+        erpCard.style.display = "none";
+        buildStagesUI({ });
         return;
       }
 
       try{
-        const vinSnap = await findERPOrderByVin(vinVal);
-        if(!vinSnap){
-          orderMsg.innerHTML = "<span class='err'>لم يتم العثور على هذا الهيكل في erp_vins.</span>";
+        let erpRecords = [];
+        let erpDocId = null;
+
+        if(idRaw){
+          const ref = doc(db, ERP_COLLECTION, idRaw);
+          const snap = await getDoc(ref);
+          if(snap.exists()){
+            erpRecords.push(snap.data());
+            erpDocId = snap.id;
+          }
+        }
+
+        let baseOrder = idRaw;
+        if(!erpRecords.length && baseOrder){
+          if(baseOrder.includes("_")) baseOrder = baseOrder.split("_")[0];
+          const q = query(collection(db, ERP_COLLECTION), where("orderNo","==",baseOrder));
+          const qsnap = await getDocs(q);
+          if(!qsnap.empty){
+            erpRecords = qsnap.docs.map(d => d.data());
+            erpDocId = qsnap.docs[0].id;
+          }
+        }
+
+        if(!erpRecords.length && vinRaw){
+          const d = await findByVin(vinRaw);
+          if(d){
+            const data = d.data();
+            erpDocId = d.id;
+            const ordNo = data.orderNo || data.OrderNo || null;
+            if (ordNo) {
+              const q2 = query(collection(db, ERP_COLLECTION), where("orderNo","==",ordNo));
+              const s2 = await getDocs(q2);
+              if (!s2.empty) {
+                erpRecords = s2.docs.map(docSnap => docSnap.data());
+              } else {
+                erpRecords = [data];
+              }
+            } else {
+              erpRecords = [data];
+            }
+          }
+        }
+
+        if(!erpRecords.length){
+          orderMsg.innerHTML = "<span class='err'>لا يوجد طلب مطابق في بيانات ERP.</span>";
+          erpCard.style.display = "none";
+          buildStagesUI({ });
           return;
         }
-        const vinData = vinSnap.data()||{};
-        const lastOrderNo = vinData.lastOrderNo;
-        if(!lastOrderNo){
-          orderMsg.innerHTML = "<span class='err'>هذا الهيكل غير مرتبط بأي طلب مبيعات.</span>";
-          return;
-        }
-        orderIdInput.value = lastOrderNo;
-        await loadOrderById();
+
+        const firstRec = erpRecords[0] || {};
+        const detectedOrderNo = firstRec.orderNo || firstRec.OrderNo || (erpDocId || idRaw);
+
+        currentOrderId = detectedOrderNo;
+
+        orderIdInput.value = detectedOrderNo || "";
+        const preferredVin =
+          vinRaw ||
+          (erpRecords.length === 1 ? (getFieldFlex("VIN", firstRec) || "") : "");
+
+        fillErpTable(erpRecords, preferredVin);
+
+        stagesCard.style.display = "";
+        ordersListCard.style.display = ordersListCard.style.display;
+
+        orderMsg.innerHTML = "<span class='ok'>تم تحميل الطلب وربطه بالتتبع.</span>";
       }catch(e){
         console.error(e);
-        orderMsg.innerHTML = "<span class='err'>حدث خطأ أثناء البحث برقم الهيكل.</span>";
+        orderMsg.innerHTML = "<span class='err'>حدث خطأ أثناء تحميل الطلب.</span>";
+        erpCard.style.display = "none";
+        buildStagesUI({ });
       }
     }
 
-    orderIdInput.addEventListener("keydown",(e)=>{
-      if(e.key==="Enter") loadOrderById();
-    });
-    vinInput.addEventListener("keydown",(e)=>{
-      if(e.key==="Enter") loadOrderByVin();
+    loadBtn.onclick = loadOrder;
+
+    clearBtn.onclick = () => {
+      orderIdInput.value = "";
+      vinInput.value = "";
+      orderMsg.textContent = "";
+      stageMsg.textContent = "";
+      currentOrderId      = null;
+      currentVin          = null;
+      currentItemNo       = null;
+      currentOrderRecords = [];
+      clearErpTable();
+      erpCard.style.display = "none";
+      buildStagesUI({ });
+    };
+
+    vinPicker.addEventListener("change", () => {
+      if (!currentOrderId || !currentOrderRecords.length) return;
+      const selected = vinPicker.value;
+      currentVin    = selected;
+      currentItemNo = resolveItemNoForVin(selected, currentOrderRecords);
+      loadTrackingForCurrentSelection();
     });
 
-    loadOrderBtn.addEventListener("click", loadOrderById);
-    loadLastOrdersBtn.addEventListener("click", loadLastOrders);
-    vinSelect.addEventListener("change", onVinChange);
+    // ---- تبويب كل الطلبات ----
+    async function loadOrdersList() {
+      ordersListBody.innerHTML = "<tr><td class='muted' colspan='6'>جاري تحميل الطلبات...</td></tr>";
+      try {
+        const q = query(collection(db, ERP_COLLECTION), limit(100));
+        const snap = await getDocs(q);
+        if (snap.empty) {
+          ordersListBody.innerHTML = "<tr><td class='muted' colspan='6'>لا توجد طلبات مسجلة حالياً.</td></tr>";
+          return;
+        }
+        const rows = [];
+        for (const docSnap of snap.docs) {
+          const d = docSnap.data();
+          const orderNo = d.orderNo || d.OrderNo || docSnap.id;
+          const vinVal  = getFieldFlex("VIN", d) || "";
+          const customerName = getFieldFlex("CustomerName", d) || "";
+          const branch = getFieldFlex("Branch", d) || "";
+          const deliveryDate = getFieldFlex("DeliveryDate", d) || "";
+
+          let statusLabel = "لم يبدأ";
+          try {
+            const tSnap = await getDoc(doc(db, TRACK_COLLECTION, orderNo + "_1"));
+            if (tSnap.exists()) {
+              const t = tSnap.data();
+              const currentStage = t.currentStage || 0;
+              if (currentStage > 0 && currentStage <= STAGES.length) {
+                statusLabel = STAGES[currentStage - 1];
+              }
+            }
+          } catch (e) {
+            console.error("track read error", e);
+          }
+          rows.push({ orderNo, vinVal, customerName, branch, deliveryDate, statusLabel });
+        }
+        ordersListBody.innerHTML = "";
+        rows.forEach(r => {
+          const tr = document.createElement("tr");
+          tr.innerHTML = `
+            <td><button class="link-btn" data-order="${r.orderNo}">${r.orderNo}</button></td>
+            <td>${r.customerName || "—"}</td>
+            <td>${r.branch || "—"}</td>
+            <td>${r.vinVal || "—"}</td>
+            <td>${r.deliveryDate || "—"}</td>
+            <td>${r.statusLabel || "—"}</td>
+          `;
+          ordersListBody.appendChild(tr);
+        });
+      } catch (err) {
+        console.error(err);
+        ordersListBody.innerHTML = "<tr><td class='err' colspan='6'>تعذر تحميل قائمة الطلبات.</td></tr>";
+      }
+    }
+
+    function activateTab(which) {
+      if (which === "list") {
+        orderCard.style.display = "none";
+        erpCard.style.display   = "none";
+        stagesCard.style.display= "none";
+        ordersListCard.style.display = "";
+        tabSearchBtn.classList.remove("tab-active");
+        tabListBtn.classList.add("tab-active");
+        loadOrdersList();
+      } else {
+        orderCard.style.display = "";
+        erpCard.style.display   = currentOrderId ? "" : "none";
+        stagesCard.style.display= "";
+        ordersListCard.style.display = "none";
+        tabSearchBtn.classList.add("tab-active");
+        tabListBtn.classList.remove("tab-active");
+      }
+    }
+
+    tabSearchBtn.addEventListener("click", () => activateTab("search"));
+    tabListBtn.addEventListener("click", () => activateTab("list"));
+
+    ordersListBody.addEventListener("click", async (e) => {
+      const btn = e.target.closest("button.link-btn");
+      if (!btn) return;
+      const ord = btn.dataset.order;
+      try { await navigator.clipboard.writeText(ord); } catch(e) { console.warn(e); }
+      orderIdInput.value = ord;
+      vinInput.value = "";
+      activateTab("search");
+      loadOrder();
+    });
+
+    clearErpTable();
+    buildStagesUI({ });
   </script>
 </body>
 </html>
