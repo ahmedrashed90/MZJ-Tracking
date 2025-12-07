@@ -346,7 +346,6 @@
     </div>
   </div>
 
-  <!-- Firebase SDK v9 (Modules) -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.11/firebase-app.js";
     import {
@@ -456,35 +455,40 @@
       return n.toLocaleString("ar-SA", { minimumFractionDigits: 2 });
     }
 
-    // ====== تايم لاين + Progress Bar ======
+    // ====== تايم لاين + Progress Bar (مرحلة واحدة فقط للعميل) ======
     function buildTimelineHtml(statusData) {
       const track = statusData || {};
+      const totalStages = STAGES.length;
       const currentStage = track.currentStage || 0;
       const stagesMap = track.stages || {};
       const updatedAt = track.updatedAt
         ? new Date(track.updatedAt.toDate ? track.updatedAt.toDate() : track.updatedAt).toLocaleString("ar-SA")
         : "";
 
-      // عدد الخطوات المنتهية
-      let doneCount = 0;
-      for (let i = 1; i <= STAGES.length; i++) {
-        const doneTs = stagesMap["s" + i];
-        if (currentStage >= i || doneTs) {
-          doneCount++;
+      // عدد الخطوات المكتملة = رقم المرحلة الحالية
+      const doneCount = currentStage > 0 ? currentStage : 0;
+      const progress = Math.round((doneCount / totalStages) * 100);
+
+      let currentStageObj = null;
+      let tsLabel = "";
+      if (currentStage > 0 && currentStage <= totalStages) {
+        currentStageObj = STAGES[currentStage - 1];
+        const ts = stagesMap["s" + currentStage];
+        if (ts) {
+          tsLabel = new Date(ts.toDate ? ts.toDate() : ts).toLocaleString("ar-SA");
         }
       }
-      const progress = Math.round((doneCount / STAGES.length) * 100);
 
-      const currentStageLabel =
-        currentStage > 0 && currentStage <= STAGES.length
-          ? STAGES[currentStage - 1].title
-          : currentStage === 0
-          ? "لم يبدأ بعد"
-          : "جارٍ التحديث";
+      let currentStageTitle = "لم يبدأ بعد";
+      let currentStageSub   = "تم استلام طلبك، وجاري بدء إجراءات المعالجة.";
+      if (currentStageObj) {
+        currentStageTitle = currentStageObj.title;
+        currentStageSub   = currentStageObj.sub;
+      }
 
       return `
         <div class="status-summary">
-          <div>حالة السيارة الحالية: <strong>${currentStageLabel}</strong></div>
+          <div>حالة السيارة الحالية: <strong>${currentStageTitle}</strong></div>
           <div>آخر تحديث للحالة: <span>${updatedAt || "-"}</span></div>
         </div>
         <div class="progress-wrapper">
@@ -497,30 +501,20 @@
           </div>
         </div>
         <div class="timeline">
-          <div class="timeline-title">خطوات طلبك من أول حجز حتى استلام السيارة</div>
+          <div class="timeline-title">آخر خطوة تم تنفيذها على طلبك</div>
           <ul class="timeline-steps">
-            ${STAGES.map((step, idx) => {
-              const stepIndex = idx + 1;
-              const doneTs = stagesMap["s" + stepIndex];
-              const isDone = currentStage >= stepIndex || !!doneTs;
-              const tsLabel = doneTs
-                ? new Date(doneTs.toDate ? doneTs.toDate() : doneTs).toLocaleString("ar-SA")
-                : "";
-              return `
-                <li class="timeline-step">
-                  <div class="step-icon ${isDone ? "done" : ""}">
-                    ${isDone ? "✓" : stepIndex}
-                  </div>
-                  <div class="step-body">
-                    <div class="step-title">${step.title}</div>
-                    <div class="step-sub">
-                      ${step.sub}
-                      ${tsLabel ? " — <span>تم في: ${tsLabel}</span>" : ""}
-                    </div>
-                  </div>
-                </li>
-              `;
-            }).join("")}
+            <li class="timeline-step">
+              <div class="step-icon ${currentStage > 0 ? "done" : ""}">
+                ${currentStage > 0 ? "✓" : "•"}
+              </div>
+              <div class="step-body">
+                <div class="step-title">${currentStageTitle}</div>
+                <div class="step-sub">
+                  ${currentStageSub}
+                  ${tsLabel ? " — <span>تم في: " + tsLabel + "</span>" : ""}
+                </div>
+              </div>
+            </li>
           </ul>
         </div>
       `;
@@ -668,7 +662,6 @@
         `;
       }
 
-      // إجمالي قيمة الطلب (شامل الضريبة) لكل السيارات
       const orderTotal = cars.reduce((sum, car) => {
         const v = parseAmountFront(car.total);
         return sum + (v || 0);
@@ -743,7 +736,6 @@
       const tabs = resultContainer.querySelectorAll(".car-tab");
       const carDetailsArea = resultContainer.querySelector("#carDetailsArea");
 
-      // أول مرة: حدّث حسب السيارة النشطة
       updateStatusUIForCar(cars[activeIndex].statusData || {});
 
       tabs.forEach((tab) => {
@@ -769,7 +761,6 @@
       setStatus("جاري البحث عن الطلب المرتبط بهذا الرقم…");
 
       try {
-        // 1) نجيب erp_vins/{vin} لمعرفة رقم الطلب + رقم البند
         const vinDocRef = doc(db, "erp_vins", rawVin);
         const vinSnap   = await getDoc(vinDocRef);
 
@@ -783,12 +774,10 @@
         const orderBase = vinData.lastOrderNo || vinData.orderNo || "";
         const itemNoForVin = vinData.lastItemNo || vinData.itemNo || 1;
 
-        // 2) نجيب حالة هذا الـ VIN / السيارة الحالية من orders
         let vinStatus = null;
         let fallbackOrderStatus = null;
 
         if (orderBase) {
-          // أولا: الهيكل الجديد – doc = orders/{orderBase}_{itemNo}/public/status
           try {
             const newDocId = `${orderBase}_${itemNoForVin}`;
             const newStatusRef = doc(db, "orders", newDocId, "public", "status");
@@ -801,7 +790,6 @@
             console.error("Error fetching new-structure status:", eNew);
           }
 
-          // ثانياً: الشكل القديم – orders/{orderBase}/public/{rawVin}
           if (!vinStatus) {
             try {
               const vinStatusRef = doc(db, "orders", orderBase, "public", rawVin);
@@ -815,7 +803,6 @@
             }
           }
 
-          // ثالثاً: fallback قديم جداً – orders/{orderBase}/public/status
           if (!vinStatus) {
             try {
               const fallbackRef = doc(db, "orders", orderBase, "public", "status");
@@ -830,7 +817,7 @@
           }
         }
 
-        // 3) نحاول نجيب كل السيارات في نفس الطلب عن طريق erp_vins
+        // محاولة معرفة إذا كان الطلب يحتوي على أكثر من سيارة
         let handledMulti = false;
         if (orderBase) {
           try {
@@ -914,7 +901,6 @@
                   if (idx >= 0) activeIndex = idx;
                 }
 
-                // نجلب حالة كل سيارة من orders/{orderBase}_{itemNo}/public/status
                 for (const car of cars) {
                   const carItemNo = car.itemNo || 1;
                   if (orderBase) {
@@ -952,7 +938,7 @@
           }
         }
 
-        // 4) لو مفيش تعدد سيارات → عرض السيارة الواحدة
+        // لو مفيش تعدد سيارات → عرض السيارة الواحدة
         if (!handledMulti) {
           setStatus("تم العثور على الطلب. يتم عرض تفاصيل السيارة.");
           renderSingleCar(vinData, vinStatus);
