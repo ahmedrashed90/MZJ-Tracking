@@ -97,7 +97,7 @@
       display: inline-flex;
       align-items: center;
       gap: 6px;
-      transition: transform 0.1s ease, box-shadow 0.1s ease, background 0.2s;
+      transition: transform 0.1s ease, box-shadow 0.1s.ease, background 0.2s;
     }
     .btn-primary {
       background: linear-gradient(135deg, #3e2420, #bc8f74);
@@ -250,7 +250,7 @@
       font-size: 12px;
       cursor: pointer;
       font-family: inherit;
-      transition: background 0.15s ease, color 0.15s ease, border-color 0.15s.ease;
+      transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
     }
     .car-tab.active {
       background: #3e2420;
@@ -450,7 +450,7 @@
     // ====== تايم لاين + Progress Bar ======
     function buildTimelineHtml(statusData) {
       const track = statusData || {};
-      const currentStage = track.currentStage || 0;
+      const currentStage = track.currentStage || 0; // نستخدمه بس للعنوان
       const stagesMap = track.stages || {};
       const updatedAt = track.updatedAt
         ? new Date(track.updatedAt.toDate ? track.updatedAt.toDate() : track.updatedAt).toLocaleString("ar-SA")
@@ -463,11 +463,8 @@
           doneCount++;
         }
       }
-      // لو ما فيش أختام بس currentStage > 0 (طلبات قديمة) نخليها 10% على الأقل
-      if (doneCount === 0 && currentStage > 0) {
-        doneCount = 1;
-      }
-      const progress = Math.round((doneCount / STAGES.length) * 100);
+      // النسبة = عدد المراحل المنتهية × 10%
+      const progress = doneCount * (100 / STAGES.length); // ومع 10 مراحل = doneCount * 10
 
       let currentStageLabel;
       if (currentStage > 0 && currentStage <= STAGES.length) {
