@@ -533,7 +533,7 @@
     let currentItemNo       = null;
     let currentOrderRecords = [];
 
-    // ✅ المراحل الجديدة كما طلبت
+    // ✅ المراحل
     const STAGES = [
       "1) طلب الشراء – (خاص بالعميل)",
       "2) إيصال الدفع – (خاص بالعميل)",
@@ -546,6 +546,18 @@
       "9) جاهزية السيارة للإستلام – (خاص بالمعرض)",
       "10) إتمام عملية التسليم بنجاح"
     ];
+
+    // ✅ دالة موحّدة لإنشاء ID التتبع: لكل VIN لوحده
+    function getTrackingDocId() {
+      if (!currentOrderId) return null;
+      const baseId = currentOrderId;
+      const vinClean = (currentVin || "").toString().trim();
+      if (vinClean) {
+        return baseId + "_VIN_" + vinClean;
+      }
+      const itemNo = currentItemNo || 1;
+      return baseId + "_ITEM_" + itemNo;
+    }
 
     const FIELD_SYNONYMS = {
       CustomerName: ["CustomerName","customerName"],
@@ -792,19 +804,15 @@
         }
       }
 
-      if (orderSubtotal !== null || orderTotal !== null) {
+      if (orderSubtotal !== null && orderTotal !== null) {
         const parts = [];
         parts.push(`<span>عدد السيارات في الطلب: <strong>${totalCars}</strong></span>`);
-        if (orderSubtotal !== null) {
-          parts.push(
-            `<span>إجمالي قبل الضريبة: <strong>${orderSubtotal.toLocaleString('ar-SA',{minimumFractionDigits:2})} ر.س</strong></span>`
-          );
-        }
-        if (orderTotal !== null) {
-          parts.push(
-            `<span>إجمالي شامل الضريبة: <strong>${orderTotal.toLocaleString('ar-SA',{minimumFractionDigits:2})} ر.س</strong></span>`
-          );
-        }
+        parts.push(
+          `<span>إجمالي قبل الضريبة: <strong>${orderSubtotal.toLocaleString('ar-SA',{minimumFractionDigits:2})} ر.س</strong></span>`
+        );
+        parts.push(
+          `<span>إجمالي شامل الضريبة: <strong>${orderTotal.toLocaleString('ar-SA',{minimumFractionDigits:2})} ر.س</strong></span>`
+        );
         erpTotals.innerHTML = parts.join("");
         erpTotals.style.display = "flex";
       } else {
@@ -887,24 +895,22 @@
 
     async function completeStage(num) {
       stageMsg.textContent = "";
-      if (!currentOrderId || !currentItemNo) {
+      const docId = getTrackingDocId();
+      if (!currentOrderId || !docId) {
         stageMsg.innerHTML = "<span class='err'>اختر طلب ورقم هيكل أولاً قبل تحديث المراحل.</span>";
         return;
       }
       try {
-        const baseId = currentOrderId;
-        const docId = baseId + "_" + currentItemNo;
-
         const orderRef = doc(db, TRACK_COLLECTION, docId);
         await updateDoc(orderRef, {
-          orderId: baseId,
+          orderId: currentOrderId,
           vin: currentVin || "",
           itemNo: currentItemNo || 1,
           currentStage: num,
           ["stages.s" + num]: serverTimestamp()
         }).catch(async () => {
           await setDoc(orderRef, {
-            orderId: baseId,
+            orderId: currentOrderId,
             vin: currentVin || "",
             itemNo: currentItemNo || 1,
             currentStage: num,
@@ -914,7 +920,7 @@
 
         const publicRef = doc(db, TRACK_COLLECTION, docId, "public", "status");
         await setDoc(publicRef, {
-          orderId: baseId,
+          orderId: currentOrderId,
           vin: currentVin || "",
           itemNo: currentItemNo || 1,
           currentStage: num,
@@ -934,14 +940,12 @@
     // ✅ زر "تراجع" لإلغاء مرحلة وإعادة حساب currentStage
     async function revertStage(num) {
       stageMsg.textContent = "";
-      if (!currentOrderId || !currentItemNo) {
+      const docId = getTrackingDocId();
+      if (!currentOrderId || !docId) {
         stageMsg.innerHTML = "<span class='err'>اختر طلب ورقم هيكل أولاً قبل التراجع عن مرحلة.</span>";
         return;
       }
       try {
-        const baseId = currentOrderId;
-        const docId  = baseId + "_" + currentItemNo;
-
         const orderRef = doc(db, TRACK_COLLECTION, docId);
         const snap = await getDoc(orderRef);
         if (!snap.exists()) {
@@ -979,7 +983,7 @@
 
         const publicRef = doc(db, TRACK_COLLECTION, docId, "public", "status");
         await setDoc(publicRef, {
-          orderId: baseId,
+          orderId: currentOrderId,
           vin: currentVin || "",
           itemNo: currentItemNo || 1,
           stages: newStages,
@@ -997,14 +1001,12 @@
     }
 
     async function loadTrackingForCurrentSelection(){
-      if (!currentOrderId || !currentItemNo) {
+      const docId = getTrackingDocId();
+      if (!currentOrderId || !docId) {
         buildStagesUI({ });
         return;
       }
       try{
-        const baseId = currentOrderId;
-        const docId  = baseId + "_" + currentItemNo;
-
         const orderRef = doc(db, TRACK_COLLECTION, docId);
         const trackSnap = await getDoc(orderRef);
         let trackData;
@@ -1012,7 +1014,7 @@
           trackData = trackSnap.data();
         } else {
           trackData = {
-            orderId: baseId,
+            orderId: currentOrderId,
             vin: currentVin || "",
             itemNo: currentItemNo || 1,
             currentStage: 0,
@@ -1021,7 +1023,7 @@
           await setDoc(orderRef, trackData, {merge:true});
           const publicRef = doc(db, TRACK_COLLECTION, docId, "public", "status");
           await setDoc(publicRef, {
-            orderId: baseId,
+            orderId: currentOrderId,
             vin: currentVin || "",
             itemNo: currentItemNo || 1,
             currentStage: 0,
@@ -1275,7 +1277,17 @@
 
           let statusLabel = "لم يبدأ";
           try {
-            const tSnap = await getDoc(doc(db, TRACK_COLLECTION, orderNo + "_1"));
+            const vinClean = (vinVal || "").toString().trim();
+            const trackId = vinClean
+              ? (orderNo + "_VIN_" + vinClean)
+              : (orderNo + "_ITEM_1");
+
+            // نقرأ من public/status أولاً، ولو مش موجود نرجع للداتا الأساسية
+            let tSnap = await getDoc(doc(db, TRACK_COLLECTION, trackId, "public", "status"));
+            if (!tSnap.exists()) {
+              tSnap = await getDoc(doc(db, TRACK_COLLECTION, trackId));
+            }
+
             if (tSnap.exists()) {
               const t = tSnap.data();
               const currentStage = t.currentStage || 0;
