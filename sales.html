@@ -261,7 +261,7 @@
       white-space:nowrap;
     }
 
-    /* VIN picker box احترافي */
+    /* VIN picker box */
     .vin-box{
       display:none;
       margin:10px 0 14px;
@@ -366,7 +366,7 @@
       </h3>
       <div id="erpMeta" class="muted" style="margin-bottom:6px;"></div>
 
-      <!-- اختيار رقم الهيكل لو الطلب فيه أكثر من VIN -->
+      <!-- اختيار رقم الهيكل -->
       <div id="vinPickerBox" class="vin-box">
         <div class="vin-box-header">
           <div class="vin-box-title">اختر رقم الهيكل للعمل عليه</div>
@@ -406,8 +406,7 @@
             <th>الإجمالي شامل الضريبة</th>
           </tr>
           </thead>
-          <tbody id="erpBody">
-          </tbody>
+          <tbody id="erpBody"></tbody>
         </table>
       </div>
     </div>
@@ -533,7 +532,7 @@
     let currentItemNo       = null;
     let currentOrderRecords = [];
 
-    // ✅ المراحل
+    // المراحل
     const STAGES = [
       "1) طلب الشراء – (خاص بالعميل)",
       "2) إيصال الدفع – (خاص بالعميل)",
@@ -547,16 +546,58 @@
       "10) إتمام عملية التسليم بنجاح"
     ];
 
-    // ✅ دالة موحّدة لإنشاء ID التتبع: لكل VIN لوحده
-    function getTrackingDocId() {
-      if (!currentOrderId) return null;
-      const baseId = currentOrderId;
+    // -------- Helpers مشتركة للتتبع --------
+
+    // نجهز كل احتمالات الـ Doc IDs لنفس الطلب/الهيكل
+    function getTrackingDocIds() {
+      if (!currentOrderId) return [];
+      const base = currentOrderId;
       const vinClean = (currentVin || "").toString().trim();
-      if (vinClean) {
-        return baseId + "_VIN_" + vinClean;
-      }
       const itemNo = currentItemNo || 1;
-      return baseId + "_ITEM_" + itemNo;
+
+      const ids = [];
+      if (vinClean) ids.push(`${base}_VIN_${vinClean}`);
+      ids.push(`${base}_ITEM_${itemNo}`);
+      ids.push(`${base}_${itemNo}`);
+      ids.push(base); // لو في نسخة قديمة بالـ order فقط
+
+      // إزالة التكرار
+      return Array.from(new Set(ids));
+    }
+
+    async function readBestTrackingDoc() {
+      const ids = getTrackingDocIds();
+      if (!ids.length) return { docId: null, data: null };
+
+      for (const id of ids) {
+        try {
+          const snap = await getDoc(doc(db, TRACK_COLLECTION, id));
+          if (snap.exists()) {
+            return { docId: id, data: snap.data() || {} };
+          }
+        } catch (e) {
+          console.warn("read doc failed", id, e);
+        }
+      }
+      return { docId: ids[0], data: null };
+    }
+
+    async function writeTrackingToAllIds(payload, merge = true) {
+      const ids = getTrackingDocIds();
+      if (!ids.length) return;
+      for (const id of ids) {
+        const ref = doc(db, TRACK_COLLECTION, id);
+        try {
+          if (merge)
+            await setDoc(ref, payload, { merge: true });
+          else
+            await setDoc(ref, payload);
+          const publicRef = doc(db, TRACK_COLLECTION, id, "public", "status");
+          await setDoc(publicRef, payload, { merge: true });
+        } catch (e) {
+          console.warn("write fail", id, e);
+        }
+      }
     }
 
     const FIELD_SYNONYMS = {
@@ -727,7 +768,7 @@
         erpBody.appendChild(tr);
       });
 
-      // إدارة VIN للدروب داون
+      // VIN dropdown
       let selectedVin = preferredVin && vins.includes(preferredVin) ? preferredVin : null;
       if (!selectedVin && vins.length === 1) {
         selectedVin = vins[0];
@@ -756,7 +797,7 @@
       currentVin    = selectedVin || (vins[0] || preferredVin || "");
       currentItemNo = resolveItemNoForVin(currentVin, records);
 
-      // حساب إجمالي الطلب
+      // إجماليات الطلب
       const totalCars = records.length;
 
       let orderSubtotal = parseAmountFront(
@@ -788,13 +829,8 @@
         if (totVal !== null) totalSum += totVal;
       });
 
-      if (orderSubtotal === null && subSum > 0) {
-        orderSubtotal = subSum;
-      }
-
-      if (orderTotal === null && totalSum > 0) {
-        orderTotal = totalSum;
-      }
+      if (orderSubtotal === null && subSum > 0) orderSubtotal = subSum;
+      if (orderTotal === null && totalSum > 0) orderTotal = totalSum;
 
       if (orderSubtotal !== null && (orderTotal === null || orderTotal < 1000)) {
         if (totalSum > 0) {
@@ -819,11 +855,11 @@
         erpTotals.style.display = "none";
       }
 
-      // تحميل مراحل التتبع للحالة الحالية
+      // تحميل المراحل
       loadTrackingForCurrentSelection();
     }
 
-    // STAGES UI
+    // --------- STAGES UI ---------
     function buildStagesUI(orderData = {}) {
       stagesList.innerHTML = "";
       const stagesObj = orderData.stages || {};
@@ -860,7 +896,6 @@
         actions.style.display = "flex";
         actions.style.gap = "6px";
 
-        // زر تراجع
         const undoBtn = document.createElement("button");
         undoBtn.className = "btn-outline";
         undoBtn.style.fontSize = "12px";
@@ -868,7 +903,6 @@
         undoBtn.disabled = !tsStr;
         undoBtn.onclick = () => revertStage(num);
 
-        // زر تم الانتهاء
         const btn = document.createElement("button");
         btn.className = "btn-outline";
         btn.style.fontSize = "12px";
@@ -895,39 +929,21 @@
 
     async function completeStage(num) {
       stageMsg.textContent = "";
-      const docId = getTrackingDocId();
-      if (!currentOrderId || !docId) {
+      if (!currentOrderId) {
         stageMsg.innerHTML = "<span class='err'>اختر طلب ورقم هيكل أولاً قبل تحديث المراحل.</span>";
         return;
       }
       try {
-        const orderRef = doc(db, TRACK_COLLECTION, docId);
-        await updateDoc(orderRef, {
-          orderId: currentOrderId,
-          vin: currentVin || "",
-          itemNo: currentItemNo || 1,
-          currentStage: num,
-          ["stages.s" + num]: serverTimestamp()
-        }).catch(async () => {
-          await setDoc(orderRef, {
-            orderId: currentOrderId,
-            vin: currentVin || "",
-            itemNo: currentItemNo || 1,
-            currentStage: num,
-            ["stages.s" + num]: serverTimestamp()
-          }, { merge:true });
-        });
-
-        const publicRef = doc(db, TRACK_COLLECTION, docId, "public", "status");
-        await setDoc(publicRef, {
+        const payload = {
           orderId: currentOrderId,
           vin: currentVin || "",
           itemNo: currentItemNo || 1,
           currentStage: num,
           ["stages.s" + num]: serverTimestamp(),
           updatedAt: serverTimestamp()
-        }, { merge:true });
+        };
 
+        await writeTrackingToAllIds(payload, true);
         await loadTrackingForCurrentSelection();
 
         stageMsg.innerHTML = "<span class='ok'>تم ختم المرحلة رقم " + num + " وتحديث صفحة التتبع.</span>";
@@ -937,36 +953,29 @@
       }
     }
 
-    // ✅ زر "تراجع" لإلغاء مرحلة وإعادة حساب currentStage
     async function revertStage(num) {
       stageMsg.textContent = "";
-      const docId = getTrackingDocId();
-      if (!currentOrderId || !docId) {
+      if (!currentOrderId) {
         stageMsg.innerHTML = "<span class='err'>اختر طلب ورقم هيكل أولاً قبل التراجع عن مرحلة.</span>";
         return;
       }
       try {
-        const orderRef = doc(db, TRACK_COLLECTION, docId);
-        const snap = await getDoc(orderRef);
-        if (!snap.exists()) {
+        const { docId, data } = await readBestTrackingDoc();
+        if (!docId || !data) {
           stageMsg.innerHTML = "<span class='err'>لا توجد مراحل محفوظة لهذا الطلب بعد.</span>";
           return;
         }
 
-        const data   = snap.data() || {};
         const stages = data.stages || {};
         const key    = "s" + num;
-
         if (!stages[key]) {
           stageMsg.innerHTML = "<span class='err'>لا يمكن التراجع عن مرحلة غير مكتملة.</span>";
           return;
         }
 
-        // حذف المرحلة من المراحل
         const newStages = { ...stages };
         delete newStages[key];
 
-        // إعادة حساب المرحلة الحالية كأعلى مرحلة متبقية
         let newCurrent = 0;
         Object.keys(newStages).forEach(k => {
           const m = k.match(/^s(\d+)$/);
@@ -976,21 +985,16 @@
           }
         });
 
-        await updateDoc(orderRef, {
-          stages: newStages,
-          currentStage: newCurrent
-        });
-
-        const publicRef = doc(db, TRACK_COLLECTION, docId, "public", "status");
-        await setDoc(publicRef, {
+        const payload = {
           orderId: currentOrderId,
           vin: currentVin || "",
           itemNo: currentItemNo || 1,
           stages: newStages,
           currentStage: newCurrent,
           updatedAt: serverTimestamp()
-        }, { merge: true });
+        };
 
+        await writeTrackingToAllIds(payload, true);
         await loadTrackingForCurrentSelection();
 
         stageMsg.innerHTML = "<span class='ok'>تم التراجع عن المرحلة رقم " + num + " وتحديث صفحة التتبع.</span>";
@@ -1001,44 +1005,33 @@
     }
 
     async function loadTrackingForCurrentSelection(){
-      const docId = getTrackingDocId();
-      if (!currentOrderId || !docId) {
-        buildStagesUI({ });
+      if (!currentOrderId) {
+        buildStagesUI({});
         return;
       }
       try{
-        const orderRef = doc(db, TRACK_COLLECTION, docId);
-        const trackSnap = await getDoc(orderRef);
-        let trackData;
-        if (trackSnap.exists()) {
-          trackData = trackSnap.data();
-        } else {
-          trackData = {
-            orderId: currentOrderId,
-            vin: currentVin || "",
-            itemNo: currentItemNo || 1,
-            currentStage: 0,
-            stages:{}
-          };
-          await setDoc(orderRef, trackData, {merge:true});
-          const publicRef = doc(db, TRACK_COLLECTION, docId, "public", "status");
-          await setDoc(publicRef, {
+        const { docId, data } = await readBestTrackingDoc();
+        if (!docId || !data) {
+          const payload = {
             orderId: currentOrderId,
             vin: currentVin || "",
             itemNo: currentItemNo || 1,
             currentStage: 0,
             stages:{},
             updatedAt: serverTimestamp()
-          }, {merge:true});
+          };
+          await writeTrackingToAllIds(payload, true);
+          buildStagesUI(payload);
+          return;
         }
-        buildStagesUI(trackData);
+        buildStagesUI(data);
       }catch(e){
         console.error(e);
         buildStagesUI({});
       }
     }
 
-    // AUTH
+    // -------- AUTH --------
     loginBtn.onclick = async () => {
       authMsg.textContent = "";
       try{
@@ -1083,8 +1076,6 @@
         logoutBtn.style.display = "";
         authCard.style.display  = "none";
         tabsBar.style.display   = "flex";
-
-        // أول ما يدخل يفتح على تبويب "كل الطلبات"
         activateTab("list");
       }else{
         whoami.textContent = "";
@@ -1098,6 +1089,7 @@
       }
     });
 
+    // -------- تحميل الطلب --------
     async function findByVin(vinRaw) {
       const val = vinRaw.trim();
       if (!val) return null;
@@ -1221,8 +1213,6 @@
         fillErpTable(erpRecords, preferredVin);
 
         stagesCard.style.display = "";
-        ordersListCard.style.display = ordersListCard.style.display;
-
         orderMsg.innerHTML = "<span class='ok'>تم تحميل الطلب وربطه بالتتبع.</span>";
       }catch(e){
         console.error(e);
@@ -1278,17 +1268,20 @@
           let statusLabel = "لم يبدأ";
           try {
             const vinClean = (vinVal || "").toString().trim();
-            const trackId = vinClean
-              ? (orderNo + "_VIN_" + vinClean)
-              : (orderNo + "_ITEM_1");
+            const ids = [];
+            if (vinClean) ids.push(`${orderNo}_VIN_${vinClean}`);
+            ids.push(`${orderNo}_ITEM_1`);
+            ids.push(`${orderNo}_1`);
+            ids.push(orderNo);
 
-            // نقرأ من public/status أولاً، ولو مش موجود نرجع للداتا الأساسية
-            let tSnap = await getDoc(doc(db, TRACK_COLLECTION, trackId, "public", "status"));
-            if (!tSnap.exists()) {
-              tSnap = await getDoc(doc(db, TRACK_COLLECTION, trackId));
+            let tSnap = null;
+            for (const id of ids) {
+              let s = await getDoc(doc(db, TRACK_COLLECTION, id, "public", "status"));
+              if (!s.exists()) s = await getDoc(doc(db, TRACK_COLLECTION, id));
+              if (s.exists()) { tSnap = s; break; }
             }
 
-            if (tSnap.exists()) {
+            if (tSnap && tSnap.exists()) {
               const t = tSnap.data();
               const currentStage = t.currentStage || 0;
               if (currentStage > 0 && currentStage <= STAGES.length) {
