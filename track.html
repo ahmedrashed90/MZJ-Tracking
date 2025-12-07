@@ -349,8 +349,8 @@
     appId: "1:655452217491:web:9348d172c47bdd411fad66"
   };
 
-  const TRACK_COLLECTION    = "orders";
-  const ERP_VINS_COLLECTION = "erp_vins";
+  const TRACK_COLLECTION      = "orders";
+  const ERP_VINS_COLLECTION   = "erp_vins";
   const ERP_ORDERS_COLLECTION = "erp_orders";
 
   const app = initializeApp(firebaseConfig);
@@ -521,7 +521,7 @@
     intColorEl.textContent  = interiorColor || "—";
     subtotalEl.textContent  = subtotal !== null ? formatCurrency(subtotal) : "—";
     vatValueEl.textContent  = vat      !== null ? formatCurrency(vat)      : "—";
-    totalInclEl.textContent = totalIncl !== null ? formatCurrency(totalIncl) : (orderTotal !== null ? formatCurrency(orderTotal) : "—");
+    totalInclEl.textContent = totalIncl !== null ? formatCurrency(totalIncl) : (orderTotal !== null ? formatCurrency(orderTotal) : "—";
   }
 
   function buildStagesUI(statusData){
@@ -601,7 +601,7 @@
       let statusData = {};
       let erpOrderData = null;
 
-      // 1) بيانات من erp_vins
+      // 1) erp_vins/{vin}
       try{
         const vinRef = doc(db, ERP_VINS_COLLECTION, vin);
         const vinSnap = await getDoc(vinRef);
@@ -612,7 +612,7 @@
         console.warn("Error reading erp_vins:", e);
       }
 
-      // 2) نحاول جلب erp_orders لو عندنا lastOrderNo + lastItemNo
+      // 2) erp_orders/{OrderNo}_{ItemNo} لو متوفر
       if (vinData) {
         const lastData = vinData.lastData || {};
         const orderId = vinData.lastOrderNo || lastData.orderNo || null;
@@ -630,7 +630,7 @@
         }
       }
 
-      // 3) الأهم: نختار أفضل دوكومنت تتبع بالـ VIN فقط (أعلى currentStage)
+      // 3) أفضل دوكومنت تتبع في orders حيث vin == هذا الـ VIN
       let bestTrackDocId = null;
       let bestTrackData  = null;
       try{
@@ -639,35 +639,31 @@
         const snap = await getDocs(qByVin);
 
         if (!snap.empty) {
-          snap.forEach(d => {
-            const data = d.data() || {};
+          for (const d of snap.docs) {
+            let data = d.data() || {};
+            // دمج public/status لو موجود
+            try{
+              const statusRef = doc(db, TRACK_COLLECTION, d.id, "public", "status");
+              const statusSnap = await getDoc(statusRef);
+              if (statusSnap.exists()) {
+                data = { ...data, ...statusSnap.data() };
+              }
+            }catch(e){ console.warn(e); }
+
             const cur  = data.currentStage || 0;
-            const stagesCount = Object.keys(data.stages || {}).length;
-            const score = Math.max(cur, stagesCount);
+            const cnt  = Object.keys(data.stages || {}).length;
+            const score = Math.max(cur, cnt);
             if (!bestTrackData) {
               bestTrackData  = data;
               bestTrackDocId = d.id;
             } else {
               const curBest  = bestTrackData.currentStage || 0;
-              const curBestCount = Object.keys(bestTrackData.stages || {}).length;
-              const bestScore = Math.max(curBest, curBestCount);
+              const cntBest  = Object.keys(bestTrackData.stages || {}).length;
+              const bestScore = Math.max(curBest, cntBest);
               if (score > bestScore) {
                 bestTrackData  = data;
                 bestTrackDocId = d.id;
               }
-            }
-          });
-
-          if (bestTrackDocId) {
-            // ندمج مع public/status
-            try{
-              const statusRef = doc(db, TRACK_COLLECTION, bestTrackDocId, "public", "status");
-              const statusSnap = await getDoc(statusRef);
-              if (statusSnap.exists()) {
-                bestTrackData = { ...bestTrackData, ...statusSnap.data() };
-              }
-            }catch(e){
-              console.warn("Error reading public/status:", e);
             }
           }
         }
