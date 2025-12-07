@@ -97,7 +97,7 @@
       display: inline-flex;
       align-items: center;
       gap: 6px;
-      transition: transform 0.1s ease, box-shadow 0.1s.ease, background 0.2s;
+      transition: transform 0.1s ease, box-shadow 0.1s ease, background 0.2s;
     }
     .btn-primary {
       background: linear-gradient(135deg, #3e2420, #bc8f74);
@@ -465,6 +465,7 @@
       }
       // النسبة = عدد المراحل المنتهية × 10%
       const progress = doneCount * (100 / STAGES.length); // ومع 10 مراحل = doneCount * 10
+      const progressFixed = Math.round(progress);
 
       let currentStageLabel;
       if (currentStage > 0 && currentStage <= STAGES.length) {
@@ -483,10 +484,10 @@
         <div class="progress-wrapper">
           <div class="progress-header">
             <span>نسبة اكتمال الطلب</span>
-            <span class="progress-percent-strong">${progress}%</span>
+            <span class="progress-percent-strong">${progressFixed}%</span>
           </div>
           <div class="progress-bar">
-            <div class="progress-fill" style="width:${progress}%;"></div>
+            <div class="progress-fill" style="width:${progressFixed}%;"></div>
           </div>
         </div>
         <div class="timeline">
@@ -770,13 +771,14 @@
         const vinData   = vinSnap.data ? vinSnap.data() : vinSnap;
         const orderBase = vinData.lastOrderNo || vinData.orderNo || "";
         const itemNoForVin = vinData.lastItemNo || vinData.itemNo || 1;
+        const docIdForVin = orderBase ? `${orderBase}_${itemNoForVin}` : null;
 
         let vinStatus = null;
         let fallbackOrderStatus = null;
 
         if (orderBase) {
           try {
-            const newDocId = `${orderBase}_${itemNoForVin}`;
+            const newDocId = docIdForVin;
             const newStatusRef = doc(db, "orders", newDocId, "public", "status");
             const newStatusSnap = await getDoc(newStatusRef);
             if (newStatusSnap.exists()) {
@@ -810,6 +812,35 @@
               }
             } catch (eFallback) {
               console.error("Error fetching legacy fallback status:", eFallback);
+            }
+          }
+
+          // 🔁 دمج أي مراحل محفوظة في المستند الرئيسي orders/{docIdForVin}
+          if (docIdForVin) {
+            try {
+              const rootRef = doc(db, "orders", docIdForVin);
+              const rootSnap = await getDoc(rootRef);
+              if (rootSnap.exists()) {
+                const rootData = rootSnap.data();
+                if (rootData && rootData.stages) {
+                  const rootStages = rootData.stages;
+                  if (vinStatus) {
+                    vinStatus = {
+                      ...vinStatus,
+                      stages: { ...(vinStatus.stages || {}), ...rootStages }
+                    };
+                  } else if (fallbackOrderStatus) {
+                    fallbackOrderStatus = {
+                      ...fallbackOrderStatus,
+                      stages: { ...(fallbackOrderStatus.stages || {}), ...rootStages }
+                    };
+                  } else {
+                    vinStatus = { stages: rootStages };
+                  }
+                }
+              }
+            } catch (eRootStages) {
+              console.error("Error fetching root order stages:", eRootStages);
             }
           }
         }
