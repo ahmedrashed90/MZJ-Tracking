@@ -2,547 +2,713 @@
 <html lang="ar" dir="rtl">
 <head>
   <meta charset="UTF-8" />
-  <title>تتبع طلبك - محمد بن ذعار العجمي للسيارات</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+  <title>MZJ – تتبع الطلب برقم الهيكل</title>
+  <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet" />
   <style>
-    body {
-      margin: 0;
-      font-family: "Tajawal", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-      background: #f6f4f0;
-      color: #3e2420;
+    :root{
+      --brown:#3e2420;
+      --beige:#bc8f74;
+      --cream:#fff8ef;
+      --text:#111827;
+      --muted:#6b7280;
+      --radius:16px;
     }
-    .page {
-      min-height: 100vh;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      padding: 24px 12px 40px;
+    *{box-sizing:border-box;}
+    body{
+      margin:0;
+      font-family:"Tajawal",system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+      background:radial-gradient(circle at top,#fffdf8 0,#fff3e6 40%,#fbe9da 70%,#f5e3d3 100%);
+      color:var(--text);
     }
-    .card {
-      width: 100%;
-      max-width: 720px;
-      background: #ffffff;
-      border-radius: 16px;
-      box-shadow: 0 10px 30px rgba(0,0,0,0.08);
-      padding: 20px 18px 24px;
-      box-sizing: border-box;
+    .topbar{
+      background:var(--brown);
+      color:#fff;
+      padding:10px 20px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      box-shadow:0 6px 14px rgba(0,0,0,.22);
     }
-    .brand {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      margin-bottom: 18px;
+    .topbar-title{
+      font-weight:800;
+      font-size:17px;
+      letter-spacing:.5px;
     }
-    .brand-mark {
-      width: 40px;
-      height: 40px;
-      border-radius: 12px;
-      background: linear-gradient(135deg, #3e2420, #bc8f74);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      color: #fff;
-      font-weight: 700;
-      font-size: 20px;
+    .wrap{
+      max-width:900px;
+      margin:22px auto 36px;
+      padding:0 14px;
     }
-    .brand-text-title {
-      font-weight: 700;
-      font-size: 18px;
-      color: #3e2420;
+    .card{
+      background:#fff;
+      border-radius:var(--radius);
+      box-shadow:0 16px 40px rgba(62,36,32,.13);
+      padding:18px 18px 20px;
+      margin-bottom:18px;
     }
-    .brand-text-sub {
-      font-size: 13px;
-      color: #7b6a63;
+    .title{
+      margin:0 0 12px 0;
+      display:flex;
+      align-items:center;
+      gap:8px;
+      color:var(--brown);
+      font-size:18px;
     }
-    .search-section {
-      margin-bottom: 18px;
-      background: #fff8ef;
-      border-radius: 12px;
-      padding: 12px 14px;
-      display: flex;
-      flex-wrap: wrap;
-      gap: 10px;
-      align-items: center;
+    .title .icon{
+      width:26px;
+      height:26px;
+      border-radius:999px;
+      background:rgba(188,143,116,.16);
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      font-size:16px;
     }
-    .search-section label {
-      font-size: 13px;
-      color: #5b4035;
-      font-weight: 600;
+    label{
+      display:block;
+      font-size:13px;
+      margin-bottom:4px;
+      color:var(--muted);
     }
-    .search-input-wrap {
-      flex: 1 1 200px;
-      display: flex;
-      gap: 8px;
+    input{
+      width:100%;
+      padding:9px 11px;
+      border-radius:10px;
+      border:1px solid #e5e7eb;
+      background:#f9fafb;
+      font-family:inherit;
+      font-size:14px;
+      outline:none;
     }
-    .search-input-wrap input {
-      flex: 1;
-      padding: 8px 10px;
-      border-radius: 10px;
-      border: 1px solid #d4c4b8;
-      font-size: 14px;
-      outline: none;
+    input:focus{
+      background:#fff;
+      border-color:var(--beige);
+      box-shadow:0 0 0 1px rgba(188,143,116,.45);
     }
-    .search-input-wrap input:focus {
-      border-color: #bc8f74;
-      box-shadow: 0 0 0 2px rgba(188,143,116,0.25);
+    .btn{
+      border:0;
+      border-radius:999px;
+      padding:9px 18px;
+      font-family:inherit;
+      cursor:pointer;
+      display:inline-flex;
+      align-items:center;
+      gap:6px;
+      font-size:14px;
+      background:var(--brown);
+      color:#fff;
     }
-    .btn {
-      border: none;
-      border-radius: 999px;
-      padding: 8px 16px;
-      font-size: 14px;
-      font-weight: 600;
-      cursor: pointer;
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      transition: transform 0.1s ease, box-shadow 0.1s ease, background 0.2s;
+    .muted{color:var(--muted);font-size:13px;}
+    .ok{color:#047857;font-weight:600;}
+    .err{color:#b91c1c;font-weight:600;}
+    .row{
+      display:grid;
+      grid-template-columns:2fr 1fr;
+      gap:10px;
     }
-    .btn-primary {
-      background: linear-gradient(135deg, #3e2420, #bc8f74);
-      color: #fff;
-      box-shadow: 0 4px 14px rgba(62,36,32,0.35);
+    @media(max-width:700px){
+      .row{grid-template-columns:1fr;}
     }
-    .btn-primary:active {
-      transform: translateY(1px);
-      box-shadow: 0 2px 8px rgba(62,36,32,0.35);
+
+    .info-grid{
+      display:grid;
+      grid-template-columns:1fr 1fr;
+      gap:10px;
+      font-size:14px;
     }
-    .status-bar {
-      margin-top: 4px;
-      font-size: 13px;
-      color: #7b6a63;
-      min-height: 18px;
+    @media(max-width:650px){
+      .info-grid{grid-template-columns:1fr;}
     }
-    .section-title {
-      font-size: 15px;
-      font-weight: 700;
-      margin: 14px 0 8px;
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      color: #3e2420;
+    .info-item{
+      padding:8px 10px;
+      border-radius:10px;
+      background:#fffaf3;
+      border:1px solid rgba(188,143,116,.3);
     }
-    .section-title span.icon-dot {
-      width: 8px;
-      height: 8px;
-      border-radius: 999px;
-      background: #bc8f74;
-      display: inline-block;
+    .info-label{
+      font-size:12px;
+      color:var(--muted);
+      margin-bottom:2px;
     }
-    .info-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-      gap: 8px 12px;
-      margin-bottom: 6px;
+    .info-value{
+      font-size:14px;
+      font-weight:600;
+      color:var(--brown);
     }
-    .info-item {
-      padding: 8px 10px;
-      border-radius: 10px;
-      background: #faf3ea;
-      border: 1px solid #e4d6c8;
+
+    .progress-wrap{
+      margin-top:8px;
     }
-    .info-label {
-      font-size: 11px;
-      color: #7b6a63;
-      margin-bottom: 3px;
+    .progress-label{
+      display:flex;
+      justify-content:space-between;
+      font-size:13px;
+      color:var(--muted);
+      margin-bottom:4px;
     }
-    .info-value {
-      font-size: 13px;
-      font-weight: 600;
-      color: #3e2420;
-      word-break: break-word;
+    .progress-bar{
+      position:relative;
+      width:100%;
+      height:10px;
+      border-radius:999px;
+      background:#f3f4f6;
+      overflow:hidden;
     }
-    .car-box {
-      margin-top: 8px;
-      border-radius: 12px;
-      background: linear-gradient(135deg, #3e2420 0%, #5b4035 45%, #bc8f74 100%);
-      padding: 12px 14px;
-      color: #fff;
-      display: flex;
-      flex-direction: column;
-      gap: 3px;
+    .progress-bar-inner{
+      position:absolute;
+      inset:0;
+      width:0;
+      border-radius:999px;
+      background:linear-gradient(90deg,#bc8f74,#3e2420);
+      transition:width .35s ease-out;
     }
-    .car-main {
-      font-size: 14px;
-      font-weight: 700;
+    .stage-list{
+      margin-top:10px;
+      display:flex;
+      flex-direction:column;
+      gap:6px;
     }
-    .car-meta {
-      font-size: 12px;
-      opacity: 0.9;
+    .stage-row{
+      display:flex;
+      align-items:flex-start;
+      gap:8px;
+      padding:7px 9px;
+      border-radius:10px;
+      background:#f9fafb;
+      border:1px solid #e5e7eb;
+      font-size:13px;
     }
-    .timeline {
-      margin-top: 10px;
-      padding-top: 8px;
-      border-top: 1px solid #e5d6c7;
+    .stage-row.done{
+      background:#ecfdf5;
+      border-color:#22c55e;
     }
-    .timeline-title {
-      font-size: 14px;
-      font-weight: 700;
-      margin-bottom: 6px;
+    .stage-status{
+      width:18px;
+      height:18px;
+      border-radius:999px;
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      font-size:11px;
+      flex-shrink:0;
+      background:#e5e7eb;
+      color:#374151;
     }
-    .timeline-steps {
-      list-style: none;
-      padding: 0;
-      margin: 0;
+    .stage-row.done .stage-status{
+      background:#22c55e;
+      color:#fff;
     }
-    .timeline-step {
-      display: flex;
-      align-items: flex-start;
-      gap: 10px;
-      padding: 8px 0;
+    .stage-title{
+      color:var(--brown);
+      margin-bottom:2px;
     }
-    .timeline-step:not(:last-child) {
-      border-bottom: 1px dashed #e0d0c2;
-    }
-    .step-icon {
-      width: 18px;
-      height: 18px;
-      border-radius: 999px;
-      border: 2px solid #bc8f74;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 11px;
-      flex-shrink: 0;
-    }
-    .step-icon.done {
-      background: #16a34a;
-      border-color: #16a34a;
-      color: #fff;
-    }
-    .step-body {
-      flex: 1;
-    }
-    .step-title {
-      font-size: 13px;
-      font-weight: 600;
-      margin-bottom: 2px;
-    }
-    .step-sub {
-      font-size: 11px;
-      color: #7b6a63;
-    }
-    .empty-state {
-      padding: 14px 10px 6px;
-      font-size: 13px;
-      color: #7b6a63;
-    }
-    .status-summary {
-      font-size: 12px;
-      color: #7b6a63;
-      margin-top: 4px;
-      margin-bottom: 8px;
-      line-height: 1.6;
-    }
-    .status-summary strong {
-      color: #3e2420;
-    }
-    .progress-wrapper {
-      margin: 4px 0 10px;
-    }
-    .progress-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      font-size: 12px;
-      color: #5b4035;
-      margin-bottom: 4px;
-    }
-    .progress-percent-strong {
-      font-weight: 700;
-    }
-    .progress-bar {
-      width: 100%;
-      height: 8px;
-      border-radius: 999px;
-      background: #f0e3d6;
-      overflow: hidden;
-    }
-    .progress-fill {
-      height: 100%;
-      border-radius: 999px;
-      background: linear-gradient(90deg, #bc8f74, #3e2420);
-      width: 0%;
-      transition: width 0.3s ease;
-    }
-    @media (max-width: 480px) {
-      .card { padding: 16px 14px 20px; }
-      .brand-text-title { font-size: 16px; }
-      .search-section { padding: 10px 10px; }
+    .stage-time{
+      color:var(--muted);
+      font-size:11px;
     }
   </style>
 </head>
 <body>
-  <div class="page">
-    <div class="card">
-      <div class="brand">
-        <div class="brand-mark">★</div>
+  <div class="topbar">
+    <div class="topbar-title">تتبع طلبك برقم الهيكل – مجموعة محمد بن ذعار العجمي للسيارات</div>
+  </div>
+
+  <div class="wrap">
+    <!-- بحث برقم الهيكل -->
+    <div class="card" id="searchCard">
+      <h3 class="title">
+        <span class="icon">🔍</span>
+        تتبع الطلب
+      </h3>
+      <div class="row">
         <div>
-          <div class="brand-text-title">تتبع طلبك</div>
-          <div class="brand-text-sub">مع محمد بن ذعار العجمي للسيارات… أنت نجم الطريق ✨</div>
+          <label>رقم الهيكل (VIN)</label>
+          <input id="vinInput" placeholder="اكتب رقم الهيكل بالكامل هنا" />
+        </div>
+        <div style="display:flex;align-items:flex-end;justify-content:flex-start;">
+          <button class="btn" id="searchBtn">بحث</button>
+        </div>
+      </div>
+      <div id="searchMsg" class="muted" style="margin-top:6px;">
+        اكتب رقم الهيكل كما هو موضح في عقد الشراء أو استمارة السيارة.
+      </div>
+    </div>
+
+    <!-- بيانات الطلب -->
+    <div class="card" id="orderInfoCard" style="display:none;">
+      <h3 class="title">
+        <span class="icon">📄</span>
+        بيانات الطلب
+      </h3>
+      <div class="info-grid">
+        <div class="info-item">
+          <div class="info-label">رقم الطلب</div>
+          <div class="info-value" id="orderNoEl">—</div>
+        </div>
+        <div class="info-item">
+          <div class="info-label">اسم العميل</div>
+          <div class="info-value" id="customerNameEl">—</div>
+        </div>
+        <div class="info-item">
+          <div class="info-label">الفرع</div>
+          <div class="info-value" id="branchEl">—</div>
+        </div>
+        <div class="info-item">
+          <div class="info-label">إجمالي قيمة الطلب (شامل الضريبة)</div>
+          <div class="info-value" id="orderTotalEl">—</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- بيانات السيارة -->
+    <div class="card" id="carInfoCard" style="display:none;">
+      <h3 class="title">
+        <span class="icon">🚗</span>
+        بيانات السيارة
+      </h3>
+      <div class="info-grid">
+        <div class="info-item">
+          <div class="info-label">اسم السيارة</div>
+          <div class="info-value" id="carNameEl">—</div>
+        </div>
+        <div class="info-item">
+          <div class="info-label">رقم الهيكل</div>
+          <div class="info-value" id="vinEl">—</div>
+        </div>
+        <div class="info-item">
+          <div class="info-label">اللون الخارجي</div>
+          <div class="info-value" id="extColorEl">—</div>
+        </div>
+        <div class="info-item">
+          <div class="info-label">اللون الداخلي</div>
+          <div class="info-value" id="intColorEl">—</div>
+        </div>
+        <div class="info-item">
+          <div class="info-label">الإجمالي قبل الضريبة</div>
+          <div class="info-value" id="subtotalEl">—</div>
+        </div>
+        <div class="info-item">
+          <div class="info-label">قيمة الضريبة (ضريبة القيمة المضافة)</div>
+          <div class="info-value" id="vatValueEl">—</div>
+        </div>
+        <div class="info-item">
+          <div class="info-label">الإجمالي شامل الضريبة</div>
+          <div class="info-value" id="totalInclEl">—</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- مراحل التتبع -->
+    <div class="card" id="stagesCard" style="display:none;">
+      <h3 class="title">
+        <span class="icon">🚦</span>
+        حالة تتبع الطلب
+      </h3>
+
+      <div class="progress-wrap">
+        <div class="progress-label">
+          <span>نسبة اكتمال الطلب</span>
+          <span id="progressPercent">0%</span>
+        </div>
+        <div class="progress-bar">
+          <div class="progress-bar-inner" id="progressBarInner"></div>
         </div>
       </div>
 
-      <div class="search-section">
-        <div><label for="vinInput">اكتب رقم الهيكل (الشاصي):</label></div>
-        <div class="search-input-wrap">
-          <input id="vinInput" type="text" placeholder="مثال: KMHXXXXXXXXXXXXX" />
-          <button id="searchBtn" class="btn btn-primary">🔍 تتبع</button>
-        </div>
-        <div class="status-bar" id="statusBar"></div>
-      </div>
+      <div class="muted" id="currentStageLabel" style="margin-top:8px;">—</div>
 
-      <div id="resultContainer">
-        <div class="empty-state">
-          اكتب رقم الهيكل واضغط "تتبع" لعرض تفاصيل طلبك وحالة السيارة.
-        </div>
-      </div>
+      <div class="stage-list" id="stagesList"></div>
     </div>
   </div>
 
   <script type="module">
-    console.log("TRACK SIMPLE v1 – use orders/{lastOrderNo}/public/status");
-
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.11/firebase-app.js";
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
     import {
       getFirestore,
       doc,
-      getDoc
-    } from "https://www.gstatic.com/firebasejs/9.6.11/firebase-firestore.js";
+      getDoc,
+      collection,
+      query,
+      where,
+      getDocs
+    } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyCorGtT5_Z68jCtLODvqnv0Fb7QW5eR6MQ",
       authDomain: "mzj-tracking.firebaseapp.com",
       projectId: "mzj-tracking",
-      storageBucket: "mzj-tracking.appspot.com",
+      storageBucket: "mzj-tracking.firebasestorage.app",
       messagingSenderId: "655452217491",
       appId: "1:655452217491:web:9348d172c47bdd411fad66"
     };
 
+    const ERP_COLLECTION      = "erp_orders";
+    const ERP_VINS_COLLECTION = "erp_vins";
+    const TRACK_COLLECTION    = "orders";
+
+    const STAGES = [
+      "1) طلب الشراء – (خاص بالعميل)",
+      "2) إيصال الدفع – (خاص بالعميل)",
+      "3) التواصل من قِبل ممثلي خدمة العملاء بإرسال البطاقة الجركية – (خاص بالمعرض)",
+      "4) سداد رسوم التسجيل – (خاص بالعميل)",
+      "5) التأمين – شرط الربط على السيستم – (خاص بالعميل)",
+      "6) إستيفاء المبالغ المتبقية – (خاص بالعميل)",
+      "7) إصدار اللوحات أو نقل الملكية – (خاص بالمعرض)",
+      "8) إستيفاء الأوراق المتبقية – (خاص بالعميل)",
+      "9) جاهزية السيارة للإستلام – (خاص بالمعرض)",
+      "10) إتمام عملية التسليم بنجاح"
+    ];
+
     const app = initializeApp(firebaseConfig);
     const db  = getFirestore(app);
 
+    // UI
     const vinInput        = document.getElementById("vinInput");
     const searchBtn       = document.getElementById("searchBtn");
-    const statusBar       = document.getElementById("statusBar");
-    const resultContainer = document.getElementById("resultContainer");
+    const searchMsg       = document.getElementById("searchMsg");
 
-    function setStatus(msg, isError = false) {
-      statusBar.textContent = msg || "";
-      statusBar.style.color = isError ? "#b00020" : "#7b6a63";
+    const orderInfoCard   = document.getElementById("orderInfoCard");
+    const carInfoCard     = document.getElementById("carInfoCard");
+    const stagesCard      = document.getElementById("stagesCard");
+
+    const orderNoEl       = document.getElementById("orderNoEl");
+    const customerNameEl  = document.getElementById("customerNameEl");
+    const branchEl        = document.getElementById("branchEl");
+    const orderTotalEl    = document.getElementById("orderTotalEl");
+
+    const carNameEl       = document.getElementById("carNameEl");
+    const vinEl           = document.getElementById("vinEl");
+    const extColorEl      = document.getElementById("extColorEl");
+    const intColorEl      = document.getElementById("intColorEl");
+    const subtotalEl      = document.getElementById("subtotalEl");
+    const vatValueEl      = document.getElementById("vatValueEl");
+    const totalInclEl     = document.getElementById("totalInclEl");
+
+    const progressBarInner   = document.getElementById("progressBarInner");
+    const progressPercentEl  = document.getElementById("progressPercent");
+    const currentStageLabel  = document.getElementById("currentStageLabel");
+    const stagesList         = document.getElementById("stagesList");
+
+    // Helpers مأخوذة من صفحة المبيعات
+    const FIELD_SYNONYMS = {
+      CustomerName: ["CustomerName","customerName"],
+      Branch:       ["Branch","branch"],
+      OrderDate:    ["OrderDate","orderDate"],
+      DeliveryDate: ["DeliveryDate","deliveryDate"],
+      ItemModel:    ["ItemModel","itemModel","model"],
+      VIN:          ["VIN","vin"],
+      InteriorColor:["InteriorColor","interiorColor"],
+      ExteriorColor:["ExteriorColor","exteriorColor"],
+      SubtotalExclVAT: ["subtotalExclVAT","SubtotalExclVAT","subtotalExclVat"],
+      TotalInclVAT:    ["totalInclVAT","TotalInclVAT","totalInclVat"],
+      TaxValue:        ["taxValue","TaxValue"],
+      orderSubtotalExclVAT: ["orderSubtotalExclVAT","orderSubtotalExclVat","orderSubtotal"],
+      orderTotalInclVAT:    ["orderTotalInclVAT","orderTotalInclVat","orderTotal"]
+    };
+
+    function buildCandidates(name) {
+      const syns = FIELD_SYNONYMS[name] || [name];
+      const arr = [];
+      syns.forEach(s => {
+        if (!s) return;
+        arr.push(s);
+        arr.push(s.toLowerCase());
+        arr.push(s.toUpperCase());
+      });
+      return Array.from(new Set(arr));
     }
 
-    function renderEmptyState() {
-      resultContainer.innerHTML = `
-        <div class="empty-state">
-          اكتب رقم الهيكل واضغط "تتبع" لعرض تفاصيل طلبك وحالة السيارة.
-        </div>
-      `;
+    function lookupIn(obj, candidates) {
+      if (!obj) return undefined;
+      for (const key of candidates) {
+        if (Object.prototype.hasOwnProperty.call(obj, key) && obj[key] !== undefined) {
+          return obj[key];
+        }
+      }
+      return undefined;
     }
 
-    const STAGES = [
-      { title: "1) طلب الشراء. (خاص بالعميل)", sub: "يتم تقديم طلب شراء السيارة من خلال المعرض أو المنصة الإلكترونية." },
-      { title: "2) إيصال الدفع. (خاص بالعميل)", sub: "يتم إصدار أو استلام إيصال الدفع (تحويل / شبكة / كاش) وربطه بالطلب." },
-      { title: "3) التواصل من قِبل ممثلي خدمة العملاء بإرسال البطاقة الجركية. (خاص بالمعرض)", sub: "يتواصل معك فريق خدمة العملاء لاستكمال البيانات وإرسال البطاقة الجركية." },
-      { title: "4) سداد رسوم التسجيل. (خاص بالعميل)", sub: "تسديد رسوم التسجيل الرسمية المطلوبة لإتمام تسجيل المركبة." },
-      { title: "5) التأمين - شرط الربط على السيستم. (خاص بالعميل)", sub: "اختيار شركة التأمين وإصدار الوثيقة وربطها بنظام المرور." },
-      { title: "6) إستيفاء المبالغ المتبقية. (خاص بالعميل)", sub: "سداد أي مبالغ متبقية على قيمة السيارة بحسب الاتفاق." },
-      { title: "7) إصدار اللوحات أو نقل الملكية. (خاص بالمعرض)", sub: "إصدار لوحات جديدة للمركبة أو إتمام عملية نقل الملكية." },
-      { title: "8) إستيفاء الأوراق المتبقية. (خاص بالعميل)", sub: "استكمال وتسليم أي أوراق أو مستندات إضافية مطلوبة." },
-      { title: "9) جاهزية السيارة للإستلام. (خاص بالمعرض)", sub: "تجهيز السيارة للتسليم النهائي أو للشحن حسب اختيارك." },
-      { title: "10) إتمام عملية التسليم بنجاح.", sub: "تم تسليم السيارة لك بنجاح وإغلاق الطلب. نتمنى لك رحلة آمنة وسعيدة." }
-    ];
+    function getFieldFlex(fieldName, data) {
+      if (!data) return "-";
+      const candidates = buildCandidates(fieldName);
+      let v = lookupIn(data, candidates);
+      if (v !== undefined) return v;
+      v = lookupIn(data.item, candidates);
+      if (v !== undefined) return v;
+      v = lookupIn(data.totals, candidates);
+      if (v !== undefined) return v;
+      return "-";
+    }
 
     function parseAmountFront(value) {
       if (value === null || value === undefined || value === "-") return null;
       if (typeof value === "number") return value;
-      const s = String(value).replace(/[^\d.,\-]/g, "").replace(/,/g, "");
+      const s = String(value)
+        .replace(/[^\d.,\-]/g, "")
+        .replace(/,/g, "");
       const n = parseFloat(s);
       return isNaN(n) ? null : n;
     }
 
-    function formatAmount(val) {
-      if (val === null || val === undefined || val === "") return "-";
-      if (typeof val === "number") {
-        return val.toLocaleString("ar-SA", { minimumFractionDigits: 2 });
-      }
-      const n = parseAmountFront(val);
-      if (n === null) return val;
-      return n.toLocaleString("ar-SA", { minimumFractionDigits: 2 });
+    function formatCurrency(num) {
+      if (num === null || num === undefined) return "—";
+      return num.toLocaleString("ar-SA",{minimumFractionDigits:2, maximumFractionDigits:2}) + " ر.س";
     }
 
-    function buildTimelineHtml(statusData) {
-      const track        = statusData || {};
-      const currentStage = track.currentStage || 0;
-      const stagesMap    = track.stages || {};
-      const updatedAt    = track.updatedAt
-        ? new Date(track.updatedAt.toDate ? track.updatedAt.toDate() : track.updatedAt).toLocaleString("ar-SA")
-        : "";
+    function resetView() {
+      orderInfoCard.style.display = "none";
+      carInfoCard.style.display   = "none";
+      stagesCard.style.display    = "none";
+      orderNoEl.textContent      = "—";
+      customerNameEl.textContent = "—";
+      branchEl.textContent       = "—";
+      orderTotalEl.textContent   = "—";
+      carNameEl.textContent      = "—";
+      vinEl.textContent          = "—";
+      extColorEl.textContent     = "—";
+      intColorEl.textContent     = "—";
+      subtotalEl.textContent     = "—";
+      vatValueEl.textContent     = "—";
+      totalInclEl.textContent    = "—";
+      progressBarInner.style.width = "0%";
+      progressPercentEl.textContent = "0%";
+      currentStageLabel.textContent = "—";
+      stagesList.innerHTML = "";
+    }
 
-      let doneCount = 0;
-      for (let i = 1; i <= STAGES.length; i++) {
-        if (stagesMap["s" + i]) doneCount++;
-      }
-      const progress      = doneCount * (100 / STAGES.length);
-      const progressFixed = Math.round(progress);
+    async function findOrderRecordsByVin(vinRaw) {
+      const val = vinRaw.trim();
+      if (!val) return null;
 
-      let currentStageLabel;
-      if (currentStage > 0 && currentStage <= STAGES.length) {
-        currentStageLabel = STAGES[currentStage - 1].title;
-      } else if (currentStage === 0) {
-        currentStageLabel = "لم يبدأ بعد";
+      const colRef = collection(db, ERP_COLLECTION);
+      let mainDoc = null;
+
+      // 1) بحث مباشر على erp_orders.vin
+      let q1 = query(colRef, where("vin","==",val));
+      let snap = await getDocs(q1);
+      if (!snap.empty) {
+        mainDoc = snap.docs[0];
       } else {
-        currentStageLabel = "جارٍ التحديث";
+        const asNum = Number(val);
+        if (!Number.isNaN(asNum)) {
+          q1 = query(colRef, where("vin","==",asNum));
+          snap = await getDocs(q1);
+          if (!snap.empty) mainDoc = snap.docs[0];
+        }
       }
 
-      return `
-        <div class="status-summary">
-          <div>حالة السيارة الحالية: <strong>${currentStageLabel}</strong></div>
-          <div>آخر تحديث للحالة: <span>${updatedAt || "-"}</span></div>
-        </div>
-        <div class="progress-wrapper">
-          <div class="progress-header">
-            <span>نسبة اكتمال الطلب</span>
-            <span class="progress-percent-strong">${progressFixed}%</span>
-          </div>
-          <div class="progress-bar">
-            <div class="progress-fill" style="width:${progressFixed}%;"></div>
-          </div>
-        </div>
-        <div class="timeline">
-          <div class="timeline-title">مراحل طلبك من أول حجز حتى استلام السيارة</div>
-          <ul class="timeline-steps">
-            ${STAGES.map((step, idx) => {
-              const stepIndex = idx + 1;
-              const doneTs    = stagesMap["s" + stepIndex];
-              const isDone    = !!doneTs;
-              const tsLabel   = doneTs
-                ? new Date(doneTs.toDate ? doneTs.toDate() : doneTs).toLocaleString("ar-SA")
-                : "";
-              return `
-                <li class="timeline-step">
-                  <div class="step-icon ${isDone ? "done" : ""}">
-                    ${isDone ? "✓" : stepIndex}
-                  </div>
-                  <div class="step-body">
-                    <div class="step-title">${step.title}</div>
-                    <div class="step-sub">
-                      ${step.sub}
-                      ${tsLabel ? " — <span>تم في: ${tsLabel}</span>" : ""}
-                    </div>
-                  </div>
-                </li>
-              `;
-            }).join("")}
-          </ul>
-        </div>
-      `;
+      // 2) لو ما لاقيناه، نستخدم erp_vins index
+      if (!mainDoc) {
+        try {
+          const vinRef = doc(db, ERP_VINS_COLLECTION, val);
+          const vinSnap = await getDoc(vinRef);
+          if (vinSnap.exists()) {
+            const vData = vinSnap.data();
+            const ordNo = vData.lastOrderNo || vData.orderNo || vData.OrderNo || null;
+            if (ordNo) {
+              const ordRef = doc(db, ERP_COLLECTION, ordNo);
+              const ordSnap = await getDoc(ordRef);
+              if (ordSnap.exists()) {
+                mainDoc = ordSnap;
+              }
+            }
+          }
+        } catch (e) {
+          console.error("VIN lookup via erp_vins failed", e);
+        }
+      }
+
+      if (!mainDoc) return null;
+
+      const mainData = mainDoc.data();
+      const orderNo = mainData.orderNo || mainData.OrderNo || mainDoc.id;
+
+      // نجيب كل الأسطر لهذا الطلب
+      const qAll = query(colRef, where("orderNo","==",orderNo));
+      const allSnap = await getDocs(qAll);
+      const records = !allSnap.empty ? allSnap.docs.map(d => d.data()) : [mainData];
+
+      return { orderNo, records };
     }
 
-    function renderSingleCar(vinData, statusData) {
-      const orderDocId   = vinData.lastOrderNo || vinData.orderNo || "";
-      const payload      = vinData.lastData || {};
-      const customerName = payload.customerName || "";
-      const branch       = payload.branch || "";
+    function fillOrderInfo(orderNo, records) {
+      const first = records[0] || {};
+      const customerName = getFieldFlex("CustomerName", first) || "—";
+      const branch       = getFieldFlex("Branch", first) || "—";
 
-      const item     = payload.item || {};
-      const carType  = item.type || "";
-      const carCat   = item.category || "";
-      const carModel = item.model || "";
-      const extColor = item.exteriorColor || item.extColor || "";
-      const intColor = item.interiorColor || item.intColor || "";
-      const dealer   = item.dealer || "";
-      const vin      = item.vin || "";
+      // إجمالي الطلب
+      let orderSubtotal = parseAmountFront(
+        first.orderSubtotalExclVAT ||
+        first.orderSubtotalExclVat ||
+        getFieldFlex("orderSubtotalExclVAT", first)
+      );
+      let orderTotal = parseAmountFront(
+        first.orderTotalInclVAT ||
+        first.orderTotalInclVat ||
+        getFieldFlex("orderTotalInclVAT", first)
+      );
 
-      const totals        = payload.totals || {};
-      const subtotalExcl  = totals.subtotalExclVAT || totals.SubtotalExclVAT || "";
-      const taxName       = totals.taxName || totals.TaxName || "";
-      const taxValue      = totals.taxValue || totals.TaxValue || "";
-      const totalInclVAT  = totals.orderTotalInclVAT || totals.totalInclVAT || totals.TotalInclVAT || "";
+      let totalSum = 0;
+      records.forEach(r => {
+        const t = parseAmountFront(
+          r.totalInclVAT ||
+          r.TotalInclVAT ||
+          getFieldFlex("TotalInclVAT", r)
+        );
+        if (t !== null) totalSum += t;
+      });
+      if (orderTotal === null && totalSum > 0) orderTotal = totalSum;
 
-      resultContainer.innerHTML = `
-        <div>
-          <div class="section-title"><span class="icon-dot"></span><span>بيانات الطلب</span></div>
-          <div class="info-grid">
-            <div class="info-item"><div class="info-label">رقم الطلب</div><div class="info-value">${orderDocId || "-"}</div></div>
-            <div class="info-item"><div class="info-label">اسم العميل</div><div class="info-value">${customerName || "-"}</div></div>
-            <div class="info-item"><div class="info-label">الفرع</div><div class="info-value">${branch || "-"}</div></div>
-            <div class="info-item">
-              <div class="info-label">إجمالي قيمة الطلب (شامل الضريبة)</div>
-              <div class="info-value">${totalInclVAT ? formatAmount(totalInclVAT) + " ر.س" : "-"}</div>
-            </div>
+      orderInfoCard.style.display = "";
+      orderNoEl.textContent      = orderNo || "—";
+      customerNameEl.textContent = customerName || "—";
+      branchEl.textContent       = branch || "—";
+      orderTotalEl.textContent   = orderTotal !== null ? formatCurrency(orderTotal) : "—";
+    }
+
+    function fillCarInfo(vin, records) {
+      const match = records.find(r =>
+        (getFieldFlex("VIN", r) || "").toString().trim() === vin.trim()
+      ) || records[0];
+
+      const carName   = getFieldFlex("ItemModel", match);
+      const extColor  = getFieldFlex("ExteriorColor", match);
+      const intColor  = getFieldFlex("InteriorColor", match);
+      const subtotal  = parseAmountFront(
+        match.subtotalExclVAT ||
+        match.SubtotalExclVAT ||
+        getFieldFlex("SubtotalExclVAT", match)
+      );
+      const taxValue  = parseAmountFront(
+        match.taxValue ||
+        match.TaxValue ||
+        getFieldFlex("TaxValue", match)
+      );
+      const totalIncl = parseAmountFront(
+        match.totalInclVAT ||
+        match.TotalInclVAT ||
+        getFieldFlex("TotalInclVAT", match)
+      );
+
+      carInfoCard.style.display = "";
+      carNameEl.textContent   = carName && carName !== "-" ? carName : "—";
+      vinEl.textContent       = vin || "—";
+      extColorEl.textContent  = extColor && extColor !== "-" ? extColor : "—";
+      intColorEl.textContent  = intColor && intColor !== "-" ? intColor : "—";
+      subtotalEl.textContent  = subtotal !== null ? formatCurrency(subtotal) : "—";
+      vatValueEl.textContent  = taxValue !== null ? formatCurrency(taxValue) : "—";
+      totalInclEl.textContent = totalIncl !== null ? formatCurrency(totalIncl) : "—";
+    }
+
+    function buildStagesUI(data) {
+      const stagesObj = data.stages || {};
+      let current     = data.currentStage || 0;
+
+      // نتأكد إن current على الأقل أعلى مرحلة منجزة
+      Object.keys(stagesObj).forEach(k => {
+        const m = k.match(/^s(\d+)$/);
+        if (!m) return;
+        const n = parseInt(m[1],10);
+        if (!isNaN(n) && n > current) current = n;
+      });
+
+      const totalStages = STAGES.length;
+      const pct = totalStages > 0 ? Math.round((current / totalStages) * 100) : 0;
+
+      progressBarInner.style.width   = pct + "%";
+      progressPercentEl.textContent  = pct + "%";
+
+      if (current > 0 && current <= totalStages) {
+        currentStageLabel.textContent = "آخر مرحلة تم تنفيذها: " + STAGES[current-1];
+      } else {
+        currentStageLabel.textContent = "لم يبدأ تنفيذ أي مرحلة حتى الآن.";
+      }
+
+      stagesList.innerHTML = "";
+      STAGES.forEach((label, idx) => {
+        const num = idx + 1;
+        const key = "s" + num;
+        const ts  = stagesObj[key];
+        const done = !!ts;
+        const tsStr = done
+          ? new Date(ts.toDate ? ts.toDate() : ts).toLocaleString("ar-SA")
+          : null;
+
+        const row = document.createElement("div");
+        row.className = "stage-row" + (done ? " done" : "");
+
+        row.innerHTML = `
+          <div class="stage-status">${done ? "✓" : "•"}</div>
+          <div>
+            <div class="stage-title">${label}</div>
+            <div class="stage-time">${tsStr ? ("تمت في: " + tsStr) : "لم تُنفّذ بعد"}</div>
           </div>
+        `;
+        stagesList.appendChild(row);
+      });
 
-          <div class="section-title"><span class="icon-dot"></span><span>بيانات السيارة</span></div>
-          <div class="car-box">
-            <div class="car-main">${carType || "-"} ${carCat || ""} ${carModel || ""}</div>
-            <div class="car-meta">رقم الهيكل: ${vin || "-"}</div>
-            <div class="car-meta">اللون الخارجي: ${extColor || "-"} – اللون الداخلي: ${intColor || "-"}</div>
-            <div class="car-meta">الوكيل: ${dealer || "-"}</div>
-            <div class="car-meta">الإجمالي قبل الضريبة: ${subtotalExcl || "-"}</div>
-            <div class="car-meta">قيمة الضريبة${taxName ? " (" + taxName + ")" : ""}: ${taxValue || "-"}</div>
-            <div class="car-meta">الإجمالي شامل الضريبة: ${totalInclVAT ? formatAmount(totalInclVAT) + " ر.س" : "-"}</div>
-          </div>
+      stagesCard.style.display = "";
+    }
 
-          <div class="section-title"><span class="icon-dot"></span><span>حالة الطلب</span></div>
-          <div id="timelineArea">
-            ${buildTimelineHtml(statusData || {})}
-          </div>
-        </div>
-      `;
+    async function loadTrackingForVin(orderNo, vin) {
+      const vinClean = vin.trim();
+      const docId = orderNo + "_VIN_" + vinClean;
+      // نقرأ من public/status أولاً
+      let statusSnap = await getDoc(doc(db, TRACK_COLLECTION, docId, "public", "status"));
+      if (!statusSnap.exists()) {
+        statusSnap = await getDoc(doc(db, TRACK_COLLECTION, docId));
+      }
+      if (!statusSnap.exists()) {
+        // لا توجد مراحل بعد
+        buildStagesUI({ currentStage: 0, stages: {} });
+      } else {
+        buildStagesUI(statusSnap.data() || {});
+      }
     }
 
     async function handleSearch() {
-      const rawVin = (vinInput.value || "").trim();
-      if (!rawVin) {
-        setStatus("من فضلك أدخل رقم الهيكل أولاً.", true);
-        renderEmptyState();
+      resetView();
+      searchMsg.classList.remove("ok","err");
+      searchMsg.textContent = "";
+
+      const vinRaw = vinInput.value.trim();
+      if (!vinRaw) {
+        searchMsg.classList.add("err");
+        searchMsg.textContent = "اكتب رقم الهيكل أولاً.";
         return;
       }
 
-      setStatus("جاري البحث عن الطلب المرتبط بهذا الرقم…");
-
+      searchMsg.textContent = "جاري البحث عن الطلب المرتبط بهذا الهيكل...";
       try {
-        // 1) دكومنِت رقم الشاصي
-        const vinDocRef = doc(db, "erp_vins", rawVin);
-        const vinSnap   = await getDoc(vinDocRef);
-
-        if (!vinSnap.exists()) {
-          setStatus("لم يتم العثور على طلب مرتبط بهذا رقم الهيكل. تأكد من الرقم وحاول مرة أخرى.", true);
-          renderEmptyState();
+        const found = await findOrderRecordsByVin(vinRaw);
+        if (!found) {
+          searchMsg.classList.add("err");
+          searchMsg.textContent = "لا يوجد طلب مرتبط بهذا رقم الهيكل. تأكد من إدخال الرقم بشكل صحيح.";
           return;
         }
 
-        const vinData    = vinSnap.data() || {};
-        const orderDocId = vinData.lastOrderNo || vinData.orderNo || "";
+        const { orderNo, records } = found;
 
-        // 2) حالة الطلب من orders/{orderDocId}/public/status
-        let statusData = null;
-        if (orderDocId) {
-          try {
-            const statusRef  = doc(db, "orders", orderDocId, "public", "status");
-            const statusSnap = await getDoc(statusRef);
-            if (statusSnap.exists()) {
-              statusData = statusSnap.data();
-            }
-          } catch (e) {
-            console.error("Error reading public/status:", e);
-          }
-        }
+        fillOrderInfo(orderNo, records);
+        fillCarInfo(vinRaw, records);
+        await loadTrackingForVin(orderNo, vinRaw);
 
-        // 3) عرض البيانات
-        renderSingleCar(vinData, statusData || {});
-        setStatus("تم العثور على الطلب. يتم عرض تفاصيل السيارة.");
-      } catch (err) {
-        console.error("Error fetching VIN:", err);
-        setStatus("حدث خطأ أثناء جلب البيانات. حاول مرة أخرى لاحقاً.", true);
-        renderEmptyState();
+        searchMsg.classList.remove("err");
+        searchMsg.classList.add("ok");
+        searchMsg.textContent = "تم العثور على الطلب وعرض تفاصيله.";
+      } catch (e) {
+        console.error(e);
+        searchMsg.classList.add("err");
+        searchMsg.textContent = "حدث خطأ أثناء جلب البيانات. حاول مرة أخرى لاحقاً.";
       }
     }
 
     searchBtn.addEventListener("click", handleSearch);
-    vinInput.addEventListener("keydown", e => {
-      if (e.key === "Enter") handleSearch();
+    vinInput.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") {
+        handleSearch();
+      }
     });
   </script>
 </body>
