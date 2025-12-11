@@ -1,4 +1,5 @@
 
+
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
@@ -457,30 +458,33 @@
     }
 
     // ====== تايم لاين + Progress Bar ======
+
     function buildTimelineHtml(statusData) {
       const track = statusData || {};
-      const currentStage = track.currentStage || 0;
       const stagesMap = track.stages || {};
       const updatedAt = track.updatedAt
         ? new Date(track.updatedAt.toDate ? track.updatedAt.toDate() : track.updatedAt).toLocaleString("ar-SA")
         : "";
 
-      // عدد الخطوات المنتهية
-      let doneCount = 0;
+      // عدد الخطوات المنتهية (بناءً على وجود ختم فعلي لكل مرحلة)
+      const doneIndices = [];
       for (let i = 1; i <= STAGES.length; i++) {
         const doneTs = stagesMap["s" + i];
-        if (currentStage >= i || doneTs) {
-          doneCount++;
+        if (doneTs) {
+          doneIndices.push(i);
         }
       }
+      const doneCount = doneIndices.length;
       const progress = Math.round((doneCount / STAGES.length) * 100);
 
-      const currentStageLabel =
-        currentStage > 0 && currentStage <= STAGES.length
-          ? STAGES[currentStage - 1].title
-          : currentStage === 0
-          ? "لم يبدأ بعد"
-          : "جارٍ التحديث";
+      let currentStageLabel;
+      if (doneCount === 0) {
+        currentStageLabel = "لم يبدأ بعد";
+      } else if (doneCount >= STAGES.length) {
+        currentStageLabel = "تم إتمام جميع المراحل";
+      } else {
+        currentStageLabel = "تم تنفيذ " + doneCount + " من " + STAGES.length + " مراحل";
+      }
 
       return `
         <div class="status-summary">
@@ -502,7 +506,7 @@
             ${STAGES.map((step, idx) => {
               const stepIndex = idx + 1;
               const doneTs = stagesMap["s" + stepIndex];
-              const isDone = currentStage >= stepIndex || !!doneTs;
+              const isDone = !!doneTs;
               const tsLabel = doneTs
                 ? new Date(doneTs.toDate ? doneTs.toDate() : doneTs).toLocaleString("ar-SA")
                 : "";
@@ -526,7 +530,6 @@
       `;
     }
 
-    // ====== عرض سيارة واحدة (Fallback) ======
     function renderSingleCar(vinData, statusData) {
       const lastOrderNo = vinData.lastOrderNo || "";
       const payload     = vinData.lastData || {};
@@ -632,6 +635,7 @@
         timelineArea.innerHTML = buildTimelineHtml(statusData || {});
       }
     }
+
 
     function renderMultiResult(orderInfo, cars, activeIndex) {
       if (!cars || !cars.length) {
@@ -757,7 +761,7 @@
       });
     }
 
-    // ========= 3) حدث البحث =========
+
     async function handleSearch() {
       const rawVin = (vinInput.value || "").trim();
       if (!rawVin) {
@@ -783,50 +787,18 @@
         const orderBase = vinData.lastOrderNo || vinData.orderNo || "";
         const itemNoForVin = vinData.lastItemNo || vinData.itemNo || 1;
 
-        // 2) نجيب حالة هذا الـ VIN / السيارة الحالية من orders
+        // 2) نجيب حالة هذا الـ VIN / السيارة الحالية من orders/{orderBase}_{itemNo}/public/status فقط
         let vinStatus = null;
-        let fallbackOrderStatus = null;
-
         if (orderBase) {
-          // أولا: الهيكل الجديد – doc = orders/{orderBase}_{itemNo}/public/status
           try {
             const newDocId = `${orderBase}_${itemNoForVin}`;
             const newStatusRef = doc(db, "orders", newDocId, "public", "status");
             const newStatusSnap = await getDoc(newStatusRef);
             if (newStatusSnap.exists()) {
               vinStatus = newStatusSnap.data();
-              fallbackOrderStatus = vinStatus;
             }
           } catch (eNew) {
-            console.error("Error fetching new-structure status:", eNew);
-          }
-
-          // ثانياً: الشكل القديم – orders/{orderBase}/public/{rawVin}
-          if (!vinStatus) {
-            try {
-              const vinStatusRef = doc(db, "orders", orderBase, "public", rawVin);
-              const vinStatusSnap = await getDoc(vinStatusRef);
-              if (vinStatusSnap.exists()) {
-                vinStatus = vinStatusSnap.data();
-                fallbackOrderStatus = fallbackOrderStatus || vinStatus;
-              }
-            } catch (eOldVin) {
-              console.error("Error fetching old VIN-based status:", eOldVin);
-            }
-          }
-
-          // ثالثاً: fallback قديم جداً – orders/{orderBase}/public/status
-          if (!vinStatus) {
-            try {
-              const fallbackRef = doc(db, "orders", orderBase, "public", "status");
-              const fallbackSnap = await getDoc(fallbackRef);
-              if (fallbackSnap.exists()) {
-                fallbackOrderStatus = fallbackSnap.data();
-                vinStatus = vinStatus || fallbackOrderStatus;
-              }
-            } catch (eFallback) {
-              console.error("Error fetching legacy fallback status:", eFallback);
-            }
+            console.error("Error fetching status for VIN:", eNew);
           }
         }
 
@@ -850,13 +822,14 @@
                   branch: payloadFallback.branch || ""
                 };
 
-                const cars = vinDocs.map((row) => {
+                const cars = [];
+                for (const row of vinDocs) {
                   const data = row.data || row;
                   const payload = data.lastData || {};
                   const item    = payload.item || {};
                   const totals  = payload.totals || {};
 
-                  const vin = row.id || data.vin || item.vin || "";
+                  const carVin = row.id || data.vin || item.vin || "";
                   const itemNo = data.lastItemNo || payload.itemNo || 1;
 
                   const carType     = item.type     || "";
@@ -887,8 +860,23 @@
                     totals.TaxValue ??
                     "";
 
-                  return {
-                    vin,
+                  // حالة هذا الهيكل من orders/{orderBase}_{itemNo}/public/status فقط
+                  let statusData = null;
+                  if (orderBase) {
+                    try {
+                      const carDocId = `${orderBase}_${itemNo || 1}`;
+                      const carStatusRef = doc(db, "orders", carDocId, "public", "status");
+                      const carStatusSnap = await getDoc(carStatusRef);
+                      if (carStatusSnap.exists()) {
+                        statusData = carStatusSnap.data();
+                      }
+                    } catch (csErr) {
+                      console.error("Error fetching car status:", csErr);
+                    }
+                  }
+
+                  cars.push({
+                    vin: carVin,
                     itemNo,
                     label: [carType, carCategory, carModel].filter(Boolean).join(" "),
                     carType,
@@ -901,9 +889,9 @@
                     total,
                     taxName,
                     taxValue,
-                    statusData: null
-                  };
-                });
+                    statusData
+                  });
+                }
 
                 let activeIndex = 0;
                 if (rawVin) {
@@ -912,32 +900,6 @@
                     (c) => (c.vin || "").replace(/\s+/g, "").toLowerCase() === normalized
                   );
                   if (idx >= 0) activeIndex = idx;
-                }
-
-                // نجلب حالة كل سيارة من orders/{orderBase}_{itemNo}/public/status
-                for (const car of cars) {
-                  const carItemNo = car.itemNo || 1;
-                  if (orderBase) {
-                    try {
-                      const carDocId = `${orderBase}_${carItemNo}`;
-                      const carStatusRef = doc(db, "orders", carDocId, "public", "status");
-                      const carStatusSnap = await getDoc(carStatusRef);
-                      if (carStatusSnap.exists()) {
-                        car.statusData = carStatusSnap.data();
-                      } else if (fallbackOrderStatus && car.vin === rawVin) {
-                        car.statusData = fallbackOrderStatus;
-                      } else if (vinStatus && car.vin === rawVin) {
-                        car.statusData = vinStatus;
-                      } else {
-                        car.statusData = null;
-                      }
-                    } catch (csErr) {
-                      console.error("Error fetching car status:", csErr);
-                      car.statusData = fallbackOrderStatus || vinStatus || null;
-                    }
-                  } else {
-                    car.statusData = fallbackOrderStatus || vinStatus || null;
-                  }
                 }
 
                 renderMultiResult(orderInfo, cars, activeIndex);
@@ -963,13 +925,3 @@
         renderEmptyState();
       }
     }
-
-    searchBtn.addEventListener("click", handleSearch);
-    vinInput.addEventListener("keydown", (e) => {
-      if (e.key === "Enter") {
-        handleSearch();
-      }
-    });
-  </script>
-</body>
-</html>
