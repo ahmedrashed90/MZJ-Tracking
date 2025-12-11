@@ -1,7 +1,3 @@
-
-
-
-
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
@@ -388,6 +384,7 @@
           <tr>
             <th>اسم العميل</th>
             <th>الرقم الضريبي للعميل</th>
+            <th>رقم جوال العميل</th>
             <th>الفرع</th>
             <th>تاريخ الطلب</th>
             <th>تاريخ التسليم</th>
@@ -427,6 +424,7 @@
           <tr>
             <th>رقم الطلب</th>
             <th>اسم العميل</th>
+            <th>رقم الجوال</th>
             <th>الفرع</th>
             <th>رقم الهيكل VIN</th>
             <th>تاريخ التسليم</th>
@@ -488,7 +486,7 @@
     const TRACK_COLLECTION    = "orders";
 
     const ERP_FIELDS = [
-      "CustomerName","CustomerVAT","Branch","OrderDate","DeliveryDate","SalesPerson",
+      "CustomerName","CustomerVAT","CustomerPhone","Branch","OrderDate","DeliveryDate","SalesPerson",
       "ItemNo","ItemType","ItemCategory","ItemModel","VIN","InteriorColor","ExteriorColor","Dealer",
       "Qty","UnitPrice","ItemValue","TaxCode","TaxName","TaxRate","TaxValue","SubtotalExclVAT","TotalInclVAT"
     ];
@@ -556,6 +554,7 @@
     const FIELD_SYNONYMS = {
       CustomerName: ["CustomerName","customerName"],
       CustomerVAT:  ["CustomerVAT","customerVat","customerVAT"],
+      CustomerPhone:["CustomerPhone","customerPhone","customer_phone","contact_mobile"],
       Branch:       ["Branch","branch"],
       OrderDate:    ["OrderDate","orderDate"],
       DeliveryDate: ["DeliveryDate","deliveryDate"],
@@ -1047,7 +1046,7 @@
         buildStagesUI(trackData);
       }catch(e){
         console.error(e);
-        buildStagesUI({});
+        buildStagesUI({ });
       }
     }
 
@@ -1212,12 +1211,12 @@
     // ---- تبويب كل الطلبات ----
 
     async function loadOrdersList() {
-      ordersListBody.innerHTML = "<tr><td class='muted' colspan='6'>جاري تحميل الطلبات...</td></tr>";
+      ordersListBody.innerHTML = "<tr><td class='muted' colspan='7'>جاري تحميل الطلبات...</td></tr>";
       try {
         const q = query(collection(db, ERP_COLLECTION), limit(100));
         const snap = await getDocs(q);
         if (snap.empty) {
-          ordersListBody.innerHTML = "<tr><td class='muted' colspan='6'>لا توجد طلبات مسجلة حالياً.</td></tr>";
+          ordersListBody.innerHTML = "<tr><td class='muted' colspan='7'>لا توجد طلبات مسجلة حالياً.</td></tr>";
           return;
         }
         const rows = [];
@@ -1226,6 +1225,7 @@
           const orderNo = d.orderNo || d.OrderNo || docSnap.id;
           const vinVal  = getFieldFlex("VIN", d) || "";
           const customerName = getFieldFlex("CustomerName", d) || "";
+          const customerPhone = getFieldFlex("CustomerPhone", d) || "";
           const branch = getFieldFlex("Branch", d) || "";
           const deliveryDate = getFieldFlex("DeliveryDate", d) || "";
 
@@ -1248,7 +1248,7 @@
           } catch (e) {
             console.error("track read error", e);
           }
-          rows.push({ orderNo, vinVal, customerName, branch, deliveryDate, statusLabel });
+          rows.push({ orderNo, vinVal, customerName, customerPhone, branch, deliveryDate, statusLabel });
         }
         ordersListBody.innerHTML = "";
         rows.forEach(r => {
@@ -1256,6 +1256,7 @@
           tr.innerHTML = `
             <td><button class="link-btn" data-order="${r.orderNo}">${r.orderNo}</button></td>
             <td>${r.customerName || "—"}</td>
+            <td>${r.customerPhone || "—"}</td>
             <td>${r.branch || "—"}</td>
             <td>${r.vinVal || "—"}</td>
             <td>${r.deliveryDate || "—"}</td>
@@ -1265,7 +1266,7 @@
         });
       } catch (err) {
         console.error(err);
-        ordersListBody.innerHTML = "<tr><td class='err' colspan='6'>تعذر تحميل قائمة الطلبات.</td></tr>";
+        ordersListBody.innerHTML = "<tr><td class='err' colspan='7'>تعذر تحميل قائمة الطلبات.</td></tr>";
       }
     }
 
