@@ -69,10 +69,11 @@ module.exports = async (req, res) => {
           branch: data.branch || "",
           customerName: data.customerName || "",
           customerVat: data.customerVat || "",
+          customerPhone: data.customerPhone || "", // 👈 رقم جوال العميل
           createdAt: nowIso,
           source: "erp",
-          // تقدر تزود هنا أي حقول تحبها للنظام:
-          // paymentType, customerPhone, status, notes, ...
+          // ممكن تزود بعدها:
+          // paymentType, status, notes, ...
         },
         { merge: true }
       );
