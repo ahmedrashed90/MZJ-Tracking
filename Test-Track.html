@@ -435,7 +435,7 @@
       }
     ];
 
-    // تحويل "ر.س 95,450.00" -> 95450
+    // ====== Helpers أرقام ======
     function parseAmountFront(value) {
       if (value === null || value === undefined || value === "-") return null;
       if (typeof value === "number") return value;
@@ -456,7 +456,7 @@
       return n.toLocaleString("ar-SA", { minimumFractionDigits: 2 });
     }
 
-    // ====== تايم لاين + Progress Bar ======
+    // ====== Timeline + Progress ======
     function buildTimelineHtml(statusData) {
       const track     = statusData || {};
       const stagesMap = track.stages || {};
@@ -524,7 +524,6 @@
       `;
     }
 
-    // ====== Multi–car UI ======
     function updateStatusUIForCar(statusData) {
       const timelineArea = resultContainer.querySelector("#timelineArea");
       if (timelineArea) {
@@ -532,6 +531,7 @@
       }
     }
 
+    // ====== Multi-car UI ======
     function renderMultiResult(orderInfo, cars, activeIndex) {
       if (!cars || !cars.length) {
         renderEmptyState();
@@ -654,65 +654,72 @@
       });
     }
 
-    // ====== تحويل سجلات erp_orders إلى Order + Cars ======
-    function buildOrderFromErpRecords(erpRecords) {
-      const first = erpRecords[0] || {};
+    // ====== Build order & cars من erp_vins ======
+    function buildOrderFromVinDocs(vinDocs, fallbackOrderNo, rawOrder) {
+      const firstDoc = vinDocs[0];
+      const d0       = firstDoc.data || firstDoc;
+      const payload0 = d0.lastData || {};
+
+      const orderNo = d0.lastOrderNo || payload0.orderNo || fallbackOrderNo || rawOrder || "";
 
       const orderInfo = {
-        orderNo: first.orderNo || first.OrderNo || "",
-        customerName: first.customerName || first.CustomerName || "",
-        branch: first.branch || first.Branch || ""
+        orderNo,
+        customerName: payload0.customerName || "",
+        branch: payload0.branch || ""
       };
 
-      const cars = erpRecords.map((rec) => {
-        const item   = rec.item   || {};
-        const totals = rec.totals || {};
+      const cars = vinDocs.map((row) => {
+        const data    = row.data || row;
+        const payload = data.lastData || {};
+        const item    = payload.item || {};
+        const totals  = payload.totals || {};
 
         const vin =
-          item.vin || item.VIN ||
-          rec.vin  || rec.VIN  || "";
+          row.id ||
+          data.vin ||
+          item.vin ||
+          "";
 
         const itemNo =
-          rec.itemNo || rec.ItemNo ||
-          item.itemNo || item.ItemNo || 1;
+          data.lastItemNo ||
+          payload.itemNo ||
+          1;
 
-        const carType     = item.type     || rec.ItemType     || "";
-        const carCategory = item.category || rec.ItemCategory || "";
-        const carModel    = item.model    || rec.ItemModel    || "";
+        const carType     = item.type     || "";
+        const carCategory = item.category || "";
+        const carModel    = item.model    || "";
 
         const extColor =
-          item.exteriorColor || item.extColor || rec.ExteriorColor || "";
+          item.exteriorColor ||
+          item.extColor ||
+          "";
 
         const intColor =
-          item.interiorColor || item.intColor || rec.InteriorColor || "";
+          item.interiorColor ||
+          item.intColor ||
+          "";
 
         const dealer =
-          item.dealer || rec.dealer || rec.Dealer || "";
+          item.dealer ||
+          payload.dealer ||
+          "";
 
         const subtotal =
-          rec.subtotalExclVAT ??
-          rec.SubtotalExclVAT ??
           totals.subtotalExclVAT ??
           totals.SubtotalExclVAT ??
           "";
 
         const total =
-          rec.totalInclVAT ??
-          rec.TotalInclVAT ??
           totals.totalInclVAT ??
           totals.TotalInclVAT ??
           "";
 
         const taxName =
-          rec.taxName ??
-          rec.TaxName ??
           totals.taxName ??
           totals.TaxName ??
           "";
 
         const taxValue =
-          rec.taxValue ??
-          rec.TaxValue ??
           totals.taxValue ??
           totals.TaxValue ??
           "";
@@ -738,7 +745,36 @@
       return { orderInfo, cars };
     }
 
-    // ========= البحث برقم الطلب من erp_orders =========
+    // ====== Helpers: توليد أشكال مختلفة لرقم الطلب ======
+    function buildOrderCandidates(rawOrder) {
+      const cands = new Set();
+
+      const trimmed = rawOrder.trim();
+      if (!trimmed) return [];
+
+      cands.add(trimmed);
+
+      // رقم بدون أصفار بداية
+      const digitsOnly = trimmed.replace(/[^\d]/g, "");
+      if (digitsOnly) {
+        cands.add(digitsOnly);
+        cands.add(digitsOnly.replace(/^0+/, "") || "0");
+
+        // pad لأطوال شائعة
+        const t = digitsOnly.replace(/^0+/, "") || digitsOnly;
+        cands.add(t.padStart(5, "0"));
+        cands.add(t.padStart(6, "0"));
+
+        // Prefix محتمل SO-
+        cands.add("SO-" + t);
+        cands.add("SO-" + t.padStart(5, "0"));
+        cands.add("SO-" + t.padStart(6, "0"));
+      }
+
+      return Array.from(cands);
+    }
+
+    // ========= البحث برقم الطلب من erp_vins فقط =========
     async function handleSearch(orderFromParam = null) {
       const rawOrder = (orderFromParam || orderInput.value || "").trim();
 
@@ -751,33 +787,43 @@
       setStatus("جاري البحث عن الطلب المرتبط بهذا الرقم…");
 
       try {
-        const colRef = collection(db, "erp_orders");
+        const vinsCol = collection(db, "erp_vins");
 
-        // نحاول بـ orderNo
-        let erpRecords = [];
-        let qsnap = await getDocs(
-          query(colRef, where("orderNo", "==", rawOrder))
-        );
+        // نحاول على lastOrderNo بأكثر من شكل لقيمة الطلب
+        const candidates = buildOrderCandidates(rawOrder);
+        let vinDocs = [];
 
-        if (!qsnap.empty) {
-          erpRecords = qsnap.docs.map((d) => d.data());
-        } else {
-          // نحاول بـ OrderNo (Capital) احتياطًا
-          qsnap = await getDocs(
-            query(colRef, where("OrderNo", "==", rawOrder))
-          );
-          if (!qsnap.empty) {
-            erpRecords = qsnap.docs.map((d) => d.data());
+        if (candidates.length) {
+          // Firestore in: بحد أقصى 10 قيم في كل مرة
+          for (let i = 0; i < candidates.length && !vinDocs.length; i += 10) {
+            const slice = candidates.slice(i, i + 10);
+            const q = query(vinsCol, where("lastOrderNo", "in", slice));
+            const snap = await getDocs(q);
+            if (!snap.empty) {
+              vinDocs = snap.docs.map((d) => ({ id: d.id, data: d.data() }));
+            }
           }
         }
 
-        if (!erpRecords.length) {
+        // لو لسه فاضية: نحاول على orderNo (لو موجود في erp_vins)
+        if (!vinDocs.length) {
+          for (let i = 0; i < candidates.length && !vinDocs.length; i += 10) {
+            const slice = candidates.slice(i, i + 10);
+            const q2 = query(vinsCol, where("orderNo", "in", slice));
+            const snap2 = await getDocs(q2);
+            if (!snap2.empty) {
+              vinDocs = snap2.docs.map((d) => ({ id: d.id, data: d.data() }));
+            }
+          }
+        }
+
+        if (!vinDocs.length) {
           setStatus("لم يتم العثور على طلب بهذا الرقم. تأكد من رقم الطلب وحاول مرة أخرى.", true);
           renderEmptyState();
           return;
         }
 
-        const { orderInfo, cars } = buildOrderFromErpRecords(erpRecords);
+        const { orderInfo, cars } = buildOrderFromVinDocs(vinDocs, null, rawOrder);
 
         // نجيب حالة كل سيارة من orders/{orderNo}_{itemNo}/public/status
         for (const car of cars) {
@@ -797,7 +843,7 @@
         renderMultiResult(orderInfo, cars, 0);
         setStatus(`تم العثور على الطلب. هذا الطلب يحتوي على ${cars.length} سيارة.`);
       } catch (err) {
-        console.error("Error fetching by order number:", err);
+        console.error("Error fetching by order number via erp_vins:", err);
         setStatus("حدث خطأ أثناء جلب البيانات. حاول مرة أخرى لاحقاً.", true);
         renderEmptyState();
       }
