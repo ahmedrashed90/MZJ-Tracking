@@ -1,6 +1,7 @@
 
 
 
+
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
@@ -377,6 +378,7 @@
         </div>
         <select id="vinPicker"></select>
         <div class="hint">أي تحديث في مراحل تتبع الطلب سيكون لهذا رقم الهيكل فقط.</div>
+        <button id="trackLinkBtn" class="btn" type="button" style="margin-top:8px;width:100%;">رابط التتبع</button>
       </div>
 
       <div id="erpTotals" class="totals-box" style="display:none;"></div>
@@ -528,6 +530,7 @@
     const vinPickerBox = document.getElementById("vinPickerBox");
     const vinPicker    = document.getElementById("vinPicker");
     const vinCountChip = document.getElementById("vinCountChip");
+    const trackLinkBtn = document.getElementById("trackLinkBtn");
 
     const stagesList   = document.getElementById("stagesList");
     const stageMsg     = document.getElementById("stageMsg");
@@ -1298,6 +1301,31 @@
       activateTab("search");
       loadOrder();
     });
+
+    // زر توليد رابط التتبع
+    if (trackLinkBtn) {
+      trackLinkBtn.addEventListener("click", async () => {
+        if (!currentVin) {
+          alert("لم يتم اختيار رقم الهيكل.");
+          return;
+        }
+
+        const url = `https://mzj-tracking.vercel.app/Test-Track.html?vin=${encodeURIComponent(currentVin)}`;
+
+        // فتح الرابط في تبويب جديد
+        window.open(url, "_blank");
+
+        // نسخ الرابط إلى الحافظة
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          try {
+            await navigator.clipboard.writeText(url);
+            alert("تم نسخ رابط التتبع:\n" + url);
+          } catch (err) {
+            console.warn("لم يتم النسخ إلى الحافظة", err);
+          }
+        }
+      });
+    }
 
 
     // إدارة حالة تسجيل الدخول وتوزيع الواجهات
