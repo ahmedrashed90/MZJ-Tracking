@@ -1,5 +1,6 @@
 
 
+
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
@@ -817,11 +818,13 @@
     }
 
     // STAGES UI
+
     function buildStagesUI(orderData = {}) {
       stagesList.innerHTML = "";
       const stagesObj = orderData.stages || {};
-      const current   = orderData.currentStage || 0;
 
+      const doneKeys = Object.keys(stagesObj).filter(k => stagesObj[k]);
+      const doneCount = doneKeys.length;
       const allDone = STAGES.every((_, idx) => {
         const key = "s" + (idx + 1);
         return !!stagesObj[key];
@@ -855,23 +858,26 @@
         header.appendChild(meta);
 
         const actions = document.createElement("div");
-        const btn = document.createElement("button");
-        btn.className = "btn-outline";
-        btn.style.fontSize = "12px";
-        btn.textContent = "تم الانتهاء";
-        btn.disabled = !!tsStr || allDone;
-        btn.onclick = () => completeStage(num);
-        actions.appendChild(btn);
+
+        const btnDone = document.createElement("button");
+        btnDone.className = "btn-outline";
+        btnDone.style.fontSize = "12px";
+        btnDone.textContent = "تم الانتهاء";
+        btnDone.disabled = !!tsStr || allDone;
+        btnDone.onclick = () => completeStage(num);
+        actions.appendChild(btnDone);
+
+        const btnUndo = document.createElement("button");
+        btnUndo.className = "btn-outline";
+        btnUndo.style.fontSize = "12px";
+        btnUndo.style.marginRight = "6px";
+        btnUndo.textContent = "تراجع";
+        btnUndo.disabled = !tsStr;
+        btnUndo.onclick = () => revertStage(num);
+        actions.appendChild(btnUndo);
 
         wrap.appendChild(header);
         wrap.appendChild(actions);
-
-        if (current === num) {
-          const b = document.createElement("div");
-          b.className = "hint";
-          b.textContent = "هذه هي المرحلة الحالية للطلب.";
-          wrap.appendChild(b);
-        }
 
         stagesList.appendChild(wrap);
       });
@@ -880,10 +886,11 @@
         const info = document.createElement("div");
         info.className = "hint";
         info.style.marginTop = "8px";
-        info.textContent = "تم إكمال جميع المراحل لهذا رقم الهيكل، ولا يمكن تعديلها مرة أخرى.";
+        info.textContent = "تم إكمال جميع المراحل لهذا رقم الهيكل، ولا يمكن إضافة مراحل جديدة.";
         stagesList.appendChild(info);
       }
     }
+
 
     async function completeStage(num) {
       stageMsg.textContent = "";
@@ -896,31 +903,41 @@
         const docId = baseId + "_" + currentItemNo;
 
         const orderRef = doc(db, TRACK_COLLECTION, docId);
-        await updateDoc(orderRef, {
+        const snap = await getDoc(orderRef);
+        let stagesObj = {};
+        if (snap.exists()) {
+          const data = snap.data();
+          stagesObj = data.stages || {};
+        }
+
+        const key = "s" + num;
+        if (stagesObj[key]) {
+          stageMsg.innerHTML = "<span class='muted'>هذه المرحلة تم ختمها مسبقاً.</span>";
+          await loadTrackingForCurrentSelection();
+          return;
+        }
+
+        // احسب عدد المراحل المكتملة بعد إضافة هذه المرحلة
+        const doneKeys = Object.keys(stagesObj).filter(k => stagesObj[k]);
+        const doneCount = doneKeys.length + 1;
+
+        await setDoc(orderRef, {
           orderId: baseId,
           vin: currentVin || "",
           itemNo: currentItemNo || 1,
-          currentStage: num,
-          ["stages.s" + num]: serverTimestamp()
-        }).catch(async () => {
-          await setDoc(orderRef, {
-            orderId: baseId,
-            vin: currentVin || "",
-            itemNo: currentItemNo || 1,
-            currentStage: num,
-            ["stages.s" + num]: serverTimestamp()
-          }, { merge:true });
-        });
+          currentStage: doneCount,
+          stages: Object.assign({}, stagesObj, { [key]: serverTimestamp() })
+        }, { merge: true });
 
         const publicRef = doc(db, TRACK_COLLECTION, docId, "public", "status");
         await setDoc(publicRef, {
           orderId: baseId,
           vin: currentVin || "",
           itemNo: currentItemNo || 1,
-          currentStage: num,
-          ["stages.s" + num]: serverTimestamp(),
+          currentStage: doneCount,
+          stages: Object.assign({}, stagesObj, { [key]: serverTimestamp() }),
           updatedAt: serverTimestamp()
-        }, { merge:true });
+        }, { merge: true });
 
         await loadTrackingForCurrentSelection();
 
@@ -930,6 +947,7 @@
         stageMsg.innerHTML = "<span class='err'>حدث خطأ أثناء تحديث المرحلة.</span>";
       }
     }
+
 
     async function loadTrackingForCurrentSelection(){
       if (!currentOrderId || !currentItemNo) {
@@ -964,72 +982,18 @@
             updatedAt: serverTimestamp()
           }, {merge:true});
         }
+
+        const stagesObj = trackData.stages || {};
+        const doneKeys = Object.keys(stagesObj).filter(k => stagesObj[k]);
+        const doneCount = doneKeys.length;
+        trackData.currentStage = doneCount;
+
         buildStagesUI(trackData);
       }catch(e){
         console.error(e);
         buildStagesUI({});
       }
     }
-
-    // AUTH
-    loginBtn.onclick = async () => {
-      authMsg.textContent = "";
-      try{
-        const em = email.value.trim();
-        const pw = password.value;
-        if(!em || !pw){
-          authMsg.innerHTML = "<span class='err'>أدخل البريد وكلمة السر.</span>";
-          return;
-        }
-        await signInWithEmailAndPassword(auth, em, pw);
-        authMsg.innerHTML = "<span class='ok'>تم تسجيل الدخول.</span>";
-      }catch(e){
-        console.error(e);
-        authMsg.innerHTML = "<span class='err'>تعذر تسجيل الدخول. تأكد من البيانات أو الصلاحيات.</span>";
-      }
-    };
-
-    signupBtn.onclick = async () => {
-      authMsg.textContent = "";
-      try{
-        const em = email.value.trim();
-        const pw = password.value;
-        if(!em || !pw){
-          authMsg.innerHTML = "<span class='err'>أدخل البريد وكلمة السر لإنشاء الحساب.</span>";
-          return;
-        }
-        await createUserWithEmailAndPassword(auth, em, pw);
-        authMsg.innerHTML = "<span class='ok'>تم إنشاء المستخدم وتسجيل الدخول.</span>";
-      }catch(e){
-        console.error(e);
-        authMsg.innerHTML = "<span class='err'>تعذر إنشاء المستخدم. ربما ليس لديك صلاحية.</span>";
-      }
-    };
-
-    logoutBtn.onclick = async () => {
-      try{ await signOut(auth); }catch(e){ console.error(e); }
-    };
-
-    onAuthStateChanged(auth, (user)=>{
-      if(user){
-        whoami.textContent = "مسجّل: " + (user.email || "");
-        logoutBtn.style.display = "";
-        authCard.style.display  = "none";
-        tabsBar.style.display   = "flex";
-
-        // أول ما يدخل يفتح على تبويب "كل الطلبات"
-        activateTab("list");
-      }else{
-        whoami.textContent = "";
-        logoutBtn.style.display = "none";
-        authCard.style.display  = "";
-        orderCard.style.display = "none";
-        erpCard.style.display   = "none";
-        stagesCard.style.display= "none";
-        tabsBar.style.display   = "none";
-        ordersListCard.style.display = "none";
-      }
-    });
 
     async function findByVin(vinRaw) {
       const val = vinRaw.trim();
@@ -1190,6 +1154,7 @@
     });
 
     // ---- تبويب كل الطلبات ----
+
     async function loadOrdersList() {
       ordersListBody.innerHTML = "<tr><td class='muted' colspan='6'>جاري تحميل الطلبات...</td></tr>";
       try {
@@ -1213,9 +1178,15 @@
             const tSnap = await getDoc(doc(db, TRACK_COLLECTION, orderNo + "_1"));
             if (tSnap.exists()) {
               const t = tSnap.data();
-              const currentStage = t.currentStage || 0;
-              if (currentStage > 0 && currentStage <= STAGES.length) {
-                statusLabel = STAGES[currentStage - 1];
+              const stagesObj = t.stages || {};
+              const doneCount = Object.keys(stagesObj).filter(k => stagesObj[k]).length;
+
+              if (doneCount === 0) {
+                statusLabel = "لم يبدأ";
+              } else if (doneCount >= STAGES.length) {
+                statusLabel = "تم إتمام جميع المراحل";
+              } else {
+                statusLabel = "تم تنفيذ " + doneCount + " من " + STAGES.length + " مراحل";
               }
             }
           } catch (e) {
