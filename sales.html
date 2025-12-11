@@ -949,6 +949,65 @@
     }
 
 
+
+    async function revertStage(num) {
+      stageMsg.textContent = "";
+      if (!currentOrderId || !currentItemNo) {
+        stageMsg.innerHTML = "<span class='err'>اختر طلب ورقم هيكل أولاً قبل التراجع عن المرحلة.</span>";
+        return;
+      }
+      try {
+        const baseId = currentOrderId;
+        const docId = baseId + "_" + currentItemNo;
+
+        const orderRef = doc(db, TRACK_COLLECTION, docId);
+        const snap = await getDoc(orderRef);
+        if (!snap.exists()) {
+          stageMsg.innerHTML = "<span class='err'>لا توجد بيانات مراحل محفوظة لهذا الطلب.</span>";
+          return;
+        }
+
+        const data = snap.data() || {};
+        const stagesObj = Object.assign({}, data.stages || {});
+        const key = "s" + num;
+
+        if (!stagesObj[key]) {
+          stageMsg.innerHTML = "<span class='muted'>هذه المرحلة غير مكتملة أصلاً.</span>";
+          return;
+        }
+
+        delete stagesObj[key];
+        const doneKeys = Object.keys(stagesObj).filter(k => stagesObj[k]);
+        const doneCount = doneKeys.length;
+
+        await setDoc(orderRef, {
+          orderId: baseId,
+          vin: currentVin || "",
+          itemNo: currentItemNo || 1,
+          currentStage: doneCount,
+          stages: stagesObj
+        }, { merge: true });
+
+        const publicRef = doc(db, TRACK_COLLECTION, docId, "public", "status");
+        await setDoc(publicRef, {
+          orderId: baseId,
+          vin: currentVin || "",
+          itemNo: currentItemNo || 1,
+          currentStage: doneCount,
+          stages: stagesObj,
+          updatedAt: serverTimestamp()
+        }, { merge: true });
+
+        await loadTrackingForCurrentSelection();
+
+        stageMsg.innerHTML = "<span class='ok'>تم التراجع عن المرحلة رقم " + num + " لهذا الرقم الهيكل.</span>";
+      } catch (e) {
+        console.error(e);
+        stageMsg.innerHTML = "<span class='err'>حدث خطأ أثناء التراجع عن المرحلة.</span>";
+      }
+    }
+
+
     async function loadTrackingForCurrentSelection(){
       if (!currentOrderId || !currentItemNo) {
         buildStagesUI({ });
