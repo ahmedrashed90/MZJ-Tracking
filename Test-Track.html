@@ -326,10 +326,10 @@
       <!-- Search -->
       <div class="search-section">
         <div>
-          <label for="vinInput">اكتب رقم الهيكل (الشاصي):</label>
+          <label for="vinInput">اكتب رقم الطلب:</label>
         </div>
         <div class="search-input-wrap">
-          <input id="vinInput" type="text" placeholder="مثال: KMHXXXXXXXXXXXXX" />
+          <input id="vinInput" type="text" placeholder="مثال: 045087 أو SO-00045" />
           <button id="searchBtn" class="btn btn-primary">
             🔍 تتبع
           </button>
@@ -340,7 +340,7 @@
       <!-- Result -->
       <div id="resultContainer">
         <div class="empty-state">
-          اكتب رقم الهيكل واضغط "تتبع" لعرض تفاصيل طلبك وحالة السيارة.
+          اكتب رقم الطلب واضغط "تتبع" لعرض تفاصيل طلبك وحالة السيارة.
         </div>
       </div>
     </div>
@@ -373,7 +373,7 @@
     const db  = getFirestore(app);
 
     // ========= 2) عناصر الصفحة =========
-    const vinInput        = document.getElementById("vinInput");
+    const vinInput        = document.getElementById("vinInput"); // هنا بقي رقم الطلب
     const searchBtn       = document.getElementById("searchBtn");
     const statusBar       = document.getElementById("statusBar");
     const resultContainer = document.getElementById("resultContainer");
@@ -386,7 +386,7 @@
     function renderEmptyState() {
       resultContainer.innerHTML = `
         <div class="empty-state">
-          اكتب رقم الهيكل واضغط "تتبع" لعرض تفاصيل طلبك وحالة السيارة.
+          اكتب رقم الطلب واضغط "تتبع" لعرض تفاصيل طلبك وحالة السيارة.
         </div>
       `;
     }
@@ -464,7 +464,6 @@
         ? new Date(track.updatedAt.toDate ? track.updatedAt.toDate() : track.updatedAt).toLocaleString("ar-SA")
         : "";
 
-      // عدد الخطوات المنتهية (بناءً على وجود ختم فعلي لكل مرحلة)
       const doneIndices = [];
       for (let i = 1; i <= STAGES.length; i++) {
         const doneTs = stagesMap["s" + i];
@@ -486,7 +485,7 @@
 
       return `
         <div class="status-summary">
-          <div>حالة السيارة الحالية: <strong>${currentStageLabel}</strong></div>
+          <div>حالة الطلب الحالية: <strong>${currentStageLabel}</strong></div>
           <div>آخر تحديث للحالة: <span>${updatedAt || "-"}</span></div>
         </div>
         <div class="progress-wrapper">
@@ -634,7 +633,6 @@
       }
     }
 
-
     function renderMultiResult(orderInfo, cars, activeIndex) {
       if (!cars || !cars.length) {
         renderEmptyState();
@@ -670,7 +668,6 @@
         `;
       }
 
-      // إجمالي قيمة الطلب (شامل الضريبة) لكل السيارات
       const orderTotal = cars.reduce((sum, car) => {
         const v = parseAmountFront(car.total);
         return sum + (v || 0);
@@ -745,7 +742,6 @@
       const tabs = resultContainer.querySelectorAll(".car-tab");
       const carDetailsArea = resultContainer.querySelector("#carDetailsArea");
 
-      // أول مرة: حدّث حسب السيارة النشطة
       updateStatusUIForCar(cars[activeIndex].statusData || {});
 
       tabs.forEach((tab) => {
@@ -759,11 +755,11 @@
       });
     }
 
-
-    async function handleSearch() {
-      const rawVin = (vinInput.value || "").trim();
-      if (!rawVin) {
-        setStatus("من فضلك أدخل رقم الهيكل أولاً.", true);
+    // ========= البحث برقم الطلب =========
+    async function handleSearch(orderFromParam = null) {
+      const rawOrder = (orderFromParam || vinInput.value || "").trim();
+      if (!rawOrder) {
+        setStatus("من فضلك أدخل رقم الطلب أولاً.", true);
         renderEmptyState();
         return;
       }
@@ -771,167 +767,154 @@
       setStatus("جاري البحث عن الطلب المرتبط بهذا الرقم…");
 
       try {
-        // 1) نجيب erp_vins/{vin} لمعرفة رقم الطلب + رقم البند
-        const vinDocRef = doc(db, "erp_vins", rawVin);
-        const vinSnap   = await getDoc(vinDocRef);
+        // 1) نجيب كل VINs المرتبطة بهذا الطلب من erp_vins حسب lastOrderNo
+        const vinsCol = collection(db, "erp_vins");
+        const q = query(vinsCol, where("lastOrderNo", "==", rawOrder));
+        const qsnap = await getDocs(q);
 
-        if (!vinSnap.exists()) {
-          setStatus("لم يتم العثور على طلب مرتبط بهذا رقم الهيكل. تأكد من الرقم وحاول مرة أخرى.", true);
+        if (qsnap.empty) {
+          setStatus("لم يتم العثور على طلب بهذا الرقم. تأكد من رقم الطلب وحاول مرة أخرى.", true);
           renderEmptyState();
           return;
         }
 
-        const vinData   = vinSnap.data ? vinSnap.data() : vinSnap;
-        const orderBase = vinData.lastOrderNo || vinData.orderNo || "";
-        const itemNoForVin = vinData.lastItemNo || vinData.itemNo || 1;
+        const vinDocs = qsnap.docs.map((d) => ({ id: d.id, data: d.data() }));
+        const firstData = vinDocs[0].data || vinDocs[0];
+        const payloadFallback = firstData.lastData || {};
 
-        // 2) نجيب حالة هذا الـ VIN / السيارة الحالية من orders/{orderBase}_{itemNo}/public/status فقط
-        let vinStatus = null;
-        if (orderBase) {
-          try {
-            const newDocId = `${orderBase}_${itemNoForVin}`;
-            const newStatusRef = doc(db, "orders", newDocId, "public", "status");
-            const newStatusSnap = await getDoc(newStatusRef);
-            if (newStatusSnap.exists()) {
-              vinStatus = newStatusSnap.data();
-            }
-          } catch (eNew) {
-            console.error("Error fetching status for VIN:", eNew);
-          }
-        }
+        const orderInfo = {
+          orderNo: firstData.lastOrderNo || payloadFallback.orderNo || rawOrder,
+          customerName: payloadFallback.customerName || "",
+          branch: payloadFallback.branch || ""
+        };
 
-        // 3) نحاول نجيب كل السيارات في نفس الطلب عن طريق erp_vins
-        let handledMulti = false;
-        if (orderBase) {
-          try {
-            const vinsCol = collection(db, "erp_vins");
-            const q = query(vinsCol, where("lastOrderNo", "==", orderBase));
-            const qsnap = await getDocs(q);
+        // 2) لو في أكثر من سيارة في الطلب → Multi
+        if (vinDocs.length > 1) {
+          const cars = [];
+          for (const row of vinDocs) {
+            const data = row.data || row;
+            const payload = data.lastData || {};
+            const item    = payload.item || {};
+            const totals  = payload.totals || {};
 
-            if (!qsnap.empty) {
-              const vinDocs = qsnap.docs.map((d) => ({ id: d.id, data: d.data() }));
-              if (vinDocs.length > 1) {
-                const firstData = vinDocs[0].data || vinDocs[0];
-                const payloadFallback = firstData.lastData || {};
+            const carVin = row.id || data.vin || item.vin || "";
+            const itemNo = data.lastItemNo || payload.itemNo || 1;
 
-                const orderInfo = {
-                  orderNo: firstData.lastOrderNo || payloadFallback.orderNo || "",
-                  customerName: payloadFallback.customerName || "",
-                  branch: payloadFallback.branch || ""
-                };
+            const carType     = item.type     || "";
+            const carCategory = item.category || "";
+            const carModel    = item.model    || "";
 
-                const cars = [];
-                for (const row of vinDocs) {
-                  const data = row.data || row;
-                  const payload = data.lastData || {};
-                  const item    = payload.item || {};
-                  const totals  = payload.totals || {};
+            const extColor = item.exteriorColor || item.extColor || "";
+            const intColor = item.interiorColor || item.intColor || "";
+            const dealer   = item.dealer || payload.dealer || "";
 
-                  const carVin = row.id || data.vin || item.vin || "";
-                  const itemNo = data.lastItemNo || payload.itemNo || 1;
+            const subtotal =
+              totals.subtotalExclVAT ??
+              totals.SubtotalExclVAT ??
+              "";
 
-                  const carType     = item.type     || "";
-                  const carCategory = item.category || "";
-                  const carModel    = item.model    || "";
+            const total =
+              totals.totalInclVAT ??
+              totals.TotalInclVAT ??
+              "";
 
-                  const extColor = item.exteriorColor || item.extColor || "";
-                  const intColor = item.interiorColor || item.intColor || "";
-                  const dealer   = item.dealer || payload.dealer || "";
+            const taxName =
+              totals.taxName ??
+              totals.TaxName ??
+              "";
 
-                  const subtotal =
-                    totals.subtotalExclVAT ??
-                    totals.SubtotalExclVAT ??
-                    "";
+            const taxValue =
+              totals.taxValue ??
+              totals.TaxValue ??
+              "";
 
-                  const total =
-                    totals.totalInclVAT ??
-                    totals.TotalInclVAT ??
-                    "";
-
-                  const taxName =
-                    totals.taxName ??
-                    totals.TaxName ??
-                    "";
-
-                  const taxValue =
-                    totals.taxValue ??
-                    totals.TaxValue ??
-                    "";
-
-                  // حالة هذا الهيكل من orders/{orderBase}_{itemNo}/public/status فقط
-                  let statusData = null;
-                  if (orderBase) {
-                    try {
-                      const carDocId = `${orderBase}_${itemNo || 1}`;
-                      const carStatusRef = doc(db, "orders", carDocId, "public", "status");
-                      const carStatusSnap = await getDoc(carStatusRef);
-                      if (carStatusSnap.exists()) {
-                        statusData = carStatusSnap.data();
-                      }
-                    } catch (csErr) {
-                      console.error("Error fetching car status:", csErr);
-                    }
-                  }
-
-                  cars.push({
-                    vin: carVin,
-                    itemNo,
-                    label: [carType, carCategory, carModel].filter(Boolean).join(" "),
-                    carType,
-                    carCategory,
-                    carModel,
-                    extColor,
-                    intColor,
-                    dealer,
-                    subtotal,
-                    total,
-                    taxName,
-                    taxValue,
-                    statusData
-                  });
-                }
-
-                let activeIndex = 0;
-                if (rawVin) {
-                  const normalized = rawVin.replace(/\s+/g, "").toLowerCase();
-                  const idx = cars.findIndex(
-                    (c) => (c.vin || "").replace(/\s+/g, "").toLowerCase() === normalized
-                  );
-                  if (idx >= 0) activeIndex = idx;
-                }
-
-                renderMultiResult(orderInfo, cars, activeIndex);
-                setStatus(
-                  `تم العثور على الطلب. هذا الطلب يحتوي على ${cars.length} سيارة.`
-                );
-                handledMulti = true;
+            // حالة هذه السيارة من orders/{orderNo}_{itemNo}/public/status
+            let statusData = null;
+            try {
+              const carDocId = `${orderInfo.orderNo}_${itemNo || 1}`;
+              const carStatusRef = doc(db, "orders", carDocId, "public", "status");
+              const carStatusSnap = await getDoc(carStatusRef);
+              if (carStatusSnap.exists()) {
+                statusData = carStatusSnap.data();
               }
+            } catch (csErr) {
+              console.error("Error fetching car status:", csErr);
             }
-          } catch (multiErr) {
-            console.error("Error fetching multi-car order:", multiErr);
+
+            cars.push({
+              vin: carVin,
+              itemNo,
+              label: [carType, carCategory, carModel].filter(Boolean).join(" "),
+              carType,
+              carCategory,
+              carModel,
+              extColor,
+              intColor,
+              dealer,
+              subtotal,
+              total,
+              taxName,
+              taxValue,
+              statusData
+            });
           }
+
+          const activeIndex = 0;
+          renderMultiResult(orderInfo, cars, activeIndex);
+          setStatus(`تم العثور على الطلب. هذا الطلب يحتوي على ${cars.length} سيارة.`);
+          return;
         }
 
-        // 4) لو مفيش تعدد سيارات → عرض السيارة الواحدة
-        if (!handledMulti) {
-          setStatus("تم العثور على الطلب. يتم عرض تفاصيل السيارة.");
-          renderSingleCar(vinData, vinStatus);
+        // 3) لو سيارة واحدة فقط في الطلب → Single
+        const singleVinDoc = vinDocs[0];
+        const vinData = singleVinDoc.data || singleVinDoc;
+        let vinStatus = null;
+
+        try {
+          const itemNo = vinData.lastItemNo || vinData.itemNo || 1;
+          const carDocId = `${orderInfo.orderNo}_${itemNo}`;
+          const newStatusRef = doc(db, "orders", carDocId, "public", "status");
+          const newStatusSnap = await getDoc(newStatusRef);
+          if (newStatusSnap.exists()) {
+            vinStatus = newStatusSnap.data();
+          }
+        } catch (eNew) {
+          console.error("Error fetching status for single VIN:", eNew);
         }
+
+        setStatus("تم العثور على الطلب. يتم عرض تفاصيل السيارة.");
+        renderSingleCar(vinData, vinStatus);
+
       } catch (err) {
-        console.error("Error fetching VIN:", err);
+        console.error("Error fetching by order number:", err);
         setStatus("حدث خطأ أثناء جلب البيانات. حاول مرة أخرى لاحقاً.", true);
         renderEmptyState();
       }
     }
 
     // ربط زر التتبع بزر البحث وبزر إنتر في خانة الإدخال
-    searchBtn.addEventListener("click", handleSearch);
+    searchBtn.addEventListener("click", () => handleSearch());
     vinInput.addEventListener("keydown", (e) => {
       if (e.key === "Enter") {
         handleSearch();
       }
     });
 
+    // ====== تشغيل تلقائي من الـ URL ======
+    (function autoFromUrl() {
+      const params = new URLSearchParams(window.location.search);
+      // هنعتبر أي قيمة في ?vin= هي رقم الطلب
+      const orderFromUrl =
+        params.get("vin") ||
+        params.get("order") ||
+        params.get("orderNo") ||
+        params.get("o");
+
+      if (orderFromUrl) {
+        vinInput.value = orderFromUrl;
+        handleSearch(orderFromUrl);
+      }
+    })();
   </script>
 </body>
 </html>
