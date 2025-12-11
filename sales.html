@@ -463,6 +463,7 @@
       getDoc,
       setDoc,
       updateDoc,
+      deleteField,
       serverTimestamp,
       collection,
       query,
@@ -980,23 +981,17 @@
         const doneKeys = Object.keys(stagesObj).filter(k => stagesObj[k]);
         const doneCount = doneKeys.length;
 
-        await setDoc(orderRef, {
-          orderId: baseId,
-          vin: currentVin || "",
-          itemNo: currentItemNo || 1,
-          currentStage: doneCount,
-          stages: stagesObj
-        }, { merge: true });
+        await updateDoc(orderRef, {
+          [`stages.${key}`]: deleteField(),
+          currentStage: doneCount
+        });
 
         const publicRef = doc(db, TRACK_COLLECTION, docId, "public", "status");
-        await setDoc(publicRef, {
-          orderId: baseId,
-          vin: currentVin || "",
-          itemNo: currentItemNo || 1,
+        await updateDoc(publicRef, {
+          [`stages.${key}`]: deleteField(),
           currentStage: doneCount,
-          stages: stagesObj,
           updatedAt: serverTimestamp()
-        }, { merge: true });
+        });
 
         await loadTrackingForCurrentSelection();
 
@@ -1006,7 +1001,6 @@
         stageMsg.innerHTML = "<span class='err'>حدث خطأ أثناء التراجع عن المرحلة.</span>";
       }
     }
-
 
     async function loadTrackingForCurrentSelection(){
       if (!currentOrderId || !currentItemNo) {
@@ -1306,67 +1300,80 @@
     });
 
 
-    // حالة تسجيل الدخول وإدارة الواجهة
+    // إدارة حالة تسجيل الدخول وتوزيع الواجهات
     onAuthStateChanged(auth, (user) => {
       if (user) {
+        // مستخدم مسجل دخول
         whoami.textContent = user.email || "";
         logoutBtn.style.display = "inline-flex";
+
         authCard.style.display = "none";
-        tabsBar.style.display = "flex";
-        orderCard.style.display = "";
+        tabsBar.style.display  = "flex";
+
+        orderCard.style.display  = "";
         if (currentOrderId) {
-          erpCard.style.display = "";
+          erpCard.style.display    = "";
           stagesCard.style.display = "";
         } else {
-          erpCard.style.display = "none";
+          erpCard.style.display    = "none";
           stagesCard.style.display = "none";
         }
+        ordersListCard.style.display = "none";
       } else {
+        // لا يوجد مستخدم
         whoami.textContent = "";
         logoutBtn.style.display = "none";
-        authCard.style.display = "";
-        orderCard.style.display = "none";
-        erpCard.style.display = "none";
-        stagesCard.style.display = "none";
+
+        authCard.style.display     = "";
+        tabsBar.style.display      = "none";
+        orderCard.style.display    = "none";
+        erpCard.style.display      = "none";
+        stagesCard.style.display   = "none";
         ordersListCard.style.display = "none";
-        tabsBar.style.display = "none";
       }
     });
 
+    // زر تسجيل الدخول
     loginBtn.addEventListener("click", async () => {
       authMsg.textContent = "";
       const emailVal = (email.value || "").trim();
       const passVal  = (password.value || "").trim();
+
       if (!emailVal || !passVal) {
         authMsg.innerHTML = "<span class='err'>أدخل البريد الإلكتروني وكلمة السر.</span>";
         return;
       }
+
       try {
         await signInWithEmailAndPassword(auth, emailVal, passVal);
         authMsg.innerHTML = "<span class='ok'>تم تسجيل الدخول بنجاح.</span>";
       } catch (e) {
         console.error(e);
-        authMsg.innerHTML = "<span class='err'>تعذر تسجيل الدخول. تأكد من البيانات.</span>";
+        authMsg.innerHTML = "<span class='err'>تعذر تسجيل الدخول. تأكد من البيانات أو تواصل مع المسؤول.</span>";
       }
     });
 
+    // زر إنشاء حساب جديد (للمشرف فقط)
     signupBtn.addEventListener("click", async () => {
       authMsg.textContent = "";
       const emailVal = (email.value || "").trim();
       const passVal  = (password.value || "").trim();
+
       if (!emailVal || !passVal) {
         authMsg.innerHTML = "<span class='err'>أدخل البريد الإلكتروني وكلمة السر.</span>";
         return;
       }
+
       try {
         await createUserWithEmailAndPassword(auth, emailVal, passVal);
         authMsg.innerHTML = "<span class='ok'>تم إنشاء الحساب وتسجيل الدخول.</span>";
       } catch (e) {
         console.error(e);
-        authMsg.innerHTML = "<span class='err'>تعذر إنشاء الحساب. ربما البريد مستخدم من قبل.</span>";
+        authMsg.innerHTML = "<span class='err'>تعذر إنشاء الحساب. ربما يكون البريد مستخدم من قبل.</span>";
       }
     });
 
+    // زر تسجيل الخروج
     logoutBtn.addEventListener("click", async () => {
       try {
         await signOut(auth);
@@ -1375,7 +1382,13 @@
       }
     });
 
-    // تهيئة أولية
+    // تهيئة أولية للصفحة
+    tabsBar.style.display      = "none";
+    orderCard.style.display    = "none";
+    erpCard.style.display      = "none";
+    stagesCard.style.display   = "none";
+    ordersListCard.style.display = "none";
+
     clearErpTable();
     buildStagesUI({ });
 
