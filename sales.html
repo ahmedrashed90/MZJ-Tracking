@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
@@ -537,6 +538,7 @@
     let currentVin          = null;
     let currentItemNo       = null;
     let currentOrderRecords = [];
+    let currentCustomerPhone = ""; // رقم جوال العميل
 
     const STAGES = [
       "1) طلب الشراء (خاص بالعميل)",
@@ -631,7 +633,105 @@
       return isNaN(n) ? null : n;
     }
 
-    function clearErpTable() {
+    
+    // تنسيق رقم الجوال لصيغة سعودية 966
+    function normalizeSaudiPhone(raw) {
+      if (!raw) return "";
+      let digits = String(raw).replace(/[^\d]/g, "");
+
+      if (digits.startsWith("00")) {
+        digits = digits.slice(2);
+      }
+      if (digits.startsWith("0")) {
+        digits = "966" + digits.slice(1);
+      }
+      if (!digits.startsWith("966") && digits.length === 9) {
+        digits = "966" + digits;
+      }
+
+      return digits;
+    }
+
+    // إرسال SMS عبر endpoint /api/stc-sms
+    async function sendStcSmsForStage(stageNum, stageLabel) {
+      stageMsg.textContent = "";
+
+      if (!currentCustomerPhone) {
+        stageMsg.innerHTML = "<span class='err'>لا يوجد رقم جوال محفوظ لهذا الطلب.</span>";
+        return;
+      }
+
+      const phone = normalizeSaudiPhone(currentCustomerPhone);
+      if (!phone) {
+        stageMsg.innerHTML = "<span class='err'>رقم الجوال غير صالح.</span>";
+        return;
+      }
+
+      const orderNo = currentOrderId || "";
+      const vin     = currentVin || "";
+      const vinLine = vin ? "\nرقم الهيكل: " + vin : "";
+
+      let text;
+
+      switch (stageNum) {
+        case 1:
+          // ترحيب وتهنئة + رقم الهيكل
+          text =
+            "عميلنا العزيز،" +
+            "\nنرحب بكم ونهنئكم باختيار معرض محمد بن ذعار العجمي للسيارات." +
+            vinLine +
+            "\nسنعمل على متابعة طلبكم بعناية وإبلاغكم بأي تحديث أولاً بأول." +
+            "\nمع محمد بن ذعار العجمي للسيارات… أنت نجم الطريق.";
+          break;
+
+        case 9:
+          // جاهزية السيارة + خيار الشحن + مواعيد العمل
+          text =
+            "عميلنا العزيز يسعدنا ابلاغك بجاهزية سيارتك الأن يمكنك الحضور للاستلام او طلب خدمة الشحن" +
+            "\nنشكرك على ثقتك" +
+            "\nمع محمد بن ذعار العجمي للسيارات انت نجم الطريق" +
+            "\nمواعيد العمل" +
+            "\nالفترة الصباحية من الساعة 9 صباحاً الى 11 مساء" +
+            "\nالفترة المسائية من الساعة 4 مساء الى 9 مساء" +
+            "\nيوم الجمعة المساء فقط";
+          break;
+
+        case 10:
+          // إتمام التسليم + هاشتاق نجم الطريق
+          text =
+            "نبارك لكم إتمام عملية التسليم بنجاح." +
+            "\nيشرفنا في محمد بن زعار العجمي للسيارات خدمتكم، ونتمنى لكم قيادة آمنة وتجربة ممتعة." +
+            "\n#نجم_الطريق";
+          break;
+
+        default:
+          // احتياطي لو اتندهت من خطوة ثانية
+          text =
+            "عميلنا العزيز، بخصوص طلبكم رقم " + orderNo + " (مرحلة: " + stageLabel + ")." +
+            "\nمعرض محمد بن ذعار العجمي للسيارات.";
+      }
+
+      try {
+        const res = await fetch("/api/stc-sms", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ phone, message: text, orderNo, stageNum })
+        });
+
+        if (!res.ok) {
+          const errText = await res.text();
+          console.error("SMS API error:", errText);
+          throw new Error(errText || "SMS API failed");
+        }
+
+        stageMsg.innerHTML = "<span class='ok'>تم إرسال رسالة SMS للعميل بنجاح.</span>";
+      } catch (err) {
+        console.error(err);
+        stageMsg.innerHTML = "<span class='err'>تعذر إرسال رسالة SMS، تأكد من إعدادات STC أو تواصل مع المسؤول التقني.</span>";
+      }
+    }
+
+function clearErpTable() {
       erpMetaEl.textContent = "";
       erpBody.innerHTML = "";
       erpTotals.style.display = "none";
@@ -677,6 +777,7 @@
 
       const first = records[0] || {};
       const orderNo = first.orderNo || first.OrderNo || currentOrderId || "";
+      currentCustomerPhone = getFieldFlex("CustomerPhone", first) || "";
       let vinBadgeLabel = "";
 
       const vins = Array.from(new Set(
@@ -862,6 +963,7 @@
 
         const actions = document.createElement("div");
 
+        // زر تم الانتهاء
         const btnDone = document.createElement("button");
         btnDone.className = "btn-outline";
         btnDone.style.fontSize = "12px";
@@ -870,6 +972,19 @@
         btnDone.onclick = () => completeStage(num);
         actions.appendChild(btnDone);
 
+        // زر رسالة SMS للعميل في الخطوات 1 و 9 و 10 فقط
+        if (num === 1 || num === 9 || num === 10) {
+          const btnSms = document.createElement("button");
+          btnSms.className = "btn-outline";
+          btnSms.style.fontSize = "12px";
+          btnSms.style.marginRight = "6px";
+          btnSms.textContent = "رسالة SMS للعميل";
+          btnSms.disabled = !currentCustomerPhone;
+          btnSms.onclick = () => sendStcSmsForStage(num, label);
+          actions.appendChild(btnSms);
+        }
+
+        // زر التراجع
         const btnUndo = document.createElement("button");
         btnUndo.className = "btn-outline";
         btnUndo.style.fontSize = "12px";
