@@ -925,3 +925,15 @@
         renderEmptyState();
       }
     }
+
+    // ربط زر التتبع بزر البحث وبزر إنتر في خانة الإدخال
+    searchBtn.addEventListener("click", handleSearch);
+    vinInput.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") {
+        handleSearch();
+      }
+    });
+
+  </script>
+</body>
+</html>
