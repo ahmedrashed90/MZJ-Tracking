@@ -1246,8 +1246,80 @@
       loadOrder();
     });
 
+
+    // حالة تسجيل الدخول وإدارة الواجهة
+    onAuthStateChanged(auth, (user) => {
+      if (user) {
+        whoami.textContent = user.email || "";
+        logoutBtn.style.display = "inline-flex";
+        authCard.style.display = "none";
+        tabsBar.style.display = "flex";
+        orderCard.style.display = "";
+        if (currentOrderId) {
+          erpCard.style.display = "";
+          stagesCard.style.display = "";
+        } else {
+          erpCard.style.display = "none";
+          stagesCard.style.display = "none";
+        }
+      } else {
+        whoami.textContent = "";
+        logoutBtn.style.display = "none";
+        authCard.style.display = "";
+        orderCard.style.display = "none";
+        erpCard.style.display = "none";
+        stagesCard.style.display = "none";
+        ordersListCard.style.display = "none";
+        tabsBar.style.display = "none";
+      }
+    });
+
+    loginBtn.addEventListener("click", async () => {
+      authMsg.textContent = "";
+      const emailVal = (email.value || "").trim();
+      const passVal  = (password.value || "").trim();
+      if (!emailVal || !passVal) {
+        authMsg.innerHTML = "<span class='err'>أدخل البريد الإلكتروني وكلمة السر.</span>";
+        return;
+      }
+      try {
+        await signInWithEmailAndPassword(auth, emailVal, passVal);
+        authMsg.innerHTML = "<span class='ok'>تم تسجيل الدخول بنجاح.</span>";
+      } catch (e) {
+        console.error(e);
+        authMsg.innerHTML = "<span class='err'>تعذر تسجيل الدخول. تأكد من البيانات.</span>";
+      }
+    });
+
+    signupBtn.addEventListener("click", async () => {
+      authMsg.textContent = "";
+      const emailVal = (email.value || "").trim();
+      const passVal  = (password.value || "").trim();
+      if (!emailVal || !passVal) {
+        authMsg.innerHTML = "<span class='err'>أدخل البريد الإلكتروني وكلمة السر.</span>";
+        return;
+      }
+      try {
+        await createUserWithEmailAndPassword(auth, emailVal, passVal);
+        authMsg.innerHTML = "<span class='ok'>تم إنشاء الحساب وتسجيل الدخول.</span>";
+      } catch (e) {
+        console.error(e);
+        authMsg.innerHTML = "<span class='err'>تعذر إنشاء الحساب. ربما البريد مستخدم من قبل.</span>";
+      }
+    });
+
+    logoutBtn.addEventListener("click", async () => {
+      try {
+        await signOut(auth);
+      } catch (e) {
+        console.error(e);
+      }
+    });
+
+    // تهيئة أولية
     clearErpTable();
     buildStagesUI({ });
+
   </script>
 </body>
 </html>
