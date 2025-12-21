@@ -1,64 +1,52 @@
 export default async function handler(req, res) {
+  // CORS (عشان الصفحة في مشروع تاني)
+  res.setHeader("Access-Control-Allow-Origin", "https://mzj-workflow.vercel.app");
+  res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+
+  if (req.method === "OPTIONS") return res.status(204).end();
+  if (req.method !== "POST") {
+    return res.status(405).json({ ok: false, error: "Method Not Allowed" });
+  }
+
   try {
-    // السماح فقط بـ POST
-    if (req.method !== "POST") {
-      return res.status(405).json({ ok: false, error: "Method Not Allowed" });
-    }
-
     const { phone, message } = req.body || {};
-
     if (!phone || !message) {
-      return res.status(400).json({
-        ok: false,
-        error: "Missing phone or message"
-      });
+      return res.status(400).json({ ok: false, error: "Missing phone or message" });
     }
 
-    // Environment Variables
-    const BASE_URL  = process.env.MERSAL_BASE_URL;   // https://w-mersal.com
-    const SEND_PATH = process.env.MERSAL_SEND_PATH;  // /api/send
-    const TOKEN     = process.env.MERSAL_TOKEN;      // API TOKEN
-
-    if (!BASE_URL || !SEND_PATH || !TOKEN) {
-      return res.status(500).json({
-        ok: false,
-        error: "Mersal environment variables are not set"
-      });
+    const TOKEN = process.env.MERSAL_TOKEN;
+    if (!TOKEN) {
+      return res.status(500).json({ ok: false, error: "Missing MERSAL_TOKEN" });
     }
 
-    // Payload حسب مرسال
-    const payload = {
-      mobile: phone,      // 9665XXXXXXXX
-      message: message
-    };
+    const response = await fetch(
+      "https://w-mersal.com/api/wpbox/sendmessage",
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          token: TOKEN,
+          phone: phone,
+          message: message
+        })
+      }
+    );
 
-    const response = await fetch(`${BASE_URL}${SEND_PATH}`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": TOKEN
-      },
-      body: JSON.stringify(payload)
-    });
-
-    const text = await response.text();
+    const data = await response.json();
 
     if (!response.ok) {
-      return res.status(502).json({
-        ok: false,
-        error: text
-      });
+      return res.status(502).json({ ok: false, error: data });
     }
 
     return res.status(200).json({
       ok: true,
-      result: text
+      status: data.status,
+      message_id: data.message_id,
+      wamid: data.message_wamid
     });
 
-  } catch (err) {
-    return res.status(500).json({
-      ok: false,
-      error: err.message || "Server Error"
-    });
+  } catch (e) {
+    return res.status(500).json({ ok: false, error: e.message });
   }
 }
