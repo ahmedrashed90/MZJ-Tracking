@@ -648,15 +648,7 @@
             <div class="info-label">الفرع</div>
             <div class="info-value">${orderInfo.branch || "-"}</div>
           </div>
-          <div class="info-item">
-            <div class="info-label">الإجمالي قبل الضريبة</div>
-            <div class="info-value">${orderInfo.orderSubtotal !== undefined && orderInfo.orderSubtotal !== "" ? formatAmount(orderInfo.orderSubtotal) + " ر.س" : "-"}</div>
-          </div>
-          <div class="info-item">
-            <div class="info-label">قيمة الضريبة (ضريبة القيمة المضافة)</div>
-            <div class="info-value">${orderInfo.orderTax !== undefined && orderInfo.orderTax !== "" ? formatAmount(orderInfo.orderTax) + " ر.س" : "-"}</div>
-          </div>
-          <div class="info-item">
+<div class="info-item">
             <div class="info-label">الإجمالي شامل الضريبة</div>
             <div class="info-value">${orderInfo.orderTotal !== undefined && orderInfo.orderTotal !== "" ? formatAmount(orderInfo.orderTotal) + " ر.س" : (orderTotal ? formatAmount(orderTotal) + " ر.س" : "-")}</div>
           </div>
