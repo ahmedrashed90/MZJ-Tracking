@@ -1,4 +1,5 @@
 
+
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
@@ -450,10 +451,19 @@
     }
 
     function formatAmount(val) {
+      // نعرض 0.00 لو القيمة = 0، ونعرض "-" فقط لو القيمة غير موجودة فعلاً
       if (val === null || val === undefined || val === "") return "-";
-      if (typeof val === "number") {
-        return val.toLocaleString("ar-SA", { minimumFractionDigits: 2 });
-      }
+
+      const n = (typeof val === "number") ? val : parseAmountFront(val);
+      if (n === null || isNaN(n)) return "-";
+
+      return n.toLocaleString("ar-SA", { minimumFractionDigits: 2 });
+    }
+
+    function amountOrZero(val) {
+      const n = (typeof val === "number") ? val : parseAmountFront(val);
+      return (n === null || isNaN(n)) ? 0 : n;
+    }
       const n = parseAmountFront(val);
       if (n === null) return val;
       return n.toLocaleString("ar-SA", { minimumFractionDigits: 2 });
@@ -596,7 +606,7 @@
           <div class="info-item">
             <div class="info-label">إجمالي قيمة الطلب (شامل الضريبة)</div>
             <div class="info-value">
-              ${orderTotal ? formatAmount(orderTotal) + " ر.س" : "-"}
+              ${formatAmount(orderTotal)} ر.س
             </div>
           </div>
         </div>
@@ -675,25 +685,16 @@
       const intColor = item.interiorColor || item.intColor || "";
       const dealer   = item.dealer || payload.dealer || "";
 
-      const subtotal =
-        totals.subtotalExclVAT ??
-        totals.SubtotalExclVAT ??
-        "";
+      const subtotal = amountOrZero(totals.subtotalExclVAT ?? totals.SubtotalExclVAT ?? "");
 
-      const total =
-        totals.totalInclVAT ??
-        totals.TotalInclVAT ??
-        "";
+      const total = amountOrZero(totals.totalInclVAT ?? totals.TotalInclVAT ?? "");
 
       const taxName =
         totals.taxName ??
         totals.TaxName ??
         "";
 
-      const taxValue =
-        totals.taxValue ??
-        totals.TaxValue ??
-        "";
+      const taxValue = amountOrZero(totals.taxValue ?? totals.TaxValue ?? "");
 
       const customerName = payload.customerName || "";
       const branch       = payload.branch || "";
@@ -760,25 +761,16 @@
         const intColor = item.interiorColor || item.intColor || "";
         const dealer   = item.dealer || payload.dealer || "";
 
-        const subtotal =
-          totals.subtotalExclVAT ??
-          totals.SubtotalExclVAT ??
-          "";
+        const subtotal = amountOrZero(totals.subtotalExclVAT ?? totals.SubtotalExclVAT ?? "");
 
-        const total =
-          totals.totalInclVAT ??
-          totals.TotalInclVAT ??
-          "";
+        const total = amountOrZero(totals.totalInclVAT ?? totals.TotalInclVAT ?? "");
 
         const taxName =
           totals.taxName ??
           totals.TaxName ??
           "";
 
-        const taxValue =
-          totals.taxValue ??
-          totals.TaxValue ??
-          "";
+        const taxValue = amountOrZero(totals.taxValue ?? totals.TaxValue ?? "");
 
         return {
           vin,
