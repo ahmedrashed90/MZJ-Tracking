@@ -1,5 +1,6 @@
 
 
+
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
@@ -460,6 +461,59 @@
       return n.toLocaleString("ar-SA", { minimumFractionDigits: 2 });
     }
 
+    // ====== Normalize Totals (Firestore keys اختلافات) ======
+    function normalizeTotals(totals) {
+      const t = totals || {};
+
+      // قيم السيارة (على مستوى الـ item)
+      const carSubtotal =
+        t.carSubtotalExclVAT ??
+        t.subtotalExclVAT ??
+        t.SubtotalExclVAT ??
+        t.carSubtotalBeforeTax ??
+        t.subtotalBeforeTax ??
+        "";
+
+      const carTax =
+        t.carTaxValue ??
+        t.taxValue ??
+        t.TaxValue ??
+        "";
+
+      const carTotal =
+        t.carTotalInclVAT ??
+        t.totalInclVAT ??
+        t.TotalInclVAT ??
+        t.grandTotal ??
+        "";
+
+      const taxName = t.taxName ?? t.TaxName ?? "ضريبة القيمة المضافة";
+      const taxRate = t.taxRate ?? t.TaxRate ?? 0.15;
+
+      // إجمالي الطلب (لو موجود)
+      const orderSubtotal = t.subtotalBeforeTax ?? t.orderSubtotalBeforeTax ?? "";
+      const orderTotal = t.grandTotal ?? t.orderGrandTotal ?? "";
+
+      // لو إجمالي الطلب موجود بس الضريبة مش موجودة نحسبها
+      let orderTax = t.taxValue ?? t.orderTaxValue ?? "";
+      const oSub = parseAmountFront(orderSubtotal);
+      const oTot = parseAmountFront(orderTotal);
+      if ((orderTax === "" || orderTax === null || orderTax === undefined) && oSub !== null && oTot !== null) {
+        orderTax = oTot - oSub;
+      }
+
+      return {
+        carSubtotal,
+        carTax,
+        carTotal,
+        taxName,
+        taxRate,
+        orderSubtotal,
+        orderTax,
+        orderTotal
+      };
+    }
+
     // ====== Timeline + Progress ======
     function buildTimelineHtml(statusData) {
       const track     = statusData || {};
@@ -595,10 +649,16 @@
             <div class="info-value">${orderInfo.branch || "-"}</div>
           </div>
           <div class="info-item">
-            <div class="info-label">إجمالي قيمة الطلب (شامل الضريبة)</div>
-            <div class="info-value">
-              ${orderTotal ? formatAmount(orderTotal) + " ر.س" : "-"}
-            </div>
+            <div class="info-label">الإجمالي قبل الضريبة</div>
+            <div class="info-value">${orderInfo.orderSubtotal !== undefined && orderInfo.orderSubtotal !== "" ? formatAmount(orderInfo.orderSubtotal) + " ر.س" : "-"}</div>
+          </div>
+          <div class="info-item">
+            <div class="info-label">قيمة الضريبة (ضريبة القيمة المضافة)</div>
+            <div class="info-value">${orderInfo.orderTax !== undefined && orderInfo.orderTax !== "" ? formatAmount(orderInfo.orderTax) + " ر.س" : "-"}</div>
+          </div>
+          <div class="info-item">
+            <div class="info-label">الإجمالي شامل الضريبة</div>
+            <div class="info-value">${orderInfo.orderTotal !== undefined && orderInfo.orderTotal !== "" ? formatAmount(orderInfo.orderTotal) + " ر.س" : (orderTotal ? formatAmount(orderTotal) + " ر.س" : "-")}</div>
           </div>
         </div>
       `;
@@ -663,7 +723,8 @@
       const d = vinData || {};
       const payload = d.lastData || {};
       const item    = payload.item || {};
-      const totals  = payload.totals || {};
+      const totalsRaw  = payload.totals || {};
+      const totals = normalizeTotals(totalsRaw);
 
       const vin = d.vin || payload.vin || "";
 
@@ -676,25 +737,10 @@
       const intColor = item.interiorColor || item.intColor || "";
       const dealer   = item.dealer || payload.dealer || "";
 
-      const subtotal =
-        totals.subtotalExclVAT ??
-        totals.SubtotalExclVAT ??
-        "";
-
-      const total =
-        totals.totalInclVAT ??
-        totals.TotalInclVAT ??
-        "";
-
-      const taxName =
-        totals.taxName ??
-        totals.TaxName ??
-        "";
-
-      const taxValue =
-        totals.taxValue ??
-        totals.TaxValue ??
-        "";
+      const subtotal = totals.carSubtotal;
+      const total    = totals.carTotal;
+      const taxName  = totals.taxName;
+      const taxValue = totals.carTax;
 
       const customerName = payload.customerName || "";
       const branch       = payload.branch || "";
@@ -727,20 +773,26 @@
       const firstRow   = vinDocs[0];
       const firstData  = firstRow.data || firstRow;
       const payload0   = firstData.lastData || {};
+      const totals0Raw = payload0.totals || {};
+      const totals0    = normalizeTotals(totals0Raw);
 
       const orderNo = firstData.lastOrderNo || payload0.orderNo || rawKey || "";
 
       const orderInfo = {
         orderNo,
         customerName: payload0.customerName || "",
-        branch: payload0.branch || ""
+        branch: payload0.branch || "",
+        orderSubtotal: totals0.orderSubtotal,
+        orderTax: totals0.orderTax,
+        orderTotal: totals0.orderTotal
       };
 
       const cars = vinDocs.map((row, idx) => {
         const data    = row.data || row;
         const payload = data.lastData || {};
         const item    = payload.item || {};
-        const totals  = payload.totals || {};
+        const totalsRaw  = payload.totals || {};
+        const totals = normalizeTotals(totalsRaw);
 
         const vin =
           row.id ||
@@ -761,25 +813,10 @@
         const intColor = item.interiorColor || item.intColor || "";
         const dealer   = item.dealer || payload.dealer || "";
 
-        const subtotal =
-          totals.subtotalExclVAT ??
-          totals.SubtotalExclVAT ??
-          "";
-
-        const total =
-          totals.totalInclVAT ??
-          totals.TotalInclVAT ??
-          "";
-
-        const taxName =
-          totals.taxName ??
-          totals.TaxName ??
-          "";
-
-        const taxValue =
-          totals.taxValue ??
-          totals.TaxValue ??
-          "";
+        const subtotal = totals.carSubtotal;
+        const total    = totals.carTotal;
+        const taxName  = totals.taxName;
+        const taxValue = totals.carTax;
 
         return {
           vin,
