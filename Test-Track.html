@@ -313,6 +313,35 @@
       }
     }
   </style>
+
+<script>
+function formatTimestamp(ts) {
+  if (!ts) return "-";
+  let date;
+  if (typeof ts.toDate === "function") {
+    date = ts.toDate();
+  } else if (ts.seconds) {
+    date = new Date(ts.seconds * 1000);
+  } else {
+    date = new Date(ts);
+  }
+  if (isNaN(date.getTime())) return "-";
+  return date.toLocaleString("ar-SA", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit"
+  });
+}
+
+// helper to safely set time text
+function applyStepTime(el, ts) {
+  if (!el) return;
+  el.innerHTML = 'تم في: <strong>' + formatTimestamp(ts) + '</strong>';
+}
+</script>
+
 </head>
 <body>
   <div class="page">
@@ -559,9 +588,7 @@
               const stepIndex = idx + 1;
               const doneTs = stagesMap["s" + stepIndex];
               const isDone = !!doneTs;
-              const tsLabel = doneTs
-                ? new Date(doneTs.toDate ? doneTs.toDate() : doneTs).toLocaleString("ar-SA")
-                : "";
+              const tsLabel = doneTs ? formatTimestamp(doneTs) : "";
               return `
                 <li class="timeline-step">
                   <div class="step-icon ${isDone ? "done" : ""}">
@@ -571,7 +598,7 @@
                     <div class="step-title">${step.title}</div>
                     <div class="step-sub">
                       ${step.sub}
-                      ${tsLabel ? " — <span>تم في: ${tsLabel}</span>" : ""}
+                      ${tsLabel ? ` — <span>تم في: ${tsLabel}</span>` : ""}
                     </div>
                   </div>
                 </li>
@@ -884,147 +911,141 @@
       try {
         const vinsCol = collection(db, "erp_vins");
 
-        // 1) نحاول أولاً كـ رقم طلب (lastOrderNo / orderNo) باستخدام Candidates
-        let usedOrder = false;
-        const candidates = buildOrderCandidates(rawKey);
+        // (A) جرّب أولاً البحث المباشر كـ Document ID داخل erp_vins (أسرع وأضمن)
+        // هذا يغطي: VIN نفسه (مثال: 045093) أو رقم هيكل/رقم داخلي محفوظ كـ doc id (مثال: 510187)
+        try {
+          const directRef  = doc(db, "erp_vins", rawKey);
+          const directSnap = await getDoc(directRef);
+          if (directSnap.exists()) {
+            const vinData      = directSnap.data();
+            const orderBase    = vinData.lastOrderNo || vinData.orderNo || (vinData.lastData && vinData.lastData.orderNo) || "";
+            const itemNoForVin = vinData.lastItemNo || vinData.itemNo || (vinData.lastData && vinData.lastData.itemNo) || 1;
+
+            // حالة السيارة الحالية
+            let vinStatus = null;
+            if (orderBase) {
+              try {
+                const newDocId      = `${orderBase}_${itemNoForVin}`;
+                const newStatusRef  = doc(db, "orders", newDocId, "public", "status");
+                const newStatusSnap = await getDoc(newStatusRef);
+                if (newStatusSnap.exists()) vinStatus = newStatusSnap.data();
+              } catch (eNew) {
+                console.error("Error fetching status for VIN:", eNew);
+              }
+            }
+
+            // لو فيه OrderNo نحاول نجيب باقي سيارات نفس الطلب
+            let handledMulti = false;
+            if (orderBase) {
+              try {
+                const qByOrder = query(vinsCol, where("lastOrderNo", "==", orderBase));
+                const qsnap    = await getDocs(qByOrder);
+
+                if (!qsnap.empty) {
+                  const vinDocs = qsnap.docs.map((d) => ({ id: d.id, data: d.data() }));
+
+                  if (vinDocs.length > 1) {
+                    const builtMulti = buildOrderFromVinDocs(vinDocs, rawKey);
+                    const orderInfo  = builtMulti.orderInfo;
+                    const cars       = builtMulti.cars;
+
+                    // نجيب حالة كل سيارة
+                    for (const car of cars) {
+                      const itemNo = car.itemNo || 1;
+                      if (!orderInfo.orderNo) continue;
+                      try {
+                        const carDocId      = `${orderInfo.orderNo}_${itemNo}`;
+                        const carStatusRef  = doc(db, "orders", carDocId, "public", "status");
+                        const carStatusSnap = await getDoc(carStatusRef);
+                        if (carStatusSnap.exists()) car.statusData = carStatusSnap.data();
+                      } catch (csErr) {
+                        console.error("Error fetching car status (multi VIN):", csErr);
+                      }
+                    }
+
+                    renderMultiResult(orderInfo, cars, builtMulti.activeIndex);
+                    setStatus(`تم العثور على الطلب. هذا الطلب يحتوي على ${cars.length} سيارة.`);
+                    handledMulti = true;
+                  }
+                }
+              } catch (multiErr) {
+                console.error("Error fetching multi-car order:", multiErr);
+              }
+            }
+
+            // لو مفيش تعدد سيارات → نعرض سيارة واحدة
+            if (!handledMulti) {
+              setStatus("تم العثور على الطلب. يتم عرض تفاصيل السيارة.");
+              renderSingleCar(vinData, vinStatus);
+            }
+            return; // ✅ انتهينا لأننا لقينا doc مباشر
+          }
+        } catch (directErr) {
+          console.error("Direct erp_vins doc lookup failed:", directErr);
+        }
+
+        // (B) لو مش موجود كـ doc id → جرّبه كـ رقم طلب (بحث بالمساواة فقط لتجنب أي تعليق)
+        // نجرب على lastOrderNo ثم على lastData.orderNo
+        const orderCands = buildOrderCandidates(rawKey);
         let vinDocsOrder = [];
 
-        if (candidates.length) {
-          // lastOrderNo
-          for (let i = 0; i < candidates.length && !vinDocsOrder.length; i += 10) {
-            const slice = candidates.slice(i, i + 10);
-            const q = query(vinsCol, where("lastOrderNo", "in", slice));
-            const snap = await getDocs(q);
-            if (!snap.empty) {
-              vinDocsOrder = snap.docs.map((d) => ({ id: d.id, data: d.data() }));
-            }
+        for (const cand of orderCands) {
+          const q1 = query(vinsCol, where("lastOrderNo", "==", cand));
+          const s1 = await getDocs(q1);
+          if (!s1.empty) {
+            vinDocsOrder = s1.docs.map((d) => ({ id: d.id, data: d.data() }));
+            break;
           }
+        }
 
-          // لو مفيش على lastOrderNo نجرب orderNo
-          if (!vinDocsOrder.length) {
-            for (let i = 0; i < candidates.length && !vinDocsOrder.length; i += 10) {
-              const slice = candidates.slice(i, i + 10);
-              const q2 = query(vinsCol, where("orderNo", "in", slice));
-              const snap2 = await getDocs(q2);
-              if (!snap2.empty) {
-                vinDocsOrder = snap2.docs.map((d) => ({ id: d.id, data: d.data() }));
-              }
+        if (!vinDocsOrder.length) {
+          for (const cand of orderCands) {
+            const q2 = query(vinsCol, where("lastData.orderNo", "==", cand));
+            const s2 = await getDocs(q2);
+            if (!s2.empty) {
+              vinDocsOrder = s2.docs.map((d) => ({ id: d.id, data: d.data() }));
+              break;
             }
           }
         }
 
-        if (vinDocsOrder.length) {
-          const built   = buildOrderFromVinDocs(vinDocsOrder, rawKey);
-          const orderInfo = built.orderInfo;
-          const cars      = built.cars;
-
-          // نجيب حالة كل سيارة من orders/{orderNo}_{itemNo}/public/status
-          for (const car of cars) {
-            const itemNo = car.itemNo || 1;
-            if (!orderInfo.orderNo) continue;
-
-            try {
-              const docId       = `${orderInfo.orderNo}_${itemNo}`;
-              const statusRef   = doc(db, "orders", docId, "public", "status");
-              const statusSnap  = await getDoc(statusRef);
-              if (statusSnap.exists()) {
-                car.statusData = statusSnap.data();
-              }
-            } catch (csErr) {
-              console.error("Error fetching car status (by order):", csErr);
-            }
-          }
-
-          renderMultiResult(orderInfo, cars, built.activeIndex);
-          setStatus(`تم العثور على الطلب. هذا الطلب يحتوي على ${cars.length} سيارة.`);
-          usedOrder = true;
-        }
-
-        // لو اتعامل كرقم طلب ونجح → نخرج
-        if (usedOrder) return;
-
-        // 2) لم يتم العثور عليه كرقم طلب → نجربه كـ VIN
-        const rawVin    = rawKey;
-        const vinDocRef = doc(db, "erp_vins", rawVin);
-        const vinSnap   = await getDoc(vinDocRef);
-
-        if (!vinSnap.exists()) {
+        if (!vinDocsOrder.length) {
           setStatus("لم يتم العثور على طلب بهذا الرقم. تأكد من رقم الطلب أو رقم الهيكل وحاول مرة أخرى.", true);
           renderEmptyState();
           return;
         }
 
-        const vinData      = vinSnap.data ? vinSnap.data() : vinSnap;
-        const orderBase    = vinData.lastOrderNo || vinData.orderNo || "";
-        const itemNoForVin = vinData.lastItemNo || vinData.itemNo || 1;
+        const built     = buildOrderFromVinDocs(vinDocsOrder, rawKey);
+        const orderInfo = built.orderInfo;
+        const cars      = built.cars;
 
-        // حالة السيارة الحالية
-        let vinStatus = null;
-        if (orderBase) {
+        // نجيب حالة كل سيارة من orders/{orderNo}_{itemNo}/public/status
+        for (const car of cars) {
+          const itemNo = car.itemNo || 1;
+          if (!orderInfo.orderNo) continue;
           try {
-            const newDocId      = `${orderBase}_${itemNoForVin}`;
-            const newStatusRef  = doc(db, "orders", newDocId, "public", "status");
-            const newStatusSnap = await getDoc(newStatusRef);
-            if (newStatusSnap.exists()) {
-              vinStatus = newStatusSnap.data();
-            }
-          } catch (eNew) {
-            console.error("Error fetching status for VIN:", eNew);
+            const docId      = `${orderInfo.orderNo}_${itemNo}`;
+            const statusRef  = doc(db, "orders", docId, "public", "status");
+            const statusSnap = await getDoc(statusRef);
+            if (statusSnap.exists()) car.statusData = statusSnap.data();
+          } catch (csErr) {
+            console.error("Error fetching car status (by order):", csErr);
           }
         }
 
-        // 3) نحاول نجيب كل السيارات في نفس الطلب عن طريق lastOrderNo (لو متوفر)
-        let handledMulti = false;
-        if (orderBase) {
-          try {
-            const qByOrder = query(vinsCol, where("lastOrderNo", "==", orderBase));
-            const qsnap    = await getDocs(qByOrder);
+        renderMultiResult(orderInfo, cars, built.activeIndex);
+        setStatus(`تم العثور على الطلب. هذا الطلب يحتوي على ${cars.length} سيارة.`);
 
-            if (!qsnap.empty) {
-              const vinDocs = qsnap.docs.map((d) => ({ id: d.id, data: d.data() }));
-
-              if (vinDocs.length > 1) {
-                const builtMulti = buildOrderFromVinDocs(vinDocs, rawVin);
-                const orderInfo  = builtMulti.orderInfo;
-                const cars       = builtMulti.cars;
-
-                // نجيب حالة كل سيارة
-                for (const car of cars) {
-                  const itemNo = car.itemNo || 1;
-                  if (!orderInfo.orderNo) continue;
-
-                  try {
-                    const carDocId      = `${orderInfo.orderNo}_${itemNo}`;
-                    const carStatusRef  = doc(db, "orders", carDocId, "public", "status");
-                    const carStatusSnap = await getDoc(carStatusRef);
-                    if (carStatusSnap.exists()) {
-                      car.statusData = carStatusSnap.data();
-                    }
-                  } catch (csErr) {
-                    console.error("Error fetching car status (multi VIN):", csErr);
-                  }
-                }
-
-                renderMultiResult(orderInfo, cars, builtMulti.activeIndex);
-                setStatus(`تم العثور على الطلب. هذا الطلب يحتوي على ${cars.length} سيارة.`);
-                handledMulti = true;
-              }
-            }
-          } catch (multiErr) {
-            console.error("Error fetching multi-car order:", multiErr);
-          }
-        }
-
-        // 4) لو مفيش تعدد سيارات → نرجع لعرض سيارة واحدة
-        if (!handledMulti) {
-          setStatus("تم العثور على الطلب. يتم عرض تفاصيل السيارة.");
-          renderSingleCar(vinData, vinStatus);
-        }
       } catch (err) {
         console.error("Error in handleSearch:", err);
-        setStatus("حدث خطأ أثناء جلب البيانات. حاول مرة أخرى لاحقاً.", true);
+        // اعرض سبب بسيط لو كانت مشكلة صلاحيات
+        const msg = (err && err.code === 'permission-denied')
+          ? "لا توجد صلاحيات لقراءة البيانات (Permission Denied). راجع قواعد Firestore."
+          : "حدث خطأ أثناء جلب البيانات. حاول مرة أخرى لاحقاً.";
+        setStatus(msg, true);
         renderEmptyState();
       }
+
     }
 
     // ربط زر التتبع بزر البحث وبزر إنتر في خانة الإدخال
