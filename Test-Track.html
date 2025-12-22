@@ -451,61 +451,16 @@
     }
 
     function formatAmount(val) {
-      // نعرض 0.00 لو القيمة = 0، ونعرض "-" فقط لو القيمة غير موجودة فعلاً
-      if (val === null || val === undefined) return "-";
-      const n = (typeof val === "number") ? val : parseAmountFront(val);
-      if (n === null || Number.isNaN(n)) return "-";
-      return n.toLocaleString("ar-SA", { minimumFractionDigits: 2 });
-    }
+      if (val === null || val === undefined || val === "") return "-";
+      if (typeof val === "number") {
+        return val.toLocaleString("ar-SA", { minimumFractionDigits: 2 });
+      }
       const n = parseAmountFront(val);
       if (n === null) return val;
       return n.toLocaleString("ar-SA", { minimumFractionDigits: 2 });
     }
 
-        function pickNumber(obj, keys) {
-      for (const k of keys) {
-        if (!obj) continue;
-        const v = obj[k];
-        const n = parseAmountFront(v);
-        if (n !== null) return n;
-      }
-      return null;
-    }
-
-    function getCarTotals(payload) {
-      const totals = payload?.totals || {};
-      const taxes  = payload?.taxes  || {};
-      const summary = payload?.summary || {};
-
-      const subtotal =
-        pickNumber(totals, ["subtotalExclVAT","SubtotalExclVAT","carSubtotalExclVAT","subtotal","netTotal","net"]) ??
-        pickNumber(summary, ["subtotalExclVAT","SubtotalExclVAT","netTotal"]) ??
-        pickNumber(payload, ["subtotalExclVAT","SubtotalExclVAT","carSubtotalExclVAT"]);
-
-      const taxValue =
-        pickNumber(totals, ["taxValue","TaxValue","carTaxValue","vatValue","VATValue"]) ??
-        pickNumber(taxes, ["taxValue","vatValue","VATValue","totalTax","taxTotal"]) ??
-        pickNumber(payload, ["taxValue","TaxValue","carTaxValue"]);
-
-      let total =
-        pickNumber(totals, ["totalInclVAT","TotalInclVAT","carTotalInclVAT","grandTotal","total"]) ??
-        pickNumber(summary, ["totalInclVAT","TotalInclVAT","grandTotal"]) ??
-        pickNumber(payload, ["totalInclVAT","TotalInclVAT","carTotalInclVAT"]);
-
-      // لو الإجمالي شامل الضريبة صفر/غير موجود لكن عندي (قبل الضريبة + الضريبة) → احسبه
-      if ((total === null || total === 0) && (subtotal !== null || taxValue !== null)) {
-        const s = subtotal ?? 0;
-        const t = taxValue ?? 0;
-        total = s + t;
-      }
-
-      const taxName =
-        totals?.taxName ?? totals?.TaxName ?? taxes?.taxName ?? taxes?.TaxName ?? "";
-
-      return { subtotal, taxValue, total, taxName };
-    }
-
-// ====== Timeline + Progress ======
+    // ====== Timeline + Progress ======
     function buildTimelineHtml(statusData) {
       const track     = statusData || {};
       const stagesMap = track.stages || {};
@@ -642,7 +597,7 @@
           <div class="info-item">
             <div class="info-label">إجمالي قيمة الطلب (شامل الضريبة)</div>
             <div class="info-value">
-              ${formatAmount(orderTotal)} ر.س
+              ${orderTotal ? formatAmount(orderTotal) + " ر.س" : "-"}
             </div>
           </div>
         </div>
@@ -708,7 +663,7 @@
       const d = vinData || {};
       const payload = d.lastData || {};
       const item    = payload.item || {};
-      const { subtotal, taxValue, total, taxName } = getCarTotals(payload);
+      const totals  = payload.totals || {};
 
       const vin = d.vin || payload.vin || "";
 
@@ -721,6 +676,25 @@
       const intColor = item.interiorColor || item.intColor || "";
       const dealer   = item.dealer || payload.dealer || "";
 
+      const subtotal =
+        totals.subtotalExclVAT ??
+        totals.SubtotalExclVAT ??
+        "";
+
+      const total =
+        totals.totalInclVAT ??
+        totals.TotalInclVAT ??
+        "";
+
+      const taxName =
+        totals.taxName ??
+        totals.TaxName ??
+        "";
+
+      const taxValue =
+        totals.taxValue ??
+        totals.TaxValue ??
+        "";
 
       const customerName = payload.customerName || "";
       const branch       = payload.branch || "";
@@ -766,7 +740,7 @@
         const data    = row.data || row;
         const payload = data.lastData || {};
         const item    = payload.item || {};
-        const { subtotal, taxValue, total, taxName } = getCarTotals(payload);
+        const totals  = payload.totals || {};
 
         const vin =
           row.id ||
@@ -787,6 +761,25 @@
         const intColor = item.interiorColor || item.intColor || "";
         const dealer   = item.dealer || payload.dealer || "";
 
+        const subtotal =
+          totals.subtotalExclVAT ??
+          totals.SubtotalExclVAT ??
+          "";
+
+        const total =
+          totals.totalInclVAT ??
+          totals.TotalInclVAT ??
+          "";
+
+        const taxName =
+          totals.taxName ??
+          totals.TaxName ??
+          "";
+
+        const taxValue =
+          totals.taxValue ??
+          totals.TaxValue ??
+          "";
 
         return {
           vin,
@@ -1016,31 +1009,19 @@
     // ====== تشغيل تلقائي من الـ URL ======
     (function autoFromUrl() {
       const params = new URLSearchParams(window.location.search);
-
-      // ندعم مفاتيح مختلفة وبأي حالة أحرف (VIN/vin/Order/order...)
-      const wanted = new Set(["vin","order","orderno","o"]);
-      let keyFromUrl = null;
-
-      for (const [k, v] of params.entries()) {
-        if (!v) continue;
-        const kk = String(k || "").trim().toLowerCase();
-        if (wanted.has(kk)) {
-          keyFromUrl = v.trim();
-          break;
-        }
-      }
-
-      // لو المستخدم حاطط باراميتر واحد بس (مثلاً ?510187) نلتقطه
-      if (!keyFromUrl && window.location.search && window.location.search.length > 2 && !window.location.search.includes("=")) {
-        keyFromUrl = decodeURIComponent(window.location.search.substring(1)).trim();
-      }
+      // هنعتبر أي قيمة هنا من دول هي رقم الطلب أو VIN
+      const keyFromUrl =
+        params.get("vin") ||
+        params.get("order") ||
+        params.get("orderNo") ||
+        params.get("o");
 
       if (keyFromUrl) {
-        vinInput.value = keyFromUrl;
+        vinInput.value = keyFromUrl.trim();
         handleSearch();
       }
     })();
-</script>
+  </script>
 </body>
 </html>
 
