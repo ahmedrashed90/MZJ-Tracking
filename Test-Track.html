@@ -1,6 +1,7 @@
 
 
 
+
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
@@ -539,7 +540,8 @@ function applyStepTime(el, ts) {
         taxRate,
         orderSubtotal,
         orderTax,
-        orderTotal
+        orderTotal,
+        registrationFee: (t.registrationFee ?? t.RegistrationFee ?? t.registration_fees ?? t.registrationFees ?? 0)
       };
     }
 
@@ -646,7 +648,7 @@ function applyStepTime(el, ts) {
               قيمة الضريبة${car.taxName ? " (" + car.taxName + ")" : ""}: ${formatAmount(car.taxValue)} ر.س
             </div>
             <div class="car-meta">
-              الإجمالي شامل الضريبة: ${formatAmount(car.total)} ر.س
+              الإجمالي شامل الضريبة: ${formatAmount((parseAmountFront(car.total) || 0) + (parseAmountFront(car.regFeePerCar) || 0))} ر.س
             </div>
           </div>
         `;
@@ -677,7 +679,7 @@ function applyStepTime(el, ts) {
           </div>
 <div class="info-item">
             <div class="info-label">الإجمالي شامل الضريبة</div>
-            <div class="info-value">${orderInfo.orderTotal !== undefined && orderInfo.orderTotal !== "" ? formatAmount(orderInfo.orderTotal) + " ر.س" : (orderTotal ? formatAmount(orderTotal) + " ر.س" : "-")}</div>
+            <div class="info-value">${(() => { const base = (orderInfo.orderTotal !== undefined && orderInfo.orderTotal !== "" ? orderInfo.orderTotal : orderTotal); const baseNum = parseAmountFront(base); const reg = parseAmountFront(orderInfo.registrationFee) || 0; if (baseNum === null) return ((orderInfo.orderTotal !== undefined && orderInfo.orderTotal !== "" ? formatAmount(orderInfo.orderTotal) + " ر.س" : (orderTotal ? formatAmount(orderTotal) + " ر.س" : "-"))); return formatAmount(baseNum + reg) + " ر.س"; })()}</div>
           </div>
         </div>
       `;
@@ -775,6 +777,7 @@ function applyStepTime(el, ts) {
         total,
         taxName,
         taxValue,
+        regFeePerCar: (parseAmountFront(totalsRaw.registrationFee ?? totalsRaw.RegistrationFee ?? totalsRaw.registration_fees ?? totalsRaw.registrationFees ?? 0) || 0),
         statusData
       };
 
@@ -795,6 +798,34 @@ function applyStepTime(el, ts) {
       const totals0Raw = payload0.totals || {};
       const totals0    = normalizeTotals(totals0Raw);
 
+      // محاولة استخراج رسوم التسجيل (قد تكون خارج totals أو في وثائق أخرى ضمن نفس الطلب)
+      const deriveRegFeeTotal = (dataObj) => {
+        if (!dataObj) return 0;
+        const ld = dataObj.lastData || {};
+        const t  = (ld.totals || {});
+        const candidates = [
+          t.registrationFee, t.RegistrationFee, t.registration_fees, t.registrationFees,
+          ld.registrationFee, ld.RegistrationFee, ld.registration_fees, ld.registrationFees,
+          ld.registrationFeeTotal, ld.registration_fee_total,
+          dataObj.registrationFee, dataObj.RegistrationFee, dataObj.registration_fees, dataObj.registrationFees
+        ];
+        // parseAmountFront موجود عندنا في الملف
+        let best = 0;
+        candidates.forEach(v => {
+          const n = parseAmountFront(v);
+          if (n !== null && n > best) best = n;
+        });
+        return best;
+      };
+
+      // ناخذ أكبر قيمة رسوم تسجيل موجودة داخل أي هيكل في نفس الطلب (أحياناً تتكرر/تختلف)
+      let regFeeTotal = 0;
+      vinDocs.forEach(row => {
+        const d = row.data || row;
+        const val = deriveRegFeeTotal(d);
+        if (val > regFeeTotal) regFeeTotal = val;
+      });
+
       const orderNo = firstData.lastOrderNo || payload0.orderNo || rawKey || "";
 
       const orderInfo = {
@@ -803,8 +834,9 @@ function applyStepTime(el, ts) {
         branch: payload0.branch || "",
         orderSubtotal: totals0.orderSubtotal,
         orderTax: totals0.orderTax,
-        orderTotal: totals0.orderTotal
-      };
+        orderTotal: totals0.orderTotal,
+        registrationFee: regFeeTotal
+            };
 
       const cars = vinDocs.map((row, idx) => {
         const data    = row.data || row;
@@ -854,6 +886,12 @@ function applyStepTime(el, ts) {
           statusData: null
         };
       });
+
+
+      // توزيع رسوم التسجيل على عدد الهياكل (إن وُجدت)
+      const totalRegFee = parseAmountFront(orderInfo.registrationFee) || 0;
+      const perCarRegFee = (totalRegFee > 0 && cars.length) ? (totalRegFee / cars.length) : 0;
+      cars.forEach(c => { c.regFeePerCar = perCarRegFee; });
 
       // نحدد السيارة النشطة لو اللي مكتوب كان VIN
       let activeIndex = 0;
