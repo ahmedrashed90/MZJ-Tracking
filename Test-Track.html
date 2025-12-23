@@ -2,6 +2,7 @@
 
 
 
+
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
@@ -501,7 +502,7 @@ function applyStepTime(el, ts) {
         t.subtotalExclVAT ??
         t.SubtotalExclVAT ??
         t.carSubtotalBeforeTax ??
-        t.subtotalBeforeTax ??
+        t.carSubtotal ??
         "";
 
       const carTax =
@@ -514,7 +515,8 @@ function applyStepTime(el, ts) {
         t.carTotalInclVAT ??
         t.totalInclVAT ??
         t.TotalInclVAT ??
-        t.grandTotal ??
+        t.carGrandTotal ??
+        t.carTotal ??
         "";
 
       const taxName = t.taxName ?? t.TaxName ?? "ضريبة القيمة المضافة";
@@ -892,6 +894,14 @@ function applyStepTime(el, ts) {
       const totalRegFee = parseAmountFront(orderInfo.registrationFee) || 0;
       const perCarRegFee = (totalRegFee > 0 && cars.length) ? (totalRegFee / cars.length) : 0;
       cars.forEach(c => { c.regFeePerCar = perCarRegFee; });
+
+
+      // حساب إجمالي الطلب من إجماليات السيارات (الإجمالي شامل الضريبة)
+      // لو الطلب فيه أكثر من سيارة: نجمع إجمالي كل سيارة (بدل الاعتماد على totals.grandTotal اللي ممكن يكون غير دقيق)
+      const carsTotalSum = cars.reduce((sum, c) => sum + (parseAmountFront(c.total) || 0), 0);
+      if (carsTotalSum > 0) {
+        orderInfo.orderTotal = carsTotalSum;
+      }
 
       // نحدد السيارة النشطة لو اللي مكتوب كان VIN
       let activeIndex = 0;
