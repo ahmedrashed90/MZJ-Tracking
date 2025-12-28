@@ -3,6 +3,7 @@
 
 
 
+
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
@@ -1006,6 +1007,13 @@ function applyStepTime(el, ts) {
                         const carStatusRef  = doc(db, "orders", carDocId, "public", "status");
                         const carStatusSnap = await getDoc(carStatusRef);
                         if (carStatusSnap.exists()) car.statusData = carStatusSnap.data();
+
+                      // 🔹 جلب رقم الهيكل الحقيقي من orders/{orderNo}_{itemNo}
+                      const carOrderRef  = doc(db, "orders", carDocId);
+                      const carOrderSnap = await getDoc(carOrderRef);
+                      if (carOrderSnap.exists()) {
+                        car.vin = (carOrderSnap.data().vin || car.vin || "");
+                      }
                       } catch (csErr) {
                         console.error("Error fetching car status (multi VIN):", csErr);
                       }
@@ -1024,7 +1032,7 @@ function applyStepTime(el, ts) {
             // لو مفيش تعدد سيارات → نعرض سيارة واحدة
             if (!handledMulti) {
               setStatus("تم العثور على الطلب. يتم عرض تفاصيل السيارة.");
-              renderSingleCar(vinData, vinStatus);
+              renderSingleCar({ ...vinData, vin: (vinData.vin || (vinData.lastData && vinData.lastData.vin) || rawKey) }, vinStatus);
             }
             return; // ✅ انتهينا لأننا لقينا doc مباشر
           }
@@ -1076,6 +1084,13 @@ function applyStepTime(el, ts) {
             const statusRef  = doc(db, "orders", docId, "public", "status");
             const statusSnap = await getDoc(statusRef);
             if (statusSnap.exists()) car.statusData = statusSnap.data();
+
+            // 🔹 جلب رقم الهيكل الحقيقي من orders/{orderNo}_{itemNo}
+            const orderItemRef  = doc(db, "orders", docId);
+            const orderItemSnap = await getDoc(orderItemRef);
+            if (orderItemSnap.exists()) {
+              car.vin = (orderItemSnap.data().vin || car.vin || "");
+            }
           } catch (csErr) {
             console.error("Error fetching car status (by order):", csErr);
           }
