@@ -23,13 +23,34 @@ export default async function handler(req, res) {
     if (!phoneRaw) return res.status(400).json({ ok: false, error: "Missing phone" });
 
     // ✅ نظّف رقم الجوال (بدون + وبدون مسافات)
-    let phone = String(phoneRaw).replace(/[^\d]/g, "");
-    if (phone.startsWith("0")) phone = "966" + phone.slice(1);
-    if (!phone.startsWith("966")) {
-      return res.status(400).json({ ok: false, error: "Phone must start with 966", phone });
+        let phone = String(phoneRaw || "").trim();
+    phone = phone.replace(/[^\d]/g, "");
+
+    // 00966 → 966
+    if (phone.startsWith("00")) {
+      phone = phone.slice(2);
     }
 
-    const BASE_URL = process.env.MERSAL_BASE_URL || "https://w-mersal.com";
+    // 05xxxxxxxx → 9665xxxxxxxx
+    if (phone.startsWith("05")) {
+      phone = "966" + phone.slice(1);
+    }
+
+    // 5xxxxxxxx → 9665xxxxxxxx
+    if (phone.length === 9 && phone.startsWith("5")) {
+      phone = "966" + phone;
+    }
+
+    // validation نهائي
+    if (!phone.startsWith("9665") || phone.length !== 12) {
+      return res.status(400).json({
+        ok: false,
+        error: "Invalid Saudi mobile number. Use 05XXXXXXXX or 9665XXXXXXXX",
+        phone,
+      });
+    }
+
+const BASE_URL = process.env.MERSAL_BASE_URL || "https://w-mersal.com";
     const TOKEN = process.env.MERSAL_TOKEN;
 
     if (!TOKEN) {
