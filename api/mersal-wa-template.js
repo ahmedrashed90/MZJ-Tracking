@@ -1,26 +1,28 @@
 /**
  * api/mersal-wa-template.js
- * --------------------------------------------------------------------
- * Vercel Serverless Function (Node.js) to send WhatsApp template messages via Mersal.
+ * ------------------------------------------------------------
+ * Vercel Serverless Function (Node.js)
+ * Sends WhatsApp Template messages via Mersal.
  *
- * ✅ Supports templates WITH variables (body_params array)
- * ✅ Supports templates WITHOUT variables (body_params omitted or [])
+ * ✅ Uses Vercel Env Vars (recommended):
+ *    - MERSAL_BASE_URL   (default: https://w-mersal.com)
+ *    - MERSAL_SEND_PATH  (default: /api/wpbox/sendtemplatemessage)
+ *    - MERSAL_TOKEN      (token used if not provided in request body)
  *
- * Request (POST JSON):
+ * Compatible with sales.html request body:
  * {
- *   "token": "MERSAL_TOKEN",
- *   "phone": "9665xxxxxxxx",
- *   "template_name": "tracking_message",
- *   "template_language": "ar",
- *   "body_params": ["val1","val2", ...]   // optional
+ *   phone,
+ *   template_name,
+ *   template_language,
+ *   body_params
  * }
  *
  * Notes:
- * - For step 1 (tracking_message): send 7 values in body_params ({{1}}..{{7}})
- * - For step 9/10 (no vars): send body_params: [] or omit it
+ * - Template with variables: send body_params as array in the correct order.
+ * - Template without variables: send body_params: [] (or omit it).
  */
 module.exports = async (req, res) => {
-  // CORS (safe default)
+  // CORS
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
@@ -29,43 +31,64 @@ module.exports = async (req, res) => {
   if (req.method !== "POST") return res.status(405).json({ ok: false, error: "Method Not Allowed" });
 
   try {
-    const body = req.body || {};
-    const token = body.token;
-    const phone = body.phone;
-    const template_name = body.template_name;
-    const template_language = body.template_language || "ar";
+    // Body can be object or JSON string (depending on runtime)
+    let body = req.body || {};
+    if (typeof body === "string") {
+      try { body = JSON.parse(body); } catch { body = {}; }
+    }
 
-    // Accept body_params as array, otherwise treat as []
-    const body_params = Array.isArray(body.body_params) ? body.body_params : [];
+    const phone = String(body.phone || "").trim();
+    const template_name = String(body.template_name || body.templateName || "").trim();
+    const template_language = String(body.template_language || body.templateLanguage || "ar").trim();
+
+    const body_params =
+      Array.isArray(body.body_params) ? body.body_params :
+      (Array.isArray(body.bodyParams) ? body.bodyParams : []);
+
+    // Env-based config
+    const BASE_URL = String(process.env.MERSAL_BASE_URL || "https://w-mersal.com").replace(/\/+$/, "");
+    const SEND_PATH = String(process.env.MERSAL_SEND_PATH || "/api/wpbox/sendtemplatemessage");
+    const SEND_URL = BASE_URL + (SEND_PATH.startsWith("/") ? SEND_PATH : ("/" + SEND_PATH));
+
+    const envToken =
+      process.env.MERSAL_TOKEN ||
+      process.env.MERSAL_WABOX_TOKEN ||
+      process.env.WABOX_TOKEN ||
+      "";
+
+    const token = String(body.token || envToken).trim();
 
     if (!token || !phone || !template_name) {
       return res.status(400).json({
         ok: false,
-        error: "Missing required fields: token, phone, template_name"
+        error: "Missing required fields: token, phone, template_name",
+        debug: {
+          hasToken: !!token,
+          hasPhone: !!phone,
+          hasTemplate: !!template_name,
+          usingEnv: {
+            MERSAL_BASE_URL: !!process.env.MERSAL_BASE_URL,
+            MERSAL_SEND_PATH: !!process.env.MERSAL_SEND_PATH,
+            MERSAL_TOKEN: !!process.env.MERSAL_TOKEN
+          }
+        }
       });
     }
 
-    // Build parameters list (type:text) – order matters for {{1}},{{2}}...
-    const parameters = body_params.map((v) => ({
-      type: "text",
-      text: String(v ?? "")
-    }));
+    // Convert body_params to Mersal/Meta parameters (order = {{1}},{{2}}...)
+    const parameters = body_params.map(v => ({ type: "text", text: String(v ?? "") }));
 
-    // Always send a BODY component. If template has no vars, parameters can be []
     const payload = {
       token,
       phone,
       template_name,
       template_language,
       components: [
-        {
-          type: "body",
-          parameters
-        }
+        { type: "body", parameters }
       ]
     };
 
-    const resp = await fetch("https://w-mersal.com/api/wpbox/sendtemplatemessage", {
+    const resp = await fetch(SEND_URL, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload)
@@ -78,7 +101,7 @@ module.exports = async (req, res) => {
     return res.status(resp.ok ? 200 : resp.status).json({
       ok: resp.ok,
       status: resp.status,
-      sent_payload: payload,   // مفيد للتجربة (لو مش عايزه، قولي أشيله)
+      mersal_url: SEND_URL,
       data
     });
   } catch (e) {
