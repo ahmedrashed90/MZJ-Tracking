@@ -1,3 +1,4 @@
+// Mersal WhatsApp Template sender (no de-duplication)
 export default async function handler(req, res) {
   // CORS
   res.setHeader("Access-Control-Allow-Origin", "https://mzj-workflow.vercel.app");
@@ -17,9 +18,12 @@ export default async function handler(req, res) {
     // ✅ اقرا كل الأسماء المحتملة اللي الصفحة ممكن تبعتها
     const phoneRaw = body.phone || body.customerPhone || body.to || body.mobile || body.phone_number;
     const stageNum = body.stageNum ?? body.stage ?? null;
-    const fallbackTemplate = (Number(stageNum) === 9) ? "mzj_car_ready_delivery"
+
+    const fallbackTemplate = (Number(stageNum) === 1) ? "123"
+      : (Number(stageNum) === 9) ? "mzj_car_ready_delivery"
       : (Number(stageNum) === 10) ? "mzj_delivery_completed"
-      : "123";
+      : "tracking_message";
+
     const templateName = String(body.template_name || body.templateName || fallbackTemplate).trim();
     const templateLanguage = String(body.template_language || body.templateLanguage || "ar").trim();
 
@@ -29,41 +33,43 @@ export default async function handler(req, res) {
       [];
 
     if (!phoneRaw || !templateName || !templateLanguage) {
-      return res.status(400).json({ ok:false, error:"Missing phone/template_name/template_language", received:{ phone: phoneRaw ?? null, template_name: templateName ?? null, template_language: templateLanguage ?? null } });
+      return res.status(400).json({
+        ok: false,
+        error: "Missing phone/template_name/template_language",
+        received: {
+          phone: phoneRaw ?? null,
+          template_name: templateName ?? null,
+          template_language: templateLanguage ?? null
+        }
+      });
     }
 
     // ✅ نظّف رقم الجوال (بدون + وبدون مسافات)
-        let phone = String(phoneRaw || "").trim();
-    phone = phone.replace(/[^\d]/g, "");
+    let phone = String(phoneRaw || "").trim().replace(/[^\d]/g, "");
 
     // 00966 → 966
-    if (phone.startsWith("00")) {
-      phone = phone.slice(2);
-    }
+    if (phone.startsWith("00")) phone = phone.slice(2);
 
     // 05xxxxxxxx → 9665xxxxxxxx
-    if (phone.startsWith("05")) {
-      phone = "966" + phone.slice(1);
-    }
+    if (phone.startsWith("05")) phone = "966" + phone.slice(1);
 
     // 5xxxxxxxx → 9665xxxxxxxx
-    if (phone.length === 9 && phone.startsWith("5")) {
-      phone = "966" + phone;
-    }
+    if (phone.length === 9 && phone.startsWith("5")) phone = "966" + phone;
 
     // validation نهائي
     if (!phone.startsWith("9665") || phone.length !== 12) {
       return res.status(400).json({
         ok: false,
         error: "Invalid Saudi mobile number. Use 05XXXXXXXX or 9665XXXXXXXX",
-        phone,
+        phone
       });
     }
 
-const BASE_URL = process.env.MERSAL_BASE_URL || "https://w-mersal.com";
+    const BASE_URL = process.env.MERSAL_BASE_URL || "https://w-mersal.com";
     const TOKEN = process.env.MERSAL_TOKEN;
 
     if (!TOKEN) {
+      // release lock if we set one
       return res.status(500).json({ ok: false, error: "Missing MERSAL_TOKEN" });
     }
 
@@ -90,8 +96,8 @@ const BASE_URL = process.env.MERSAL_BASE_URL || "https://w-mersal.com";
     let data;
     try { data = text ? JSON.parse(text) : null; } catch { data = text; }
 
-    // ✅ لو مرسال رجّع خطأ، نبينه للواجهة بدل “تم الإرسال”
     if (!r.ok) {
+      // release lock on failure so user can retry
       return res.status(502).json({
         ok: false,
         status: r.status,
@@ -108,6 +114,7 @@ const BASE_URL = process.env.MERSAL_BASE_URL || "https://w-mersal.com";
     });
 
   } catch (e) {
+    // release any pending lock if we can infer it (best effort)
     return res.status(500).json({ ok: false, error: e.message || String(e) });
   }
 }
