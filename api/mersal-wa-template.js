@@ -1,28 +1,3 @@
-// Mersal WhatsApp Template sender (with best-effort de-duplication for steps 1/9/10)
-// Note: In Vercel serverless, in-memory de-duplication is best-effort (may reset on cold starts).
-// It still prevents rapid double-click / duplicate sends in most cases.
-const  = globalThis.__MZJ_MERSAL_DEDUPE_STORE__ || (globalThis.__MZJ_MERSAL_DEDUPE_STORE__ = new Map());
-
-function _now() { return Date.now(); }
-
-function _() {
-  const t = _now();
-  for (const [k, v] of .entries()) {
-    if (!v || (v. && v. <= t)) .delete(k);
-  }
-}
-
-function _({ phone, templateName, stageNum, orderKey }) {
-  // Keep it stable & short
-  return [
-    "wa_tpl",
-    String(stageNum ?? ""),
-    String(templateName ?? ""),
-    String(phone ?? ""),
-    String(orderKey ?? "")
-  ].join("|");
-}
-
 export default async function handler(req, res) {
   // CORS
   res.setHeader("Access-Control-Allow-Origin", "https://mzj-workflow.vercel.app");
@@ -33,8 +8,6 @@ export default async function handler(req, res) {
   if (req.method !== "POST") return res.status(405).json({ ok: false, error: "Method Not Allowed" });
 
   try {
-    _();
-
     let body = req.body || {};
     // allow raw string body
     if (typeof body === "string") {
@@ -44,11 +17,9 @@ export default async function handler(req, res) {
     // ✅ اقرا كل الأسماء المحتملة اللي الصفحة ممكن تبعتها
     const phoneRaw = body.phone || body.customerPhone || body.to || body.mobile || body.phone_number;
     const stageNum = body.stageNum ?? body.stage ?? null;
-
     const fallbackTemplate = (Number(stageNum) === 9) ? "mzj_car_ready_delivery"
       : (Number(stageNum) === 10) ? "mzj_delivery_completed"
       : "123";
-
     const templateName = String(body.template_name || body.templateName || fallbackTemplate).trim();
     const templateLanguage = String(body.template_language || body.templateLanguage || "ar").trim();
 
@@ -58,81 +29,41 @@ export default async function handler(req, res) {
       [];
 
     if (!phoneRaw || !templateName || !templateLanguage) {
-      return res.status(400).json({
-        ok: false,
-        error: "Missing phone/template_name/template_language",
-        received: {
-          phone: phoneRaw ?? null,
-          template_name: templateName ?? null,
-          template_language: templateLanguage ?? null
-        }
-      });
+      return res.status(400).json({ ok:false, error:"Missing phone/template_name/template_language", received:{ phone: phoneRaw ?? null, template_name: templateName ?? null, template_language: templateLanguage ?? null } });
     }
 
     // ✅ نظّف رقم الجوال (بدون + وبدون مسافات)
-    let phone = String(phoneRaw || "").trim().replace(/[^\d]/g, "");
+        let phone = String(phoneRaw || "").trim();
+    phone = phone.replace(/[^\d]/g, "");
 
     // 00966 → 966
-    if (phone.startsWith("00")) phone = phone.slice(2);
+    if (phone.startsWith("00")) {
+      phone = phone.slice(2);
+    }
 
     // 05xxxxxxxx → 9665xxxxxxxx
-    if (phone.startsWith("05")) phone = "966" + phone.slice(1);
+    if (phone.startsWith("05")) {
+      phone = "966" + phone.slice(1);
+    }
 
     // 5xxxxxxxx → 9665xxxxxxxx
-    if (phone.length === 9 && phone.startsWith("5")) phone = "966" + phone;
+    if (phone.length === 9 && phone.startsWith("5")) {
+      phone = "966" + phone;
+    }
 
     // validation نهائي
     if (!phone.startsWith("9665") || phone.length !== 12) {
       return res.status(400).json({
         ok: false,
         error: "Invalid Saudi mobile number. Use 05XXXXXXXX or 9665XXXXXXXX",
-        phone
+        phone,
       });
     }
 
-    // ✅ Best-effort de-duplication for steps 1 / 9 / 10
-    const stageN = Number(stageNum);
-    const  = (stageN === 1 || stageN === 9 || stageN === 10);
-
-    // Prefer strong idempotency key if provided by client
-    const orderKey =
-      body.idempotency_key ||
-      body.idempotencyKey ||
-      body.orderId || body.order_id ||
-      body.vin || body.VIN || body.chassis || body.chassisNo || body.chassis_no ||
-      body.requestId || body.request_id ||
-      ""; // fallback empty
-
-    if () {
-      const key = _({ phone, templateName, stageNum: stageN, orderKey });
-
-      const existing = .get(key);
-      const t = _now();
-
-      // If another request is in-flight OR already sent recently, block duplicates
-      if (existing && existing. && existing. > t) {
-        return res.status().json({
-          ok: false,
-          error: " (already sent or in progress).",
-          stage: stageN,
-          template: templateName,
-          phone,
-          dedupe: { state: existing.state, : existing. }
-        });
-      }
-
-      // lock as pending for 2 minutes
-      .set(key, { state: "pending", : t + (2 * 60 * 1000) });
-      // We'll upgrade to "sent" on success with a longer TTL.
-      body.__dedupeKey = key;
-    }
-
-    const BASE_URL = process.env.MERSAL_BASE_URL || "https://w-mersal.com";
+const BASE_URL = process.env.MERSAL_BASE_URL || "https://w-mersal.com";
     const TOKEN = process.env.MERSAL_TOKEN;
 
     if (!TOKEN) {
-      // release lock if we set one
-      if (body.__dedupeKey) .delete(body.__dedupeKey);
       return res.status(500).json({ ok: false, error: "Missing MERSAL_TOKEN" });
     }
 
@@ -159,20 +90,14 @@ export default async function handler(req, res) {
     let data;
     try { data = text ? JSON.parse(text) : null; } catch { data = text; }
 
+    // ✅ لو مرسال رجّع خطأ، نبينه للواجهة بدل “تم الإرسال”
     if (!r.ok) {
-      // release lock on failure so user can retry
-      if (body.__dedupeKey) .delete(body.__dedupeKey);
       return res.status(502).json({
         ok: false,
         status: r.status,
         mersal_error: data || text,
         sent_payload: { phone, templateName, templateLanguage, paramsCount: params.length }
       });
-    }
-
-    // success → mark as sent for 6 hours (prevents duplicates across users most of the day)
-    if (body.__dedupeKey) {
-      .set(body.__dedupeKey, { state: "sent", : _now() + (6 * 60 * 60 * 1000) });
     }
 
     return res.status(200).json({
@@ -183,7 +108,6 @@ export default async function handler(req, res) {
     });
 
   } catch (e) {
-    // release any pending lock if we can infer it (best effort)
     return res.status(500).json({ ok: false, error: e.message || String(e) });
   }
 }
