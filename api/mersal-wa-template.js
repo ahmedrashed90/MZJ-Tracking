@@ -1,18 +1,18 @@
 // Mersal WhatsApp Template sender (with best-effort de-duplication for steps 1/9/10)
 // Note: In Vercel serverless, in-memory de-duplication is best-effort (may reset on cold starts).
 // It still prevents rapid double-click / duplicate sends in most cases.
-const __DEDUPE_STORE__ = globalThis.__MZJ_MERSAL_DEDUPE_STORE__ || (globalThis.__MZJ_MERSAL_DEDUPE_STORE__ = new Map());
+const  = globalThis.__MZJ_MERSAL_DEDUPE_STORE__ || (globalThis.__MZJ_MERSAL_DEDUPE_STORE__ = new Map());
 
 function _now() { return Date.now(); }
 
-function _cleanupStore() {
+function _() {
   const t = _now();
-  for (const [k, v] of __DEDUPE_STORE__.entries()) {
-    if (!v || (v.expiresAt && v.expiresAt <= t)) __DEDUPE_STORE__.delete(k);
+  for (const [k, v] of .entries()) {
+    if (!v || (v. && v. <= t)) .delete(k);
   }
 }
 
-function _getDedupeKey({ phone, templateName, stageNum, orderKey }) {
+function _({ phone, templateName, stageNum, orderKey }) {
   // Keep it stable & short
   return [
     "wa_tpl",
@@ -33,7 +33,7 @@ export default async function handler(req, res) {
   if (req.method !== "POST") return res.status(405).json({ ok: false, error: "Method Not Allowed" });
 
   try {
-    _cleanupStore();
+    _();
 
     let body = req.body || {};
     // allow raw string body
@@ -47,7 +47,7 @@ export default async function handler(req, res) {
 
     const fallbackTemplate = (Number(stageNum) === 9) ? "mzj_car_ready_delivery"
       : (Number(stageNum) === 10) ? "mzj_delivery_completed"
-      : "m1";
+      : "123";
 
     const templateName = String(body.template_name || body.templateName || fallbackTemplate).trim();
     const templateLanguage = String(body.template_language || body.templateLanguage || "ar").trim();
@@ -92,7 +92,7 @@ export default async function handler(req, res) {
 
     // ✅ Best-effort de-duplication for steps 1 / 9 / 10
     const stageN = Number(stageNum);
-    const isProtectedStage = false; // protection disabled for testing
+    const  = (stageN === 1 || stageN === 9 || stageN === 10);
 
     // Prefer strong idempotency key if provided by client
     const orderKey =
@@ -103,26 +103,26 @@ export default async function handler(req, res) {
       body.requestId || body.request_id ||
       ""; // fallback empty
 
-    if (isProtectedStage) {
-      const key = _getDedupeKey({ phone, templateName, stageNum: stageN, orderKey });
+    if () {
+      const key = _({ phone, templateName, stageNum: stageN, orderKey });
 
-      const existing = __DEDUPE_STORE__.get(key);
+      const existing = .get(key);
       const t = _now();
 
       // If another request is in-flight OR already sent recently, block duplicates
-      if (existing && existing.expiresAt && existing.expiresAt > t) {
-        return res.status(409).json({
+      if (existing && existing. && existing. > t) {
+        return res.status().json({
           ok: false,
-          error: "Duplicate prevented (already sent or in progress).",
+          error: " (already sent or in progress).",
           stage: stageN,
           template: templateName,
           phone,
-          dedupe: { state: existing.state, expiresAt: existing.expiresAt }
+          dedupe: { state: existing.state, : existing. }
         });
       }
 
       // lock as pending for 2 minutes
-      __DEDUPE_STORE__.set(key, { state: "pending", expiresAt: t + (2 * 60 * 1000) });
+      .set(key, { state: "pending", : t + (2 * 60 * 1000) });
       // We'll upgrade to "sent" on success with a longer TTL.
       body.__dedupeKey = key;
     }
@@ -132,7 +132,7 @@ export default async function handler(req, res) {
 
     if (!TOKEN) {
       // release lock if we set one
-      if (body.__dedupeKey) __DEDUPE_STORE__.delete(body.__dedupeKey);
+      if (body.__dedupeKey) .delete(body.__dedupeKey);
       return res.status(500).json({ ok: false, error: "Missing MERSAL_TOKEN" });
     }
 
@@ -161,7 +161,7 @@ export default async function handler(req, res) {
 
     if (!r.ok) {
       // release lock on failure so user can retry
-      if (body.__dedupeKey) __DEDUPE_STORE__.delete(body.__dedupeKey);
+      if (body.__dedupeKey) .delete(body.__dedupeKey);
       return res.status(502).json({
         ok: false,
         status: r.status,
@@ -172,7 +172,7 @@ export default async function handler(req, res) {
 
     // success → mark as sent for 6 hours (prevents duplicates across users most of the day)
     if (body.__dedupeKey) {
-      __DEDUPE_STORE__.set(body.__dedupeKey, { state: "sent", expiresAt: _now() + (6 * 60 * 60 * 1000) });
+      .set(body.__dedupeKey, { state: "sent", : _now() + (6 * 60 * 60 * 1000) });
     }
 
     return res.status(200).json({
