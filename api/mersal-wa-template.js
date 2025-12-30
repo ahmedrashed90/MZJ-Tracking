@@ -1,96 +1,189 @@
-/**
- * api/mersal-wa-template.js
- * ------------------------------------------------------------
- * Fix for your current 404:
- * You still have MERSAL_SEND_PATH=/api/send which does NOT exist on https://w-mersal.com
- * This file auto-corrects that value to the real endpoint:
- *   /api/wpbox/sendtemplatemessage
- *
- * Env Vars:
- * - MERSAL_BASE_URL  (default: https://w-mersal.com)
- * - MERSAL_SEND_PATH (default: /api/wpbox/sendtemplatemessage)
- * - MERSAL_TOKEN     (required, unless passed in body)
- */
-module.exports = async (req, res) => {
-  res.setHeader("Access-Control-Allow-Origin", "*");
-  res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
-  res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
+// Mersal WhatsApp Template sender (with best-effort de-duplication for steps 1/9/10)
+// Note: In Vercel serverless, in-memory de-duplication is best-effort (may reset on cold starts).
+// It still prevents rapid double-click / duplicate sends in most cases.
+const __DEDUPE_STORE__ = globalThis.__MZJ_MERSAL_DEDUPE_STORE__ || (globalThis.__MZJ_MERSAL_DEDUPE_STORE__ = new Map());
 
-  if (req.method === "OPTIONS") return res.status(200).end();
+function _now() { return Date.now(); }
+
+function _cleanupStore() {
+  const t = _now();
+  for (const [k, v] of __DEDUPE_STORE__.entries()) {
+    if (!v || (v.expiresAt && v.expiresAt <= t)) __DEDUPE_STORE__.delete(k);
+  }
+}
+
+function _getDedupeKey({ phone, templateName, stageNum, orderKey }) {
+  // Keep it stable & short
+  return [
+    "wa_tpl",
+    String(stageNum ?? ""),
+    String(templateName ?? ""),
+    String(phone ?? ""),
+    String(orderKey ?? "")
+  ].join("|");
+}
+
+export default async function handler(req, res) {
+  // CORS
+  res.setHeader("Access-Control-Allow-Origin", "https://mzj-workflow.vercel.app");
+  res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+
+  if (req.method === "OPTIONS") return res.status(204).end();
   if (req.method !== "POST") return res.status(405).json({ ok: false, error: "Method Not Allowed" });
 
   try {
+    _cleanupStore();
+
     let body = req.body || {};
+    // allow raw string body
     if (typeof body === "string") {
       try { body = JSON.parse(body); } catch { body = {}; }
     }
 
-    const phone = String(body.phone || "").trim();
-    const template_name = String(body.template_name || body.templateName || "").trim();
-    const template_language = String(body.template_language || body.templateLanguage || "ar").trim();
+    // ✅ اقرا كل الأسماء المحتملة اللي الصفحة ممكن تبعتها
+    const phoneRaw = body.phone || body.customerPhone || body.to || body.mobile || body.phone_number;
+    const stageNum = body.stageNum ?? body.stage ?? null;
 
-    const body_params =
-      Array.isArray(body.body_params) ? body.body_params :
-      (Array.isArray(body.bodyParams) ? body.bodyParams : []);
+    const fallbackTemplate = (Number(stageNum) === 9) ? "mzj_car_ready_delivery"
+      : (Number(stageNum) === 10) ? "mzj_delivery_completed"
+      : "tracking_message";
 
-    const BASE_URL = String(process.env.MERSAL_BASE_URL || "https://w-mersal.com").replace(/\/+$/, "");
-    let SEND_PATH = String(process.env.MERSAL_SEND_PATH || "/api/wpbox/sendtemplatemessage");
+    const templateName = String(body.template_name || body.templateName || fallbackTemplate).trim();
+    const templateLanguage = String(body.template_language || body.templateLanguage || "ar").trim();
 
-    // 🔥 Auto-fix the wrong path that causes 404 on Mersal:
-    if (SEND_PATH.trim() === "/api/send") {
-      SEND_PATH = "/api/wpbox/sendtemplatemessage";
-    }
+    const params =
+      (Array.isArray(body.body_params) && body.body_params) ||
+      (Array.isArray(body.bodyParams) && body.bodyParams) ||
+      [];
 
-    const SEND_URL = BASE_URL + (SEND_PATH.startsWith("/") ? SEND_PATH : ("/" + SEND_PATH));
-
-    const token = String(
-      body.token ||
-      process.env.MERSAL_TOKEN ||
-      process.env.MERSAL_WABOX_TOKEN ||
-      process.env.WABOX_TOKEN ||
-      ""
-    ).trim();
-
-    if (!token || !phone || !template_name) {
+    if (!phoneRaw || !templateName || !templateLanguage) {
       return res.status(400).json({
         ok: false,
-        error: "Missing required fields: token, phone, template_name",
-        debug: { hasToken: !!token, hasPhone: !!phone, hasTemplate: !!template_name }
+        error: "Missing phone/template_name/template_language",
+        received: {
+          phone: phoneRaw ?? null,
+          template_name: templateName ?? null,
+          template_language: templateLanguage ?? null
+        }
       });
     }
 
-    const parameters = body_params.map(v => ({ type: "text", text: String(v ?? "") }));
+    // ✅ نظّف رقم الجوال (بدون + وبدون مسافات)
+    let phone = String(phoneRaw || "").trim().replace(/[^\d]/g, "");
+
+    // 00966 → 966
+    if (phone.startsWith("00")) phone = phone.slice(2);
+
+    // 05xxxxxxxx → 9665xxxxxxxx
+    if (phone.startsWith("05")) phone = "966" + phone.slice(1);
+
+    // 5xxxxxxxx → 9665xxxxxxxx
+    if (phone.length === 9 && phone.startsWith("5")) phone = "966" + phone;
+
+    // validation نهائي
+    if (!phone.startsWith("9665") || phone.length !== 12) {
+      return res.status(400).json({
+        ok: false,
+        error: "Invalid Saudi mobile number. Use 05XXXXXXXX or 9665XXXXXXXX",
+        phone
+      });
+    }
+
+    // ✅ Best-effort de-duplication for steps 1 / 9 / 10
+    const stageN = Number(stageNum);
+    const isProtectedStage = (stageN === 1 || stageN === 9 || stageN === 10);
+
+    // Prefer strong idempotency key if provided by client
+    const orderKey =
+      body.idempotency_key ||
+      body.idempotencyKey ||
+      body.orderId || body.order_id ||
+      body.vin || body.VIN || body.chassis || body.chassisNo || body.chassis_no ||
+      body.requestId || body.request_id ||
+      ""; // fallback empty
+
+    if (isProtectedStage) {
+      const key = _getDedupeKey({ phone, templateName, stageNum: stageN, orderKey });
+
+      const existing = __DEDUPE_STORE__.get(key);
+      const t = _now();
+
+      // If another request is in-flight OR already sent recently, block duplicates
+      if (existing && existing.expiresAt && existing.expiresAt > t) {
+        return res.status(409).json({
+          ok: false,
+          error: "Duplicate prevented (already sent or in progress).",
+          stage: stageN,
+          template: templateName,
+          phone,
+          dedupe: { state: existing.state, expiresAt: existing.expiresAt }
+        });
+      }
+
+      // lock as pending for 2 minutes
+      __DEDUPE_STORE__.set(key, { state: "pending", expiresAt: t + (2 * 60 * 1000) });
+      // We'll upgrade to "sent" on success with a longer TTL.
+      body.__dedupeKey = key;
+    }
+
+    const BASE_URL = process.env.MERSAL_BASE_URL || "https://w-mersal.com";
+    const TOKEN = process.env.MERSAL_TOKEN;
+
+    if (!TOKEN) {
+      // release lock if we set one
+      if (body.__dedupeKey) __DEDUPE_STORE__.delete(body.__dedupeKey);
+      return res.status(500).json({ ok: false, error: "Missing MERSAL_TOKEN" });
+    }
 
     const payload = {
-      token,
+      token: TOKEN,
       phone,
-      template_name,
-      template_language,
-      components: [{ type: "body", parameters }]
+      template_name: templateName,
+      template_language: templateLanguage,
+      components: [
+        {
+          type: "body",
+          parameters: params.map(v => ({ type: "text", text: String(v ?? "") }))
+        }
+      ]
     };
 
-    const resp = await fetch(SEND_URL, {
+    const r = await fetch(`${BASE_URL}/api/wpbox/sendtemplatemessage`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload)
     });
 
-    const raw = await resp.text();
+    const text = await r.text();
     let data;
-    try { data = JSON.parse(raw); } catch { data = { raw }; }
+    try { data = text ? JSON.parse(text) : null; } catch { data = text; }
 
-    return res.status(resp.ok ? 200 : resp.status).json({
-      ok: resp.ok,
-      status: resp.status,
-      mersal_url: SEND_URL,
-      env_seen: {
-        MERSAL_BASE_URL: process.env.MERSAL_BASE_URL || null,
-        MERSAL_SEND_PATH: process.env.MERSAL_SEND_PATH || null,
-        MERSAL_TOKEN: process.env.MERSAL_TOKEN ? "SET" : "NOT_SET"
-      },
-      data
+    if (!r.ok) {
+      // release lock on failure so user can retry
+      if (body.__dedupeKey) __DEDUPE_STORE__.delete(body.__dedupeKey);
+      return res.status(502).json({
+        ok: false,
+        status: r.status,
+        mersal_error: data || text,
+        sent_payload: { phone, templateName, templateLanguage, paramsCount: params.length }
+      });
+    }
+
+    // success → mark as sent for 6 hours (prevents duplicates across users most of the day)
+    if (body.__dedupeKey) {
+      __DEDUPE_STORE__.set(body.__dedupeKey, { state: "sent", expiresAt: _now() + (6 * 60 * 60 * 1000) });
+    }
+
+    return res.status(200).json({
+      ok: true,
+      status: r.status,
+      mersal_result: data,
+      sent_payload: { phone, templateName, templateLanguage, paramsCount: params.length }
     });
+
   } catch (e) {
-    return res.status(500).json({ ok: false, error: String(e?.message || e) });
+    // release any pending lock if we can infer it (best effort)
+    return res.status(500).json({ ok: false, error: e.message || String(e) });
   }
-};
+}
