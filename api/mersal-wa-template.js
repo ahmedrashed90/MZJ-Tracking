@@ -1,4 +1,5 @@
-// Mersal WhatsApp Template sender (no de-duplication)
+// Mersal WhatsApp Template sender (no de-duplication; step 1/9/10 always allowed)
+
 export default async function handler(req, res) {
   // CORS
   res.setHeader("Access-Control-Allow-Origin", "https://mzj-workflow.vercel.app");
@@ -19,8 +20,7 @@ export default async function handler(req, res) {
     const phoneRaw = body.phone || body.customerPhone || body.to || body.mobile || body.phone_number;
     const stageNum = body.stageNum ?? body.stage ?? null;
 
-    const fallbackTemplate = (Number(stageNum) === 1) ? "123"
-      : (Number(stageNum) === 9) ? "mzj_car_ready_delivery"
+    const fallbackTemplate = (Number(stageNum) === 9) ? "mzj_car_ready_delivery"
       : (Number(stageNum) === 10) ? "mzj_delivery_completed"
       : "tracking_message";
 
@@ -69,7 +69,6 @@ export default async function handler(req, res) {
     const TOKEN = process.env.MERSAL_TOKEN;
 
     if (!TOKEN) {
-      // release lock if we set one
       return res.status(500).json({ ok: false, error: "Missing MERSAL_TOKEN" });
     }
 
@@ -97,7 +96,6 @@ export default async function handler(req, res) {
     try { data = text ? JSON.parse(text) : null; } catch { data = text; }
 
     if (!r.ok) {
-      // release lock on failure so user can retry
       return res.status(502).json({
         ok: false,
         status: r.status,
@@ -114,7 +112,6 @@ export default async function handler(req, res) {
     });
 
   } catch (e) {
-    // release any pending lock if we can infer it (best effort)
     return res.status(500).json({ ok: false, error: e.message || String(e) });
   }
 }
