@@ -4,6 +4,7 @@
 
 
 
+
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
@@ -315,6 +316,37 @@
         padding: 10px 10px;
       }
     }
+  
+    /* ✅ Finished/Archived order notice (public tracking) */
+    .archived-notice{
+      margin-top: 10px;
+      padding: 14px 14px;
+      border-radius: 14px;
+      background: #fff8ef;
+      border: 1px solid #e4d6c8;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+    }
+    .archived-notice .title{
+      font-size: 16px;
+      font-weight: 800;
+      color: #3e2420;
+      display:flex;
+      align-items:center;
+      gap:8px;
+      margin-bottom: 6px;
+    }
+    .archived-notice .msg{
+      font-size: 13px;
+      color: #5b4035;
+      line-height: 1.8;
+    }
+    .archived-notice .meta{
+      margin-top: 8px;
+      font-size: 12px;
+      color: #7b6a63;
+      line-height: 1.8;
+    }
+
   </style>
 
 <script>
@@ -343,6 +375,41 @@ function applyStepTime(el, ts) {
   if (!el) return;
   el.innerHTML = 'تم في: <strong>' + formatTimestamp(ts) + '</strong>';
 }
+
+// ========== Archived detection (from PUBLIC status doc only) ==========
+function isArchivedStatus(statusData) {
+  const s = statusData || {};
+  return (
+    s.isArchived === true ||
+    s.archived === true ||
+    s.inArchive === true ||
+    s.status === "archived" ||
+    s.orderStatus === "archived" ||
+    s.state === "archived"
+  );
+}
+
+function getArchivedAtFromStatus(statusData) {
+  const s = statusData || {};
+  return s.archivedAt || s.archiveAt || s.archived_at || s.archive_at || null;
+}
+
+function buildArchivedHtml(statusData) {
+  const at = getArchivedAtFromStatus(statusData);
+  const atTxt = at ? formatTimestamp(at) : "";
+  return `
+    <div class="archived-notice">
+      <div class="title">✅ الطلب منتهي</div>
+      <div class="msg">
+        تم الانتهاء من هذا الطلب وأرشفته بنجاح.
+      </div>
+      <div class="meta">
+        ${atTxt ? `تاريخ الأرشفة: <strong>${atTxt}</strong>` : ``}
+      </div>
+    </div>
+  `;
+}
+
 </script>
 
 </head>
@@ -616,9 +683,15 @@ function applyStepTime(el, ts) {
 
     function updateStatusUIForCar(statusData) {
       const timelineArea = resultContainer.querySelector("#timelineArea");
-      if (timelineArea) {
-        timelineArea.innerHTML = buildTimelineHtml(statusData || {});
+      if (!timelineArea) return;
+
+      // ✅ If archived (order finished) show a clear message instead of timeline
+      if (isArchivedStatus(statusData)) {
+        timelineArea.innerHTML = buildArchivedHtml(statusData || {});
+        return;
       }
+
+      timelineArea.innerHTML = buildTimelineHtml(statusData || {});
     }
 
     // ====== Multi-car UI ======
