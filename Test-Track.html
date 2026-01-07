@@ -348,18 +348,7 @@
       line-height: 1.8;
     }
 
-  
-    .spinner{
-      width:28px;height:28px;
-      border:3px solid rgba(0,0,0,.15);
-      border-top-color: rgba(0,0,0,.65);
-      border-radius:50%;
-      animation:spin .8s linear infinite;
-      margin:0 auto;
-    }
-    @keyframes spin{to{transform:rotate(360deg)}}
-
-</style>
+  </style>
 
 <script>
 function formatTimestamp(ts) {
@@ -470,8 +459,7 @@ function buildArchivedHtml(statusData) {
       collection,
       query,
       where,
-      getDocs,
-      enableIndexedDbPersistence
+      getDocs
     } from "https://www.gstatic.com/firebasejs/9.6.11/firebase-firestore.js";
 
     // ========= 1) إعداد Firebase =========
@@ -487,13 +475,6 @@ function buildArchivedHtml(statusData) {
     const app = initializeApp(firebaseConfig);
     const db  = getFirestore(app);
 
-
-    // ✅ تفعيل Cache محلي (IndexedDB) لتسريع التحميل في الزيارات المتكررة وتقليل التأخير
-    enableIndexedDbPersistence(db).catch((err) => {
-      // ممكن يفشل لو الصفحة مفتوحة في تبويبات متعددة أو المتصفح مانع التخزين
-      console.warn("Persistence not enabled:", err && err.code ? err.code : err);
-    });
-
     // ========= 2) عناصر الصفحة =========
     const vinInput       = document.getElementById("vinInput");
     const searchBtn      = document.getElementById("searchBtn");
@@ -504,33 +485,6 @@ function buildArchivedHtml(statusData) {
       statusBar.textContent = msg || "";
       statusBar.style.color = isError ? "#b00020" : "#7b6a63";
     }
-
-    function setLoading(on) {
-      try {
-        searchBtn.disabled = !!on;
-        vinInput.disabled  = !!on;
-
-        if (on) {
-          searchBtn.dataset._origHtml = searchBtn.innerHTML;
-          searchBtn.innerHTML = "جاري البحث...";
-          resultContainer.innerHTML = `
-            <div class="card">
-              <div class="empty-state">
-                <div class="spinner"></div>
-                <div style="margin-top:10px;">جاري تحميل البيانات...</div>
-              </div>
-            </div>`;
-        } else {
-          if (searchBtn.dataset._origHtml) {
-            searchBtn.innerHTML = searchBtn.dataset._origHtml;
-            delete searchBtn.dataset._origHtml;
-          }
-        }
-      } catch (e) {
-        console.warn("setLoading error:", e);
-      }
-    }
-
 
     function renderEmptyState() {
       resultContainer.innerHTML = `
@@ -1039,35 +993,35 @@ function buildArchivedHtml(statusData) {
 
     // ====== Helpers: توليد أشكال مختلفة لرقم الطلب ======
     function buildOrderCandidates(rawOrder) {
-      const trimmed = (rawOrder || "").trim();
-      if (!trimmed) return [];
-
       const cands = new Set();
 
-      // لو فيه حروف/شرط → غالبًا رقم طلب كامل (زي SAL-ORD-2026-00001) فنجربه كما هو فقط
-      if (/[A-Za-z]/.test(trimmed) || /-/.test(trimmed)) {
-        cands.add(trimmed);
-        cands.add(trimmed.toUpperCase());
-        return Array.from(cands);
+      const trimmed = rawOrder.trim();
+      if (!trimmed) return [];
+
+      cands.add(trimmed);
+
+      // رقم بدون أصفار بداية
+      const digitsOnly = trimmed.replace(/[^\d]/g, "");
+      if (digitsOnly) {
+        cands.add(digitsOnly);
+        cands.add(digitsOnly.replace(/^0+/, "") || "0");
+
+        // pad لأطوال شائعة
+        const t = digitsOnly.replace(/^0+/, "") || digitsOnly;
+        cands.add(t.padStart(5, "0"));
+        cands.add(t.padStart(6, "0"));
+
+        // Prefix محتمل SO-
+        cands.add("SO-" + t);
+        cands.add("SO-" + t.padStart(5, "0"));
+        cands.add("SO-" + t.padStart(6, "0"));
       }
-
-      // أرقام فقط → نجرب شوية أشكال شائعة بدون ما نعمل عشرات Queries
-      const digits = trimmed.replace(/[^\d]/g, "");
-      if (!digits) return [trimmed];
-
-      const t = digits.replace(/^0+/, "") || digits;
-      cands.add(digits);
-      cands.add(t);
-      cands.add(t.padStart(5, "0"));
-      cands.add(t.padStart(6, "0"));
 
       return Array.from(cands);
     }
 
     // ========= handleSearch: يدعم رقم الطلب + VIN =========
     async function handleSearch() {
-      setLoading(true);
-      try {
       const rawKey = (vinInput.value || "").trim();
       if (!rawKey) {
         setStatus("من فضلك أدخل رقم الطلب أو رقم الهيكل أولاً.", true);
@@ -1119,30 +1073,27 @@ function buildArchivedHtml(statusData) {
                     const cars       = builtMulti.cars;
 
                     // نجيب حالة كل سيارة
-                    await Promise.all(cars.map(async (car) => {
+                    for (const car of cars) {
                       const itemNo = car.itemNo || 1;
-                      if (!orderInfo.orderNo) return;
+                      if (!orderInfo.orderNo) continue;
                       try {
-                        const carDocId     = `${orderInfo.orderNo}_${itemNo}`;
-                        const carStatusRef = doc(db, "orders", carDocId, "public", "status");
-                        const carOrderRef  = doc(db, "orders", carDocId);
-
-                        const [carStatusSnap, carOrderSnap] = await Promise.all([
-                          getDoc(carStatusRef),
-                          getDoc(carOrderRef)
-                        ]);
-
+                        const carDocId      = `${orderInfo.orderNo}_${itemNo}`;
+                        const carStatusRef  = doc(db, "orders", carDocId, "public", "status");
+                        const carStatusSnap = await getDoc(carStatusRef);
                         if (carStatusSnap.exists()) car.statusData = carStatusSnap.data();
 
-                        // 🔹 جلب رقم الهيكل الحقيقي من orders/{orderNo}_{itemNo}
-                        if (carOrderSnap.exists()) {
-                          car.vin = (carOrderSnap.data().vin || car.vin || "");
-                        }
+                      // 🔹 جلب رقم الهيكل الحقيقي من orders/{orderNo}_{itemNo}
+                      const carOrderRef  = doc(db, "orders", carDocId);
+                      const carOrderSnap = await getDoc(carOrderRef);
+                      if (carOrderSnap.exists()) {
+                        car.vin = (carOrderSnap.data().vin || car.vin || "");
+                      }
                       } catch (csErr) {
                         console.error("Error fetching car status (multi VIN):", csErr);
                       }
-                    }));
-renderMultiResult(orderInfo, cars, builtMulti.activeIndex);
+                    }
+
+                    renderMultiResult(orderInfo, cars, builtMulti.activeIndex);
                     setStatus(`تم العثور على الطلب. هذا الطلب يحتوي على ${cars.length} سيارة.`);
                     handledMulti = true;
                   }
@@ -1165,26 +1116,27 @@ renderMultiResult(orderInfo, cars, builtMulti.activeIndex);
 
         // (B) لو مش موجود كـ doc id → جرّبه كـ رقم طلب (بحث بالمساواة فقط لتجنب أي تعليق)
         // نجرب على lastOrderNo ثم على lastData.orderNo
-        const orderCands = buildOrderCandidates(rawKey).slice(0, 8); // ✅ نحدّها لتقليل عدد الاستعلامات
+        const orderCands = buildOrderCandidates(rawKey);
         let vinDocsOrder = [];
 
-        // ✅ استعلامات "بالتوازي" بدل حلقة await واحدة واحدة (أسرع على الشبكة)
-        const firstNonEmpty = async (queries) => {
-          const snaps = await Promise.all(queries.map((q) => getDocs(q)));
-          for (const s of snaps) {
-            if (s && !s.empty) return s.docs.map((d) => ({ id: d.id, data: d.data() }));
+        for (const cand of orderCands) {
+          const q1 = query(vinsCol, where("lastOrderNo", "==", cand));
+          const s1 = await getDocs(q1);
+          if (!s1.empty) {
+            vinDocsOrder = s1.docs.map((d) => ({ id: d.id, data: d.data() }));
+            break;
           }
-          return [];
-        };
-
-        vinDocsOrder = await firstNonEmpty(
-          orderCands.map((cand) => query(vinsCol, where("lastOrderNo", "==", cand)))
-        );
+        }
 
         if (!vinDocsOrder.length) {
-          vinDocsOrder = await firstNonEmpty(
-            orderCands.map((cand) => query(vinsCol, where("lastData.orderNo", "==", cand)))
-          );
+          for (const cand of orderCands) {
+            const q2 = query(vinsCol, where("lastData.orderNo", "==", cand));
+            const s2 = await getDocs(q2);
+            if (!s2.empty) {
+              vinDocsOrder = s2.docs.map((d) => ({ id: d.id, data: d.data() }));
+              break;
+            }
+          }
         }
 
         if (!vinDocsOrder.length) {
@@ -1198,30 +1150,27 @@ renderMultiResult(orderInfo, cars, builtMulti.activeIndex);
         const cars      = built.cars;
 
         // نجيب حالة كل سيارة من orders/{orderNo}_{itemNo}/public/status
-        await Promise.all(cars.map(async (car) => {
+        for (const car of cars) {
           const itemNo = car.itemNo || 1;
-          if (!orderInfo.orderNo) return;
+          if (!orderInfo.orderNo) continue;
           try {
-            const docId        = `${orderInfo.orderNo}_${itemNo}`;
-            const statusRef    = doc(db, "orders", docId, "public", "status");
-            const orderItemRef = doc(db, "orders", docId);
-
-            const [statusSnap, orderItemSnap] = await Promise.all([
-              getDoc(statusRef),
-              getDoc(orderItemRef)
-            ]);
-
+            const docId      = `${orderInfo.orderNo}_${itemNo}`;
+            const statusRef  = doc(db, "orders", docId, "public", "status");
+            const statusSnap = await getDoc(statusRef);
             if (statusSnap.exists()) car.statusData = statusSnap.data();
 
             // 🔹 جلب رقم الهيكل الحقيقي من orders/{orderNo}_{itemNo}
+            const orderItemRef  = doc(db, "orders", docId);
+            const orderItemSnap = await getDoc(orderItemRef);
             if (orderItemSnap.exists()) {
               car.vin = (orderItemSnap.data().vin || car.vin || "");
             }
           } catch (csErr) {
             console.error("Error fetching car status (by order):", csErr);
           }
-        }));
-renderMultiResult(orderInfo, cars, built.activeIndex);
+        }
+
+        renderMultiResult(orderInfo, cars, built.activeIndex);
         setStatus(`تم العثور على الطلب. هذا الطلب يحتوي على ${cars.length} سيارة.`);
 
       } catch (err) {
@@ -1234,9 +1183,6 @@ renderMultiResult(orderInfo, cars, built.activeIndex);
         renderEmptyState();
       }
 
-      } finally {
-        setLoading(false);
-      }
     }
 
     // ربط زر التتبع بزر البحث وبزر إنتر في خانة الإدخال
