@@ -1,29 +1,50 @@
+// api/sms/_admin.js
+// Shared Firebase Admin initializer for Vercel API routes.
+// Usage:
+//   import { getAdmin, getDb } from "./_admin";
+//   const db = getDb();
+
 import admin from "firebase-admin";
 
-function getAdmin(){
-  if (!admin.apps.length){
-    // Prefer FIREBASE_SERVICE_ACCOUNT_JSON if present; else build from pieces
-    if (process.env.FIREBASE_SERVICE_ACCOUNT_JSON){
-      admin.initializeApp({
-        credential: admin.credential.cert(JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_JSON))
-      });
-    } else if (process.env.FIREBASE_SERVICE_ACCOUNT){
-      admin.initializeApp({
-        credential: admin.credential.cert(JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT))
-      });
-    } else if (process.env.FIREBASE_PROJECT_ID && process.env.FIREBASE_CLIENT_EMAIL && process.env.FIREBASE_PRIVATE_KEY){
-      admin.initializeApp({
-        credential: admin.credential.cert({
-          projectId: process.env.FIREBASE_PROJECT_ID,
-          clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-          privateKey: process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, "\n"),
-        })
-      });
-    } else {
-      throw new Error("Missing Firebase Admin credentials env vars");
+function parseServiceAccount() {
+  const raw = process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
+  if (!raw) {
+    throw new Error("Missing FIREBASE_SERVICE_ACCOUNT_JSON env var");
+  }
+
+  // Support either direct JSON string OR base64-encoded JSON.
+  let jsonStr = raw;
+  try {
+    // If it's base64, decoding will likely produce a JSON string.
+    // If it's plain JSON, decoding will throw or produce gibberish that won't parse.
+    const decoded = Buffer.from(raw, "base64").toString("utf8");
+    if (decoded && decoded.trim().startsWith("{") && decoded.includes("private_key")) {
+      jsonStr = decoded;
     }
+  } catch (_) {
+    // ignore
+  }
+
+  // Normalize escaped newlines in private_key (common in env vars)
+  const obj = JSON.parse(jsonStr);
+  if (obj.private_key && typeof obj.private_key === "string") {
+    obj.private_key = obj.private_key.replace(/\\n/g, "\n");
+  }
+  return obj;
+}
+
+export function getAdmin() {
+  if (!admin.apps.length) {
+    const serviceAccount = parseServiceAccount();
+    admin.initializeApp({
+      credential: admin.credential.cert(serviceAccount),
+    });
   }
   return admin;
 }
 
-export { getAdmin };
+export function getDb() {
+  const a = getAdmin();
+  return a.firestore();
+}
+
