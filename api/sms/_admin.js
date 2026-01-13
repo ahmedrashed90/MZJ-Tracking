@@ -1,0 +1,29 @@
+import admin from "firebase-admin";
+
+function getAdmin(){
+  if (!admin.apps.length){
+    // Prefer FIREBASE_SERVICE_ACCOUNT_JSON if present; else build from pieces
+    if (process.env.FIREBASE_SERVICE_ACCOUNT_JSON){
+      admin.initializeApp({
+        credential: admin.credential.cert(JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_JSON))
+      });
+    } else if (process.env.FIREBASE_SERVICE_ACCOUNT){
+      admin.initializeApp({
+        credential: admin.credential.cert(JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT))
+      });
+    } else if (process.env.FIREBASE_PROJECT_ID && process.env.FIREBASE_CLIENT_EMAIL && process.env.FIREBASE_PRIVATE_KEY){
+      admin.initializeApp({
+        credential: admin.credential.cert({
+          projectId: process.env.FIREBASE_PROJECT_ID,
+          clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
+          privateKey: process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, "\n"),
+        })
+      });
+    } else {
+      throw new Error("Missing Firebase Admin credentials env vars");
+    }
+  }
+  return admin;
+}
+
+export { getAdmin };
